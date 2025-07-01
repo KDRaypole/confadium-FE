@@ -32,13 +32,13 @@ export default function ContactModal({ contact, isOpen, onClose, onEdit }: Conta
   const getStatusColor = (status: Contact["status"]) => {
     switch (status) {
       case "hot":
-        return "bg-red-100 text-red-800";
+        return "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200";
       case "warm":
-        return "bg-yellow-100 text-yellow-800";
+        return "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200";
       case "cold":
-        return "bg-blue-100 text-blue-800";
+        return "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200";
       default:
-        return "bg-gray-100 text-gray-800";
+        return "bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200";
     }
   };
 
@@ -78,7 +78,7 @@ export default function ContactModal({ contact, isOpen, onClose, onEdit }: Conta
           leaveFrom="opacity-100"
           leaveTo="opacity-0"
         >
-          <div className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" />
+          <div className="fixed inset-0 bg-gray-500 dark:bg-gray-900 bg-opacity-75 dark:bg-opacity-75 transition-opacity" />
         </Transition.Child>
 
         <div className="fixed inset-0 overflow-hidden">
@@ -115,26 +115,26 @@ export default function ContactModal({ contact, isOpen, onClose, onEdit }: Conta
                       </button>
                     </div>
                   </Transition.Child>
-                  <div className="flex h-full flex-col overflow-y-scroll bg-white py-6 shadow-xl">
+                  <div className="flex h-full flex-col overflow-y-scroll bg-white dark:bg-gray-800 py-6 shadow-xl">
                     <div className="px-4 sm:px-6">
-                      <Dialog.Title className="text-base font-semibold leading-6 text-gray-900">
+                      <Dialog.Title className="text-base font-semibold leading-6 text-gray-900 dark:text-gray-100">
                         Contact Details
                       </Dialog.Title>
                     </div>
                     <div className="relative mt-6 flex-1 px-4 sm:px-6">
                       {/* Contact Header */}
-                      <div className="flex items-center space-x-3 pb-6 border-b border-gray-200">
+                      <div className="flex items-center space-x-3 pb-6 border-b border-gray-200 dark:border-gray-700">
                         <div className="flex-shrink-0">
-                          <div className="h-16 w-16 rounded-full bg-gray-300 flex items-center justify-center">
-                            <span className="text-xl font-medium text-gray-700">
+                          <div className="h-16 w-16 rounded-full bg-gray-300 dark:bg-gray-600 flex items-center justify-center">
+                            <span className="text-xl font-medium text-gray-700 dark:text-gray-200">
                               {contact.name.split(' ').map(n => n[0]).join('')}
                             </span>
                           </div>
                         </div>
                         <div className="min-w-0 flex-1">
-                          <h2 className="text-xl font-bold text-gray-900">{contact.name}</h2>
-                          <p className="text-sm text-gray-500">{contact.position}</p>
-                          <p className="text-sm text-gray-500">{contact.company}</p>
+                          <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">{contact.name}</h2>
+                          <p className="text-sm text-gray-500 dark:text-gray-400">{contact.position}</p>
+                          <p className="text-sm text-gray-500 dark:text-gray-400">{contact.company}</p>
                           <span className={`inline-flex mt-2 px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(contact.status)}`}>
                             {contact.status}
                           </span>
@@ -144,44 +144,44 @@ export default function ContactModal({ contact, isOpen, onClose, onEdit }: Conta
                       {/* Contact Information */}
                       <div className="mt-6 space-y-6">
                         <div>
-                          <h3 className="text-lg font-medium text-gray-900 mb-4">Contact Information</h3>
+                          <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-4">Contact Information</h3>
                           <div className="space-y-3">
                             <div className="flex items-center space-x-3">
-                              <EnvelopeIcon className="h-5 w-5 text-gray-400" />
+                              <EnvelopeIcon className="h-5 w-5 text-gray-400 dark:text-gray-500" />
                               <div>
-                                <p className="text-sm text-gray-500">Email</p>
-                                <p className="text-sm font-medium text-gray-900">{contact.email}</p>
+                                <p className="text-sm text-gray-500 dark:text-gray-400">Email</p>
+                                <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{contact.email}</p>
                               </div>
                             </div>
                             <div className="flex items-center space-x-3">
-                              <PhoneIcon className="h-5 w-5 text-gray-400" />
+                              <PhoneIcon className="h-5 w-5 text-gray-400 dark:text-gray-500" />
                               <div>
-                                <p className="text-sm text-gray-500">Phone</p>
-                                <p className="text-sm font-medium text-gray-900">{contact.phone}</p>
+                                <p className="text-sm text-gray-500 dark:text-gray-400">Phone</p>
+                                <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{contact.phone}</p>
                               </div>
                             </div>
                             <div className="flex items-center space-x-3">
-                              <BuildingOfficeIcon className="h-5 w-5 text-gray-400" />
+                              <BuildingOfficeIcon className="h-5 w-5 text-gray-400 dark:text-gray-500" />
                               <div>
-                                <p className="text-sm text-gray-500">Company</p>
-                                <p className="text-sm font-medium text-gray-900">{contact.company}</p>
+                                <p className="text-sm text-gray-500 dark:text-gray-400">Company</p>
+                                <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{contact.company}</p>
                               </div>
                             </div>
                             <div className="flex items-center space-x-3">
-                              <CalendarIcon className="h-5 w-5 text-gray-400" />
+                              <CalendarIcon className="h-5 w-5 text-gray-400 dark:text-gray-500" />
                               <div>
-                                <p className="text-sm text-gray-500">Last Contact</p>
-                                <p className="text-sm font-medium text-gray-900">
+                                <p className="text-sm text-gray-500 dark:text-gray-400">Last Contact</p>
+                                <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
                                   {new Date(contact.lastContact).toLocaleDateString()}
                                 </p>
                               </div>
                             </div>
                             {contact.address && (
                               <div className="flex items-center space-x-3">
-                                <MapPinIcon className="h-5 w-5 text-gray-400" />
+                                <MapPinIcon className="h-5 w-5 text-gray-400 dark:text-gray-500" />
                                 <div>
-                                  <p className="text-sm text-gray-500">Address</p>
-                                  <p className="text-sm font-medium text-gray-900">{contact.address}</p>
+                                  <p className="text-sm text-gray-500 dark:text-gray-400">Address</p>
+                                  <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{contact.address}</p>
                                 </div>
                               </div>
                             )}
@@ -191,7 +191,7 @@ export default function ContactModal({ contact, isOpen, onClose, onEdit }: Conta
                         {/* Social Media */}
                         {(contact.socialMedia?.linkedin || contact.socialMedia?.twitter) && (
                           <div>
-                            <h3 className="text-lg font-medium text-gray-900 mb-4">Social Media</h3>
+                            <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-4">Social Media</h3>
                             <div className="space-y-3">
                               {contact.socialMedia?.linkedin && (
                                 <div className="flex items-center space-x-3">
@@ -199,8 +199,8 @@ export default function ContactModal({ contact, isOpen, onClose, onEdit }: Conta
                                     <span className="text-blue-600 font-bold text-sm">in</span>
                                   </div>
                                   <div>
-                                    <p className="text-sm text-gray-500">LinkedIn</p>
-                                    <a href={contact.socialMedia.linkedin} target="_blank" rel="noopener noreferrer" className="text-sm font-medium text-blue-600 hover:text-blue-500">
+                                    <p className="text-sm text-gray-500 dark:text-gray-400">LinkedIn</p>
+                                    <a href={contact.socialMedia.linkedin} target="_blank" rel="noopener noreferrer" className="text-sm font-medium text-blue-600 hover:text-blue-500 dark:text-blue-400 dark:hover:text-blue-300">
                                       View Profile
                                     </a>
                                   </div>
@@ -212,8 +212,8 @@ export default function ContactModal({ contact, isOpen, onClose, onEdit }: Conta
                                     <span className="text-blue-400 font-bold text-sm">𝕏</span>
                                   </div>
                                   <div>
-                                    <p className="text-sm text-gray-500">Twitter</p>
-                                    <a href={contact.socialMedia.twitter} target="_blank" rel="noopener noreferrer" className="text-sm font-medium text-blue-600 hover:text-blue-500">
+                                    <p className="text-sm text-gray-500 dark:text-gray-400">Twitter</p>
+                                    <a href={contact.socialMedia.twitter} target="_blank" rel="noopener noreferrer" className="text-sm font-medium text-blue-600 hover:text-blue-500 dark:text-blue-400 dark:hover:text-blue-300">
                                       View Profile
                                     </a>
                                   </div>
@@ -225,14 +225,14 @@ export default function ContactModal({ contact, isOpen, onClose, onEdit }: Conta
 
                         {/* Recent Activities */}
                         <div>
-                          <h3 className="text-lg font-medium text-gray-900 mb-4">Recent Activities</h3>
+                          <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-4">Recent Activities</h3>
                           <div className="space-y-3">
                             {recentActivities.map((activity) => (
-                              <div key={activity.id} className="flex items-start space-x-3 p-3 bg-gray-50 rounded-lg">
-                                <ChatBubbleLeftRightIcon className="h-5 w-5 text-gray-400 mt-0.5" />
+                              <div key={activity.id} className="flex items-start space-x-3 p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                                <ChatBubbleLeftRightIcon className="h-5 w-5 text-gray-400 dark:text-gray-500 mt-0.5" />
                                 <div className="min-w-0 flex-1">
-                                  <p className="text-sm font-medium text-gray-900">{activity.description}</p>
-                                  <p className="text-xs text-gray-500">
+                                  <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{activity.description}</p>
+                                  <p className="text-xs text-gray-500 dark:text-gray-400">
                                     {new Date(activity.date).toLocaleDateString()} at {activity.time}
                                   </p>
                                 </div>
@@ -243,27 +243,27 @@ export default function ContactModal({ contact, isOpen, onClose, onEdit }: Conta
 
                         {/* Notes */}
                         <div>
-                          <h3 className="text-lg font-medium text-gray-900 mb-4">Notes</h3>
-                          <div className="bg-gray-50 rounded-lg p-4">
-                            <p className="text-sm text-gray-600">
+                          <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-4">Notes</h3>
+                          <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
+                            <p className="text-sm text-gray-600 dark:text-gray-300">
                               {contact.notes || "No notes available for this contact."}
                             </p>
                           </div>
                         </div>
 
                         {/* Action Buttons */}
-                        <div className="pt-6 border-t border-gray-200">
+                        <div className="pt-6 border-t border-gray-200 dark:border-gray-700">
                           <div className="flex space-x-3">
                             <button
                               type="button"
-                              className="flex-1 bg-blue-600 border border-transparent rounded-md shadow-sm py-2 px-4 inline-flex justify-center text-sm font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                              className="flex-1 bg-blue-600 border border-transparent rounded-md shadow-sm py-2 px-4 inline-flex justify-center text-sm font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 dark:bg-blue-700 dark:hover:bg-blue-600 dark:focus:ring-offset-gray-800"
                             >
                               <PhoneIcon className="-ml-1 mr-2 h-5 w-5" aria-hidden="true" />
                               Call
                             </button>
                             <button
                               type="button"
-                              className="flex-1 bg-white border border-gray-300 rounded-md shadow-sm py-2 px-4 inline-flex justify-center text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                              className="flex-1 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-4 inline-flex justify-center text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 dark:focus:ring-offset-gray-800"
                             >
                               <EnvelopeIcon className="-ml-1 mr-2 h-5 w-5" aria-hidden="true" />
                               Email
@@ -277,7 +277,7 @@ export default function ContactModal({ contact, isOpen, onClose, onEdit }: Conta
                                 onClose();
                               }
                             }}
-                            className="w-full mt-3 bg-white border border-gray-300 rounded-md shadow-sm py-2 px-4 inline-flex justify-center text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                            className="w-full mt-3 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm py-2 px-4 inline-flex justify-center text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 dark:focus:ring-offset-gray-800"
                           >
                             Edit Contact
                           </button>

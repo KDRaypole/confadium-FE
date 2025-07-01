@@ -1,6 +1,7 @@
 import { useState } from "react";
 import Sidebar from "./Sidebar";
 import Header from "./Header";
+import { useDarkMode } from "~/contexts/DarkModeContext";
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -9,9 +10,10 @@ interface LayoutProps {
 
 export default function Layout({ children, showOrgNavigation = true }: LayoutProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const { isDarkMode } = useDarkMode();
 
   return (
-    <div className="h-screen flex">
+    <div className={`h-screen flex ${isDarkMode ? 'dark' : ''}`}>
       <Sidebar showOrgNavigation={showOrgNavigation} />
       
       {/* Mobile menu overlay */}
@@ -38,7 +40,7 @@ export default function Layout({ children, showOrgNavigation = true }: LayoutPro
 
       <div className="flex flex-1 flex-col overflow-hidden">
         <Header onMobileMenuClick={() => setMobileMenuOpen(true)} />
-        <main className="flex-1 overflow-x-hidden overflow-y-auto bg-gray-50">
+        <main className="flex-1 overflow-x-hidden overflow-y-auto bg-gray-50 dark:bg-gray-900">
           {children}
         </main>
       </div>

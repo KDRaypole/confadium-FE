@@ -32,15 +32,15 @@ export default function OrganizationHome() {
         <div className="w-full px-6 lg:px-8">
           {/* Page Header */}
           <div className="mb-6">
-            <nav className="flex text-sm text-gray-500 mb-4">
+            <nav className="flex text-sm text-gray-500 dark:text-gray-400 mb-4">
               <span>Home</span>
               <span className="mx-2">/</span>
               <span>{orgName}</span>
             </nav>
             <div className="flex items-center justify-between">
               <div>
-                <h1 className="text-2xl font-bold text-gray-900">Home</h1>
-                <p className="mt-1 text-sm text-gray-600">
+                <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Home</h1>
+                <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
                   Welcome back! Here's what's happening with {orgName} today.
                 </p>
               </div>

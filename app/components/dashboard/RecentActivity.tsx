@@ -56,26 +56,26 @@ export default function RecentActivity() {
   const getActivityColor = (type: Activity["type"]) => {
     switch (type) {
       case "call":
-        return "bg-blue-100 text-blue-800";
+        return "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200";
       case "email":
-        return "bg-green-100 text-green-800";
+        return "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200";
       case "meeting":
-        return "bg-purple-100 text-purple-800";
+        return "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200";
       case "deal":
-        return "bg-yellow-100 text-yellow-800";
+        return "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200";
       default:
-        return "bg-gray-100 text-gray-800";
+        return "bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200";
     }
   };
 
   return (
-    <div className="bg-white shadow rounded-lg">
-      <div className="px-6 py-4 border-b border-gray-200">
-        <h3 className="text-lg leading-6 font-medium text-gray-900">
+    <div className="bg-white dark:bg-gray-800 shadow rounded-lg">
+      <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+        <h3 className="text-lg leading-6 font-medium text-gray-900 dark:text-gray-100">
           Recent Activity
         </h3>
       </div>
-      <div className="divide-y divide-gray-200">
+      <div className="divide-y divide-gray-200 dark:divide-gray-700">
         {mockActivities.map((activity) => (
           <div key={activity.id} className="px-6 py-4">
             <div className="flex items-center space-x-3">
@@ -84,23 +84,23 @@ export default function RecentActivity() {
                 {activity.type}
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-gray-900 truncate">
+                <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
                   {activity.contact}
                 </p>
-                <p className="text-sm text-gray-500 truncate">
+                <p className="text-sm text-gray-500 dark:text-gray-400 truncate">
                   {activity.description}
                 </p>
               </div>
-              <div className="flex-shrink-0 text-sm text-gray-500">
+              <div className="flex-shrink-0 text-sm text-gray-500 dark:text-gray-400">
                 {activity.timestamp}
               </div>
             </div>
           </div>
         ))}
       </div>
-      <div className="px-6 py-3 border-t border-gray-200">
+      <div className="px-6 py-3 border-t border-gray-200 dark:border-gray-700">
         <div className="text-sm">
-          <a href="/activities" className="font-medium text-blue-600 hover:text-blue-500">
+          <a href="/activities" className="font-medium text-blue-600 hover:text-blue-500 dark:text-blue-400 dark:hover:text-blue-300">
             View all activity →
           </a>
         </div>
