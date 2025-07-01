@@ -10,7 +10,8 @@ import {
   Squares2X2Icon,
   BuildingOfficeIcon,
   ArrowLeftIcon,
-  CogIcon
+  CogIcon,
+  EnvelopeIcon
 } from "@heroicons/react/24/outline";
 
 interface SidebarProps {
@@ -31,6 +32,7 @@ const getOrgNavigation = (orgId: string) => [
   { name: "Activities", href: `/organizations/${orgId}/activities`, icon: CalendarIcon },
   { name: "Calls", href: `/organizations/${orgId}/calls`, icon: PhoneIcon },
   { name: "Reports", href: `/organizations/${orgId}/reports`, icon: ChartBarIcon },
+  { name: "Email Templates", href: `/organizations/${orgId}/email-templates`, icon: EnvelopeIcon },
   { name: "Modules", href: `/organizations/${orgId}/modules`, icon: CogIcon },
 ];
 
