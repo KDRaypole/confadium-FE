@@ -1,4 +1,5 @@
 import type { MetaFunction } from "@remix-run/node";
+import { Link, useParams } from "@remix-run/react";
 import Layout from "~/components/layout/Layout";
 import { ChartBarIcon, DocumentArrowDownIcon, CalendarIcon, CurrencyDollarIcon, UsersIcon, PhoneIcon } from "@heroicons/react/24/outline";
 
@@ -62,6 +63,8 @@ const mockReports: Report[] = [
 ];
 
 export default function Reports() {
+  const params = useParams();
+  const orgId = params.orgId;
   const getCategoryColor = (category: Report["category"]) => {
     switch (category) {
       case "sales":
@@ -218,13 +221,13 @@ export default function Reports() {
                       </div>
                     </div>
                     <div className="flex items-center space-x-2">
-                      <button
-                        type="button"
+                      <Link
+                        to={`/organizations/${orgId}/report/${report.id}`}
                         className="inline-flex items-center px-3 py-2 border border-gray-300 dark:border-gray-600 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
                       >
                         <ChartBarIcon className="-ml-0.5 mr-2 h-4 w-4" aria-hidden="true" />
                         View
-                      </button>
+                      </Link>
                       <button
                         type="button"
                         className="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"

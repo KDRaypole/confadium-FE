@@ -2,7 +2,13 @@
   "permissions": {
     "allow": [
       "Bash(npm run typecheck:*)",
-      "Bash(cp:*)"
+      "Bash(cp:*)",
+      "Bash(mv:*)",
+      "Bash(ls:*)",
+      "Bash(head:*)",
+      "Bash(rm:*)",
+      "Bash(npx remix:*)",
+      "Bash(npx tsc:*)"
     ],
     "deny": []
   }
