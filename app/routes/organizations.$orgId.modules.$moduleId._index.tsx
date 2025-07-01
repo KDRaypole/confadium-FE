@@ -1,6 +1,8 @@
 import type { MetaFunction } from "@remix-run/node";
 import { Link, useParams } from "@remix-run/react";
+import { useState } from "react";
 import Layout from "~/components/layout/Layout";
+import WorkflowGraph from "~/components/modules/WorkflowGraph";
 import { 
   CogIcon, 
   BellIcon, 
@@ -18,6 +20,7 @@ import {
   TrashIcon,
   EyeIcon
 } from "@heroicons/react/24/outline";
+import { useDarkMode } from "~/contexts/DarkModeContext";
 
 export const meta: MetaFunction = () => {
   return [
@@ -175,6 +178,8 @@ const mockConfigurations: Configuration[] = [
 export default function ModuleDetail() {
   const params = useParams();
   const { orgId, moduleId } = params;
+  const { isDarkMode } = useDarkMode();
+  const [workflowChanges, setWorkflowChanges] = useState<any[]>([]);
   
   const module = getModuleData(moduleId!);
 
@@ -358,15 +363,43 @@ export default function ModuleDetail() {
               </p>
             </div>
             <div className="p-6">
-              <div className="h-64 flex items-center justify-center bg-gray-50 dark:bg-gray-700 rounded-lg border-2 border-dashed border-gray-300 dark:border-gray-600">
-                <div className="text-center">
-                  <ChartBarIcon className="mx-auto h-12 w-12 text-gray-400 dark:text-gray-500" />
-                  <h3 className="mt-2 text-sm font-medium text-gray-900 dark:text-gray-100">Configuration Flow Chart</h3>
-                  <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">Interactive flow diagram will be displayed here</p>
+              <WorkflowGraph 
+                configurations={mockConfigurations}
+                onConfigurationChange={(changes) => {
+                  setWorkflowChanges(prev => [...prev, changes]);
+                  console.log("Workflow changes:", changes);
+                }}
+                isDarkMode={isDarkMode}
+              />
+            </div>
+          </div>
+
+          {/* Workflow Changes Log */}
+          {workflowChanges.length > 0 && (
+            <div className="bg-white dark:bg-gray-800 shadow rounded-lg mb-6 border border-gray-200 dark:border-gray-700">
+              <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+                <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">Recent Changes</h3>
+                <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
+                  JSON log of workflow modifications for tracking
+                </p>
+              </div>
+              <div className="p-6">
+                <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 max-h-48 overflow-y-auto">
+                  <pre className="text-xs text-gray-700 dark:text-gray-300 whitespace-pre-wrap">
+                    {JSON.stringify(workflowChanges, null, 2)}
+                  </pre>
+                </div>
+                <div className="mt-4 flex justify-end">
+                  <button
+                    onClick={() => setWorkflowChanges([])}
+                    className="px-3 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700"
+                  >
+                    Clear Log
+                  </button>
                 </div>
               </div>
             </div>
-          </div>
+          )}
 
           {/* Configurations List */}
           <div className="bg-white dark:bg-gray-800 shadow rounded-lg border border-gray-200 dark:border-gray-700">

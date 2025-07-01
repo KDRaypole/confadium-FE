@@ -102,7 +102,7 @@ const triggers = [
 
 const actionTypes = [
   { value: "assign_lead", label: "Assign Lead", targets: ["Sales Rep", "Sales Team", "Territory Owner"] },
-  { value: "send_email", label: "Send Email", targets: ["Contact", "Lead", "Sales Rep", "Sales Manager"] },
+  { value: "send_email", label: "Send Email", targets: ["Me", "Contact", "Lead", "Sales Rep", "Sales Manager"] },
   { value: "create_task", label: "Create Task", targets: ["Sales Rep", "Sales Manager", "Support Team"] },
   { value: "update_field", label: "Update Field", targets: ["Contact", "Deal", "Activity"] },
   { value: "change_status", label: "Change Status", targets: ["Contact", "Deal", "Lead"] },
