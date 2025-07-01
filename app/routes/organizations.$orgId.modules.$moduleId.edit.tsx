@@ -2,12 +2,17 @@ import type { MetaFunction } from "@remix-run/node";
 import { Link, useParams, useSearchParams } from "@remix-run/react";
 import { useState } from "react";
 import Layout from "~/components/layout/Layout";
+import EmailEditor from "~/components/email/EmailEditor";
+import EmailPreview from "~/components/email/EmailPreview";
+import { getTemplateById } from "~/components/email/EmailTemplates";
 import { 
   ArrowLeftIcon,
   PlusIcon,
   TrashIcon,
   XMarkIcon,
-  ChevronDownIcon
+  ChevronDownIcon,
+  EnvelopeIcon,
+  EyeIcon
 } from "@heroicons/react/24/outline";
 
 export const meta: MetaFunction = () => {
@@ -130,6 +135,11 @@ export default function ModuleEdit() {
     status: "draft"
   });
 
+  // Email editor state
+  const [emailEditorOpen, setEmailEditorOpen] = useState(false);
+  const [currentActionId, setCurrentActionId] = useState<string | null>(null);
+  const [emailPreviewOpen, setEmailPreviewOpen] = useState(false);
+
   const addCondition = () => {
     const newCondition: Condition = {
       id: Math.random().toString(36).substr(2, 9),
@@ -213,6 +223,50 @@ export default function ModuleEdit() {
     const updatedConfig = { ...configuration, status };
     console.log("Saving configuration:", updatedConfig);
     // Here you would typically save to your backend
+  };
+
+  const openEmailEditor = (actionId: string) => {
+    setCurrentActionId(actionId);
+    setEmailEditorOpen(true);
+  };
+
+  const handleEmailTemplateSelect = (templateId: string) => {
+    if (currentActionId) {
+      updateAction(currentActionId, {
+        parameters: {
+          ...getActionById(currentActionId)?.parameters,
+          emailTemplate: templateId,
+          emailVariables: {}
+        }
+      });
+    }
+  };
+
+  const handleEmailVariablesChange = (variables: Record<string, string>) => {
+    if (currentActionId) {
+      updateAction(currentActionId, {
+        parameters: {
+          ...getActionById(currentActionId)?.parameters,
+          emailVariables: variables
+        }
+      });
+    }
+  };
+
+  const getActionById = (actionId: string) => {
+    return configuration.actions.find(action => action.id === actionId);
+  };
+
+  const getCurrentEmailTemplate = () => {
+    if (!currentActionId) return undefined;
+    const action = getActionById(currentActionId);
+    return action?.parameters?.emailTemplate;
+  };
+
+  const getCurrentEmailVariables = () => {
+    if (!currentActionId) return {};
+    const action = getActionById(currentActionId);
+    return action?.parameters?.emailVariables || {};
   };
 
   return (
@@ -517,16 +571,72 @@ export default function ModuleEdit() {
                             <div className="space-y-2">
                               {action.type === "send_email" && (
                                 <>
-                                  <input
-                                    type="text"
-                                    placeholder="Email template name..."
-                                    className="block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-sm"
-                                  />
-                                  <input
-                                    type="text"
-                                    placeholder="Delay (e.g., 5 minutes, 1 hour)..."
-                                    className="block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-sm"
-                                  />
+                                  <div className="space-y-3">
+                                    <div className="flex items-center space-x-2">
+                                      <button
+                                        onClick={() => openEmailEditor(action.id)}
+                                        className="flex-1 inline-flex items-center justify-center px-3 py-2 border border-blue-300 dark:border-blue-600 shadow-sm text-sm leading-4 font-medium rounded-md text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-900 hover:bg-blue-100 dark:hover:bg-blue-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                                      >
+                                        <EnvelopeIcon className="-ml-0.5 mr-2 h-4 w-4" />
+                                        {action.parameters?.emailTemplate ? "Edit Email Template" : "Select Email Template"}
+                                      </button>
+                                      {action.parameters?.emailTemplate && (
+                                        <button
+                                          onClick={() => {
+                                            setCurrentActionId(action.id);
+                                            setEmailPreviewOpen(true);
+                                          }}
+                                          className="px-3 py-2 border border-gray-300 dark:border-gray-600 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                                          title="Preview email"
+                                        >
+                                          <EyeIcon className="h-4 w-4" />
+                                        </button>
+                                      )}
+                                    </div>
+                                    
+                                    {action.parameters?.emailTemplate && (
+                                      <div className="bg-gray-50 dark:bg-gray-700 p-3 rounded-lg">
+                                        {(() => {
+                                          const template = getTemplateById(action.parameters.emailTemplate);
+                                          return template ? (
+                                            <div>
+                                              <div className="flex items-center justify-between mb-2">
+                                                <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                                                  {template.name}
+                                                </span>
+                                                <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
+                                                  {template.category}
+                                                </span>
+                                              </div>
+                                              <p className="text-xs text-gray-600 dark:text-gray-400 mb-2">
+                                                {template.description}
+                                              </p>
+                                              <div className="text-xs text-gray-500 dark:text-gray-400">
+                                                <strong>Subject:</strong> {template.subject}
+                                              </div>
+                                              {template.variables.length > 0 && (
+                                                <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                                  <strong>Variables:</strong> {template.variables.join(", ")}
+                                                </div>
+                                              )}
+                                            </div>
+                                          ) : (
+                                            <span className="text-sm text-red-600 dark:text-red-400">Template not found</span>
+                                          );
+                                        })()}
+                                      </div>
+                                    )}
+                                    
+                                    <input
+                                      type="text"
+                                      placeholder="Delay (e.g., 5 minutes, 1 hour)..."
+                                      value={action.parameters?.delay || ""}
+                                      onChange={(e) => updateAction(action.id, {
+                                        parameters: { ...action.parameters, delay: e.target.value }
+                                      })}
+                                      className="block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-sm"
+                                    />
+                                  </div>
                                 </>
                               )}
                               {action.type === "create_task" && (
@@ -579,6 +689,32 @@ export default function ModuleEdit() {
           </div>
         </div>
       </div>
+
+      {/* Email Editor Modal */}
+      <EmailEditor
+        isOpen={emailEditorOpen}
+        selectedTemplate={getCurrentEmailTemplate()}
+        variables={getCurrentEmailVariables()}
+        onTemplateSelect={handleEmailTemplateSelect}
+        onVariablesChange={handleEmailVariablesChange}
+        onClose={() => {
+          setEmailEditorOpen(false);
+          setCurrentActionId(null);
+        }}
+        isDarkMode={false} // You can integrate with your dark mode context here
+      />
+
+      {/* Email Preview Modal */}
+      <EmailPreview
+        isOpen={emailPreviewOpen}
+        templateId={getCurrentEmailTemplate()}
+        variables={getCurrentEmailVariables()}
+        onClose={() => {
+          setEmailPreviewOpen(false);
+          setCurrentActionId(null);
+        }}
+        isDarkMode={false} // You can integrate with your dark mode context here
+      />
     </Layout>
   );
 }
