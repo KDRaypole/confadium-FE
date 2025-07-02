@@ -1,9 +1,9 @@
 import type { MetaFunction } from "@remix-run/node";
-import { Link, useParams } from "@remix-run/react";
-import { useState, useEffect } from "react";
+import { Link, useParams, useNavigate } from "@remix-run/react";
+import { useState } from "react";
 import Layout from "~/components/layout/Layout";
 import HTMLEditor from "~/components/email/HTMLEditor";
-import { getTemplateById, replaceVariables } from "~/components/email/EmailTemplates";
+import { replaceVariables } from "~/components/email/EmailTemplates";
 import { 
   ArrowLeftIcon,
   EyeIcon,
@@ -12,37 +12,82 @@ import {
   XMarkIcon,
   PlusIcon,
   TrashIcon,
-  TagIcon
+  CodeBracketIcon
 } from "@heroicons/react/24/outline";
 
 export const meta: MetaFunction = () => {
   return [
-    { title: "Edit Email Template - CRM Dashboard" },
-    { name: "description", content: "Edit and customize email template" },
+    { title: "Create Email Template - CRM Dashboard" },
+    { name: "description", content: "Create a new email template" },
   ];
 };
 
-export default function EditEmailTemplate() {
+interface NewTemplate {
+  name: string;
+  category: "welcome" | "follow_up" | "nurturing" | "promotion" | "notification" | "reminder";
+  subject: string;
+  htmlContent: string;
+  textContent: string;
+  variables: string[];
+  description: string;
+  previewText: string;
+}
+
+export default function CreateEmailTemplate() {
   const params = useParams();
-  const { orgId, templateId } = params;
+  const navigate = useNavigate();
+  const { orgId } = params;
   
-  const originalTemplate = getTemplateById(templateId!);
-  
-  const [templateData, setTemplateData] = useState(originalTemplate || {
-    id: "",
+  const [templateData, setTemplateData] = useState<NewTemplate>({
     name: "",
     category: "welcome",
     subject: "",
-    htmlContent: "",
-    textContent: "",
-    variables: [],
+    htmlContent: `<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+  <h1 style="color: #333; text-align: center;">Welcome!</h1>
+  <p style="color: #666; line-height: 1.6;">
+    Hi {{contact_name}},
+  </p>
+  <p style="color: #666; line-height: 1.6;">
+    Welcome to {{company_name}}! We're excited to have you on board.
+  </p>
+  <div style="text-align: center; margin: 30px 0;">
+    <a href="{{action_link}}" style="background: #007bff; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px;">Get Started</a>
+  </div>
+  <p style="color: #666; font-size: 14px;">
+    Best regards,<br>
+    {{sender_name}}
+  </p>
+</div>`,
+    textContent: `Hi {{contact_name}},
+
+Welcome to {{company_name}}! We're excited to have you on board.
+
+Get started: {{action_link}}
+
+Best regards,
+{{sender_name}}`,
+    variables: ["contact_name", "company_name", "action_link", "sender_name"],
     description: "",
     previewText: ""
   });
 
-  const [sampleVariables, setSampleVariables] = useState<Record<string, string>>({});
+  const [sampleVariables, setSampleVariables] = useState<Record<string, string>>({
+    contact_name: "John Smith",
+    company_name: "Acme Corporation",
+    action_link: "https://example.com/get-started",
+    sender_name: "Sarah Johnson"
+  });
+
   const [previewMode, setPreviewMode] = useState<"html" | "text">("html");
   const [showPreview, setShowPreview] = useState(true);
+  const [htmlEditorMode, setHtmlEditorMode] = useState<"visual" | "code">("visual");
+
+  const handleVariableChange = (variable: string, value: string) => {
+    setSampleVariables(prev => ({
+      ...prev,
+      [variable]: value
+    }));
+  };
 
   const extractVariablesFromContent = (content: string) => {
     const regex = /\{\{([^}]+)\}\}/g;
@@ -72,55 +117,6 @@ export default function EditEmailTemplate() {
       }
     });
     setSampleVariables(newSampleVars);
-  };
-
-  // Initialize sample variables when template loads
-  useEffect(() => {
-    if (templateData.variables) {
-      const initialVars: Record<string, string> = {};
-      templateData.variables.forEach((variable) => {
-        // Provide default sample values
-        switch (variable) {
-          case "contact_name":
-            initialVars[variable] = "John Smith";
-            break;
-          case "company_name":
-            initialVars[variable] = "Acme Corporation";
-            break;
-          case "sender_name":
-            initialVars[variable] = "Sarah Johnson";
-            break;
-          case "phone_number":
-            initialVars[variable] = "(555) 123-4567";
-            break;
-          case "email":
-            initialVars[variable] = "john.smith@example.com";
-            break;
-          case "lead_score":
-            initialVars[variable] = "85";
-            break;
-          case "estimated_value":
-            initialVars[variable] = "$50,000";
-            break;
-          case "discount_percent":
-            initialVars[variable] = "20";
-            break;
-          case "service_name":
-            initialVars[variable] = "Premium Package";
-            break;
-          default:
-            initialVars[variable] = `Sample ${variable.replace(/_/g, " ")}`;
-        }
-      });
-      setSampleVariables(initialVars);
-    }
-  }, [templateData.variables]);
-
-  const handleVariableChange = (variable: string, value: string) => {
-    setSampleVariables(prev => ({
-      ...prev,
-      [variable]: value
-    }));
   };
 
   const addVariable = () => {
@@ -157,9 +153,20 @@ export default function EditEmailTemplate() {
   };
 
   const handleSave = () => {
+    if (!templateData.name.trim()) {
+      alert("Please enter a template name");
+      return;
+    }
+    
+    // Generate a unique ID for the new template
+    const newId = `custom_${Date.now()}`;
+    
     // Here you would typically save to your backend
-    console.log("Saving template:", templateData);
-    alert("Template saved successfully!");
+    console.log("Creating new template:", { ...templateData, id: newId });
+    alert("Template created successfully!");
+    
+    // Navigate back to templates list
+    navigate(`/organizations/${orgId}/email-templates`);
   };
 
   const getCategoryColor = (category: string) => {
@@ -181,29 +188,6 @@ export default function EditEmailTemplate() {
     }
   };
 
-  if (!originalTemplate) {
-    return (
-      <Layout>
-        <div className="py-6">
-          <div className="w-full px-4 sm:px-6 lg:px-8">
-            <div className="text-center py-12">
-              <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Template Not Found</h1>
-              <p className="mt-2 text-gray-600 dark:text-gray-400">
-                The email template you're looking for doesn't exist.
-              </p>
-              <Link
-                to={`/organizations/${orgId}/email-templates`}
-                className="mt-4 inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700"
-              >
-                Back to Templates
-              </Link>
-            </div>
-          </div>
-        </div>
-      </Layout>
-    );
-  }
-
   return (
     <Layout>
       <div className="py-6">
@@ -215,7 +199,7 @@ export default function EditEmailTemplate() {
                 Email Templates
               </Link>
               <span>/</span>
-              <span>Edit Template</span>
+              <span>Create New Template</span>
             </nav>
             
             <div className="flex items-center justify-between">
@@ -229,7 +213,7 @@ export default function EditEmailTemplate() {
                 </Link>
                 <div>
                   <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-                    Edit: {templateData.name}
+                    Create Email Template
                   </h1>
                   <div className="flex items-center space-x-2 mt-1">
                     <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getCategoryColor(templateData.category)}`}>
@@ -255,7 +239,7 @@ export default function EditEmailTemplate() {
                   className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
                 >
                   <CheckIcon className="-ml-1 mr-2 h-4 w-4" />
-                  Save Changes
+                  Create Template
                 </button>
               </div>
             </div>
@@ -272,13 +256,14 @@ export default function EditEmailTemplate() {
                 <div className="p-6 space-y-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                      Template Name
+                      Template Name *
                     </label>
                     <input
                       type="text"
                       value={templateData.name}
                       onChange={(e) => setTemplateData(prev => ({ ...prev, name: e.target.value }))}
                       className="block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                      placeholder="Enter template name"
                     />
                   </div>
                   <div>
@@ -290,6 +275,7 @@ export default function EditEmailTemplate() {
                       value={templateData.description}
                       onChange={(e) => setTemplateData(prev => ({ ...prev, description: e.target.value }))}
                       className="block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                      placeholder="Describe what this template is used for"
                     />
                   </div>
                   <div>
@@ -356,7 +342,7 @@ export default function EditEmailTemplate() {
                 <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
                   <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">HTML Content</h3>
                   <p className="text-sm text-gray-600 dark:text-gray-400">
-                    Use variable_name syntax for dynamic content. Variables will be automatically detected.
+                    "Use variable_name syntax for dynamic content. Variables will be automatically detected."
                   </p>
                 </div>
                 <div className="p-6">
@@ -421,7 +407,7 @@ export default function EditEmailTemplate() {
                 <div className="p-6">
                   {templateData.variables.length === 0 ? (
                     <p className="text-gray-500 dark:text-gray-400 text-center py-4">
-                      No variables defined
+                      No variables detected. Use variable_name syntax in your content.
                     </p>
                   ) : (
                     <div className="space-y-3">
