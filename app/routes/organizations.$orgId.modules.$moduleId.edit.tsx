@@ -37,11 +37,17 @@ interface Action {
   parameters: Record<string, any>;
 }
 
+interface TriggerConfig {
+  entityType: string;
+  action: string;
+  attributeFilter?: string; // For update triggers, optionally filter by specific attribute
+}
+
 interface Configuration {
   id?: string;
   name: string;
   description: string;
-  trigger: string;
+  trigger: TriggerConfig;
   conditions: Condition[];
   actions: Action[];
   status: "active" | "inactive" | "draft";
@@ -87,23 +93,112 @@ const operators = [
   { value: "newer_than", label: "newer than", types: ["date"] }
 ];
 
-const triggers = [
-  "New Contact Created",
-  "Contact Updated", 
-  "Contact Status Changed",
-  "New Deal Created",
-  "Deal Stage Changed",
-  "Deal Value Updated",
-  "Activity Completed",
-  "Email Opened",
-  "Email Clicked",
-  "Form Submitted",
-  "Page Visited",
-  "Score Threshold Reached",
-  "No Response for X Days",
-  "Meeting Scheduled",
-  "Call Completed"
+// Entity types and their available actions
+const entityTypes = [
+  {
+    value: "contact",
+    label: "Contact",
+    actions: ["create", "update", "delete"],
+    attributes: [
+      { value: "name", label: "Name", type: "text" },
+      { value: "email", label: "Email", type: "email" },
+      { value: "phone", label: "Phone", type: "text" },
+      { value: "company", label: "Company", type: "text" },
+      { value: "status", label: "Status", type: "select", options: ["hot", "warm", "cold"] },
+      { value: "source", label: "Lead Source", type: "select", options: ["Website", "Email", "Phone", "Social Media", "Referral"] },
+      { value: "score", label: "Lead Score", type: "number" },
+      { value: "value", label: "Estimated Value", type: "number" },
+      { value: "territory", label: "Territory", type: "text" },
+      { value: "lastContact", label: "Last Contact Date", type: "date" },
+      { value: "tags", label: "Tags", type: "text" }
+    ]
+  },
+  {
+    value: "deal",
+    label: "Deal/Opportunity",
+    actions: ["create", "update", "delete"],
+    attributes: [
+      { value: "name", label: "Deal Name", type: "text" },
+      { value: "stage", label: "Stage", type: "select", options: ["prospect", "qualified", "proposal", "negotiation", "closed-won", "closed-lost"] },
+      { value: "value", label: "Deal Value", type: "number" },
+      { value: "probability", label: "Probability", type: "number" },
+      { value: "closeDate", label: "Close Date", type: "date" },
+      { value: "assignedTo", label: "Assigned To", type: "text" },
+      { value: "contactId", label: "Primary Contact", type: "text" },
+      { value: "description", label: "Description", type: "text" },
+      { value: "tags", label: "Tags", type: "text" }
+    ]
+  },
+  {
+    value: "activity",
+    label: "Activity",
+    actions: ["create", "update", "delete"],
+    attributes: [
+      { value: "type", label: "Activity Type", type: "select", options: ["call", "email", "meeting", "task", "note"] },
+      { value: "status", label: "Status", type: "select", options: ["completed", "scheduled", "overdue", "cancelled"] },
+      { value: "subject", label: "Subject", type: "text" },
+      { value: "description", label: "Description", type: "text" },
+      { value: "dueDate", label: "Due Date", type: "date" },
+      { value: "priority", label: "Priority", type: "select", options: ["low", "medium", "high", "urgent"] },
+      { value: "assignedTo", label: "Assigned To", type: "text" },
+      { value: "contactId", label: "Related Contact", type: "text" },
+      { value: "dealId", label: "Related Deal", type: "text" }
+    ]
+  },
+  {
+    value: "email",
+    label: "Email",
+    actions: ["sent", "opened", "clicked", "bounced", "replied"],
+    attributes: [
+      { value: "subject", label: "Subject", type: "text" },
+      { value: "templateId", label: "Template", type: "text" },
+      { value: "recipientEmail", label: "Recipient Email", type: "email" },
+      { value: "openCount", label: "Open Count", type: "number" },
+      { value: "clickCount", label: "Click Count", type: "number" },
+      { value: "sentDate", label: "Sent Date", type: "date" },
+      { value: "campaignId", label: "Campaign ID", type: "text" }
+    ]
+  },
+  {
+    value: "form",
+    label: "Form",
+    actions: ["submitted"],
+    attributes: [
+      { value: "formId", label: "Form ID", type: "text" },
+      { value: "formName", label: "Form Name", type: "text" },
+      { value: "submitterEmail", label: "Submitter Email", type: "email" },
+      { value: "submissionDate", label: "Submission Date", type: "date" },
+      { value: "source", label: "Source Page", type: "text" }
+    ]
+  },
+  {
+    value: "call",
+    label: "Call",
+    actions: ["created", "completed", "missed"],
+    attributes: [
+      { value: "duration", label: "Duration (minutes)", type: "number" },
+      { value: "outcome", label: "Outcome", type: "select", options: ["successful", "busy", "no-answer", "voicemail"] },
+      { value: "notes", label: "Call Notes", type: "text" },
+      { value: "scheduledDate", label: "Scheduled Date", type: "date" },
+      { value: "contactId", label: "Contact ID", type: "text" },
+      { value: "assignedTo", label: "Assigned To", type: "text" }
+    ]
+  }
 ];
+
+const triggerActions = {
+  create: "Created",
+  update: "Updated",
+  delete: "Deleted",
+  sent: "Sent",
+  opened: "Opened",
+  clicked: "Clicked",
+  bounced: "Bounced",
+  replied: "Replied to",
+  submitted: "Submitted",
+  completed: "Completed",
+  missed: "Missed"
+};
 
 const actionTypes = [
   { value: "assign_lead", label: "Assign Lead", targets: ["Sales Rep", "Sales Team", "Territory Owner"] },
@@ -129,7 +224,11 @@ export default function ModuleEdit() {
   const [configuration, setConfiguration] = useState<Configuration>({
     name: "",
     description: "",
-    trigger: "",
+    trigger: {
+      entityType: "",
+      action: "",
+      attributeFilter: undefined
+    },
     conditions: [],
     actions: [],
     status: "draft"
@@ -269,6 +368,36 @@ export default function ModuleEdit() {
     return action?.parameters?.emailVariables || {};
   };
 
+  const getEntityType = (entityValue: string) => {
+    return entityTypes.find(entity => entity.value === entityValue);
+  };
+
+  const getAvailableActions = (entityValue: string) => {
+    const entity = getEntityType(entityValue);
+    return entity ? entity.actions : [];
+  };
+
+  const getEntityAttributes = (entityValue: string) => {
+    const entity = getEntityType(entityValue);
+    return entity ? entity.attributes : [];
+  };
+
+  const formatTriggerDisplay = (trigger: TriggerConfig) => {
+    if (!trigger.entityType || !trigger.action) return "No trigger selected";
+    
+    const entity = getEntityType(trigger.entityType);
+    const actionLabel = triggerActions[trigger.action as keyof typeof triggerActions];
+    
+    let display = `${entity?.label || trigger.entityType} ${actionLabel}`;
+    
+    if (trigger.attributeFilter && trigger.action === "update") {
+      const attribute = entity?.attributes.find(attr => attr.value === trigger.attributeFilter);
+      display += ` (${attribute?.label || trigger.attributeFilter})`;
+    }
+    
+    return display;
+  };
+
   return (
     <Layout>
       <div className="py-6">
@@ -365,22 +494,120 @@ export default function ModuleEdit() {
                 <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">Trigger</h3>
                 <p className="text-sm text-gray-600 dark:text-gray-400">Choose what event will start this automation</p>
               </div>
-              <div className="p-6">
-                <div className="relative">
-                  <select
-                    value={configuration.trigger}
-                    onChange={(e) => setConfiguration(prev => ({ ...prev, trigger: e.target.value }))}
-                    className="block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm appearance-none"
-                  >
-                    <option value="">Select a trigger event...</option>
-                    {triggers.map((trigger) => (
-                      <option key={trigger} value={trigger}>
-                        {trigger}
-                      </option>
-                    ))}
-                  </select>
-                  <ChevronDownIcon className="absolute right-3 top-3 h-4 w-4 text-gray-400 pointer-events-none" />
+              <div className="p-6 space-y-4">
+                {/* Entity Type Selection */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Entity Type
+                  </label>
+                  <div className="relative">
+                    <select
+                      value={configuration.trigger.entityType}
+                      onChange={(e) => setConfiguration(prev => ({ 
+                        ...prev, 
+                        trigger: { 
+                          entityType: e.target.value, 
+                          action: "", 
+                          attributeFilter: undefined 
+                        } 
+                      }))}
+                      className="block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm appearance-none"
+                    >
+                      <option value="">Select entity type...</option>
+                      {entityTypes.map((entity) => (
+                        <option key={entity.value} value={entity.value}>
+                          {entity.label}
+                        </option>
+                      ))}
+                    </select>
+                    <ChevronDownIcon className="absolute right-3 top-3 h-4 w-4 text-gray-400 pointer-events-none" />
+                  </div>
                 </div>
+
+                {/* Action Selection */}
+                {configuration.trigger.entityType && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      Action
+                    </label>
+                    <div className="relative">
+                      <select
+                        value={configuration.trigger.action}
+                        onChange={(e) => setConfiguration(prev => ({ 
+                          ...prev, 
+                          trigger: { 
+                            ...prev.trigger, 
+                            action: e.target.value,
+                            attributeFilter: e.target.value === "update" ? prev.trigger.attributeFilter : undefined
+                          } 
+                        }))}
+                        className="block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm appearance-none"
+                      >
+                        <option value="">Select action...</option>
+                        {getAvailableActions(configuration.trigger.entityType).map((action) => (
+                          <option key={action} value={action}>
+                            {triggerActions[action as keyof typeof triggerActions]}
+                          </option>
+                        ))}
+                      </select>
+                      <ChevronDownIcon className="absolute right-3 top-3 h-4 w-4 text-gray-400 pointer-events-none" />
+                    </div>
+                  </div>
+                )}
+
+                {/* Attribute Filter for Update Actions */}
+                {configuration.trigger.entityType && configuration.trigger.action === "update" && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      Specific Attribute (Optional)
+                    </label>
+                    <div className="relative">
+                      <select
+                        value={configuration.trigger.attributeFilter || ""}
+                        onChange={(e) => setConfiguration(prev => ({ 
+                          ...prev, 
+                          trigger: { 
+                            ...prev.trigger, 
+                            attributeFilter: e.target.value || undefined
+                          } 
+                        }))}
+                        className="block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm appearance-none"
+                      >
+                        <option value="">Any attribute (trigger on any update)</option>
+                        {getEntityAttributes(configuration.trigger.entityType).map((attribute) => (
+                          <option key={attribute.value} value={attribute.value}>
+                            {attribute.label}
+                          </option>
+                        ))}
+                      </select>
+                      <ChevronDownIcon className="absolute right-3 top-3 h-4 w-4 text-gray-400 pointer-events-none" />
+                    </div>
+                    <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
+                      Leave empty to trigger on any update, or select a specific attribute to only trigger when that attribute changes
+                    </p>
+                  </div>
+                )}
+
+                {/* Trigger Preview */}
+                {configuration.trigger.entityType && configuration.trigger.action && (
+                  <div className="mt-4 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+                    <div className="flex items-center">
+                      <div className="flex-shrink-0">
+                        <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center">
+                          <span className="text-white text-sm font-medium">T</span>
+                        </div>
+                      </div>
+                      <div className="ml-3">
+                        <h4 className="text-sm font-medium text-blue-900 dark:text-blue-100">
+                          Trigger Preview
+                        </h4>
+                        <p className="text-sm text-blue-700 dark:text-blue-300">
+                          {formatTriggerDisplay(configuration.trigger)}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
 
