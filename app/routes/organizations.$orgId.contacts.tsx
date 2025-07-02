@@ -1,4 +1,5 @@
 import type { MetaFunction } from "@remix-run/node";
+import { Link, useParams, Outlet, useLocation } from "@remix-run/react";
 import { useState } from "react";
 import Layout from "~/components/layout/Layout";
 import ContactModal from "~/components/contacts/ContactModal";
@@ -100,6 +101,8 @@ const mockContacts: Contact[] = [
 ];
 
 export default function Contacts() {
+  const { orgId } = useParams();
+  const location = useLocation();
   const [contacts, setContacts] = useState<Contact[]>(mockContacts);
   const [selectedContact, setSelectedContact] = useState<Contact | null>(null);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
@@ -145,8 +148,13 @@ export default function Contacts() {
     }
   };
 
+  // Check if we're on a nested route (contact details page)
+  const isOnContactDetailsPage = location.pathname.match(/\/contacts\/[^\/]+$/);
+
   return (
     <Layout>
+      <Outlet />
+      {!isOnContactDetailsPage && (
       <div className="py-6">
         <div className="w-full px-6 lg:px-8">
           {/* Page Header */}
@@ -249,9 +257,12 @@ export default function Contacts() {
                     <tr key={contact.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div>
-                          <div className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                          <Link 
+                            to={`/organizations/${orgId}/contacts/${contact.id}`}
+                            className="text-sm font-medium text-gray-900 dark:text-gray-100 hover:text-blue-600 dark:hover:text-blue-400"
+                          >
                             {contact.name}
-                          </div>
+                          </Link>
                           <div className="text-sm text-gray-500 dark:text-gray-400">
                             {contact.email}
                           </div>
@@ -280,12 +291,12 @@ export default function Contacts() {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                         <div className="flex items-center space-x-2">
-                          <button 
-                            onClick={() => handleViewContact(contact)}
+                          <Link 
+                            to={`/organizations/${orgId}/contacts/${contact.id}`}
                             className="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300 text-sm font-medium"
                           >
                             View
-                          </button>
+                          </Link>
                           <span className="text-gray-300 dark:text-gray-600">|</span>
                           <button 
                             onClick={() => handleEditContact(contact)}
@@ -303,6 +314,7 @@ export default function Contacts() {
           </div>
         </div>
       </div>
+      )}
       
       <ContactModal 
         contact={selectedContact}
