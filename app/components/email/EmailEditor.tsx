@@ -5,9 +5,11 @@ import {
   DocumentTextIcon,
   ChevronDownIcon,
   XMarkIcon,
-  ClipboardDocumentIcon
+  ClipboardDocumentIcon,
+  PlusIcon
 } from "@heroicons/react/24/outline";
-import { emailTemplates, getTemplateById, replaceVariables, EmailTemplate } from "./EmailTemplates";
+import { replaceVariables, type EmailTemplate } from "./EmailTemplates";
+import { useEmailTemplates, useEmailTemplate } from "~/hooks/useEmailTemplates";
 
 interface EmailEditorProps {
   selectedTemplate?: string;
@@ -17,6 +19,7 @@ interface EmailEditorProps {
   isDarkMode?: boolean;
   isOpen: boolean;
   onClose: () => void;
+  onNewTemplate?: () => void;
 }
 
 export default function EmailEditor({
@@ -26,13 +29,16 @@ export default function EmailEditor({
   onVariablesChange,
   isDarkMode = false,
   isOpen,
-  onClose
+  onClose,
+  onNewTemplate
 }: EmailEditorProps) {
   const [showPreview, setShowPreview] = useState(false);
   const [previewMode, setPreviewMode] = useState<"html" | "text">("html");
   const [currentVariables, setCurrentVariables] = useState<Record<string, string>>(variables);
   
-  const template = selectedTemplate ? getTemplateById(selectedTemplate) : null;
+  // Use React Query hooks
+  const { templates, loading: templatesLoading, error: templatesError } = useEmailTemplates();
+  const { template, loading: templateLoading } = useEmailTemplate(selectedTemplate);
 
   useEffect(() => {
     setCurrentVariables(variables);
@@ -77,39 +83,71 @@ export default function EmailEditor({
           <div className="w-1/2 border-r border-gray-200 dark:border-gray-700 overflow-y-auto">
             {/* Template Selection */}
             <div className="p-6 border-b border-gray-200 dark:border-gray-700">
-              <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-4">Select Template</h3>
-              <div className="relative">
-                <select
-                  value={selectedTemplate || ""}
-                  onChange={(e) => {
-                    onTemplateSelect(e.target.value);
-                    setShowPreview(false);
-                  }}
-                  className="block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm appearance-none"
-                >
-                  <option value="">Choose an email template...</option>
-                  {emailTemplates.map((template) => (
-                    <option key={template.id} value={template.id}>
-                      {template.name} ({template.category})
-                    </option>
-                  ))}
-                </select>
-                <ChevronDownIcon className="absolute right-3 top-3 h-4 w-4 text-gray-400 pointer-events-none" />
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">Select Template</h3>
+                {onNewTemplate && (
+                  <button
+                    onClick={onNewTemplate}
+                    className="inline-flex items-center px-3 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded-md text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700"
+                  >
+                    <PlusIcon className="h-4 w-4 mr-1" />
+                    New Template
+                  </button>
+                )}
               </div>
               
-              {template && (
+              {templatesLoading ? (
+                <div className="flex items-center justify-center py-4">
+                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
+                  <span className="ml-2 text-sm text-gray-500 dark:text-gray-400">Loading templates...</span>
+                </div>
+              ) : templatesError ? (
+                <div className="p-3 bg-red-50 dark:bg-red-900 border border-red-200 dark:border-red-700 rounded-md">
+                  <p className="text-sm text-red-700 dark:text-red-200">Error loading templates: {templatesError}</p>
+                </div>
+              ) : (
+                <div className="relative">
+                  <select
+                    value={selectedTemplate || ""}
+                    onChange={(e) => {
+                      onTemplateSelect(e.target.value);
+                      setShowPreview(false);
+                    }}
+                    className="block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm appearance-none"
+                  >
+                    <option value="">Choose an email template...</option>
+                    {templates.map((template) => (
+                      <option key={template.id} value={template.id}>
+                        {template.name} ({template.category})
+                      </option>
+                    ))}
+                  </select>
+                  <ChevronDownIcon className="absolute right-3 top-3 h-4 w-4 text-gray-400 pointer-events-none" />
+                </div>
+              )}
+              
+              {selectedTemplate && (
                 <div className="mt-4 p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <h4 className="font-medium text-gray-900 dark:text-gray-100">{template.name}</h4>
-                      <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">{template.description}</p>
-                      <div className="mt-2">
-                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
-                          {template.category}
-                        </span>
+                  {templateLoading ? (
+                    <div className="flex items-center justify-center py-4">
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+                      <span className="ml-2 text-sm text-gray-500 dark:text-gray-400">Loading template...</span>
+                    </div>
+                  ) : template ? (
+                    <div className="flex items-start justify-between">
+                      <div>
+                        <h4 className="font-medium text-gray-900 dark:text-gray-100">{template.name}</h4>
+                        <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">{template.description}</p>
+                        <div className="mt-2">
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
+                            {template.category}
+                          </span>
+                        </div>
                       </div>
                     </div>
-                  </div>
+                  ) : (
+                    <p className="text-sm text-red-600 dark:text-red-400">Template not found</p>
+                  )}
                 </div>
               )}
             </div>

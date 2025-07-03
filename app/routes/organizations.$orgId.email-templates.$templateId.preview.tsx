@@ -2,7 +2,8 @@ import type { MetaFunction } from "@remix-run/node";
 import { Link, useParams } from "@remix-run/react";
 import { useState, useEffect } from "react";
 import Layout from "~/components/layout/Layout";
-import { getTemplateById, replaceVariables } from "~/components/email/EmailTemplates";
+import { replaceVariables } from "~/components/email/EmailTemplates";
+import { useEmailTemplate } from "~/hooks/useEmailTemplates";
 import { 
   ArrowLeftIcon,
   ClipboardDocumentIcon,
@@ -20,7 +21,8 @@ export default function PreviewEmailTemplate() {
   const params = useParams();
   const { orgId, templateId } = params;
   
-  const template = getTemplateById(templateId!);
+  // React Query hook
+  const { template, loading, error } = useEmailTemplate(templateId);
   const [previewMode, setPreviewMode] = useState<"html" | "text">("html");
   const [sampleVariables, setSampleVariables] = useState<Record<string, string>>({});
 
@@ -117,6 +119,45 @@ export default function PreviewEmailTemplate() {
     }
   };
 
+  // Loading state
+  if (loading) {
+    return (
+      <Layout>
+        <div className="py-6">
+          <div className="w-full px-4 sm:px-6 lg:px-8">
+            <div className="text-center py-12">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+              <p className="mt-2 text-gray-600 dark:text-gray-400">Loading template...</p>
+            </div>
+          </div>
+        </div>
+      </Layout>
+    );
+  }
+
+  // Error state
+  if (error) {
+    return (
+      <Layout>
+        <div className="py-6">
+          <div className="w-full px-4 sm:px-6 lg:px-8">
+            <div className="text-center py-12">
+              <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Error Loading Template</h1>
+              <p className="mt-2 text-gray-600 dark:text-gray-400">{error}</p>
+              <Link
+                to={`/organizations/${orgId}/email-templates`}
+                className="mt-4 inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700"
+              >
+                Back to Templates
+              </Link>
+            </div>
+          </div>
+        </div>
+      </Layout>
+    );
+  }
+
+  // Template not found
   if (!template) {
     return (
       <Layout>

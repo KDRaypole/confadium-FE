@@ -1,9 +1,11 @@
 import type { MetaFunction } from "@remix-run/node";
-import { Link, useParams } from "@remix-run/react";
+import { Link, useParams, useNavigate } from "@remix-run/react";
 import { useState, useEffect } from "react";
 import Layout from "~/components/layout/Layout";
 import HTMLEditor from "~/components/email/HTMLEditor";
-import { getTemplateById, replaceVariables } from "~/components/email/EmailTemplates";
+import { replaceVariables } from "~/components/email/EmailTemplates";
+import { useEmailTemplate } from "~/hooks/useEmailTemplates";
+import type { EmailTemplateUpdateData } from "~/lib/api/emailTemplates";
 import { 
   ArrowLeftIcon,
   EyeIcon,
@@ -24,12 +26,13 @@ export const meta: MetaFunction = () => {
 
 export default function EditEmailTemplate() {
   const params = useParams();
+  const navigate = useNavigate();
   const { orgId, templateId } = params;
   
-  const originalTemplate = getTemplateById(templateId!);
+  // React Query hooks
+  const { template, loading, error, updateTemplate, isUpdating } = useEmailTemplate(templateId);
   
-  const [templateData, setTemplateData] = useState(originalTemplate || {
-    id: "",
+  const [templateData, setTemplateData] = useState<EmailTemplateUpdateData>({
     name: "",
     category: "welcome",
     subject: "",
@@ -73,6 +76,22 @@ export default function EditEmailTemplate() {
     });
     setSampleVariables(newSampleVars);
   };
+
+  // Load template data when it becomes available
+  useEffect(() => {
+    if (template) {
+      setTemplateData({
+        name: template.name,
+        category: template.category,
+        subject: template.subject,
+        htmlContent: template.htmlContent,
+        textContent: template.textContent,
+        variables: template.variables,
+        description: template.description,
+        previewText: template.previewText
+      });
+    }
+  }, [template]);
 
   // Initialize sample variables when template loads
   useEffect(() => {
@@ -156,10 +175,15 @@ export default function EditEmailTemplate() {
     navigator.clipboard.writeText(text);
   };
 
-  const handleSave = () => {
-    // Here you would typically save to your backend
-    console.log("Saving template:", templateData);
-    alert("Template saved successfully!");
+  const handleSave = async () => {
+    try {
+      await updateTemplate(templateData);
+      alert("Template updated successfully!");
+      navigate(`/organizations/${orgId}/email-templates`);
+    } catch (error) {
+      console.error("Failed to update template:", error);
+      alert("Failed to update template. Please try again.");
+    }
   };
 
   const getCategoryColor = (category: string) => {
@@ -181,7 +205,46 @@ export default function EditEmailTemplate() {
     }
   };
 
-  if (!originalTemplate) {
+  // Loading state
+  if (loading) {
+    return (
+      <Layout>
+        <div className="py-6">
+          <div className="w-full px-4 sm:px-6 lg:px-8">
+            <div className="text-center py-12">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+              <p className="mt-2 text-gray-600 dark:text-gray-400">Loading template...</p>
+            </div>
+          </div>
+        </div>
+      </Layout>
+    );
+  }
+
+  // Error state
+  if (error) {
+    return (
+      <Layout>
+        <div className="py-6">
+          <div className="w-full px-4 sm:px-6 lg:px-8">
+            <div className="text-center py-12">
+              <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Error Loading Template</h1>
+              <p className="mt-2 text-gray-600 dark:text-gray-400">{error}</p>
+              <Link
+                to={`/organizations/${orgId}/email-templates`}
+                className="mt-4 inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700"
+              >
+                Back to Templates
+              </Link>
+            </div>
+          </div>
+        </div>
+      </Layout>
+    );
+  }
+
+  // Template not found
+  if (!template) {
     return (
       <Layout>
         <div className="py-6">
@@ -252,10 +315,11 @@ export default function EditEmailTemplate() {
                 </button>
                 <button
                   onClick={handleSave}
-                  className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                  disabled={isUpdating}
+                  className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
                 >
                   <CheckIcon className="-ml-1 mr-2 h-4 w-4" />
-                  Save Changes
+                  {isUpdating ? "Saving..." : "Save Changes"}
                 </button>
               </div>
             </div>

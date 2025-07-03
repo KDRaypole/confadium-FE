@@ -4,6 +4,8 @@ import { useState } from "react";
 import Layout from "~/components/layout/Layout";
 import HTMLEditor from "~/components/email/HTMLEditor";
 import { replaceVariables } from "~/components/email/EmailTemplates";
+import { useEmailTemplates } from "~/hooks/useEmailTemplates";
+import type { EmailTemplateCreateData } from "~/lib/api/emailTemplates";
 import { 
   ArrowLeftIcon,
   EyeIcon,
@@ -22,23 +24,15 @@ export const meta: MetaFunction = () => {
   ];
 };
 
-interface NewTemplate {
-  name: string;
-  category: "welcome" | "follow_up" | "nurturing" | "promotion" | "notification" | "reminder";
-  subject: string;
-  htmlContent: string;
-  textContent: string;
-  variables: string[];
-  description: string;
-  previewText: string;
-}
-
 export default function CreateEmailTemplate() {
   const params = useParams();
   const navigate = useNavigate();
   const { orgId } = params;
   
-  const [templateData, setTemplateData] = useState<NewTemplate>({
+  // React Query hook
+  const { createTemplate, isCreating } = useEmailTemplates();
+  
+  const [templateData, setTemplateData] = useState<EmailTemplateCreateData>({
     name: "",
     category: "welcome",
     subject: "",
@@ -152,21 +146,20 @@ Best regards,
     navigator.clipboard.writeText(text);
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!templateData.name.trim()) {
       alert("Please enter a template name");
       return;
     }
     
-    // Generate a unique ID for the new template
-    const newId = `custom_${Date.now()}`;
-    
-    // Here you would typically save to your backend
-    console.log("Creating new template:", { ...templateData, id: newId });
-    alert("Template created successfully!");
-    
-    // Navigate back to templates list
-    navigate(`/organizations/${orgId}/email-templates`);
+    try {
+      await createTemplate(templateData);
+      alert("Template created successfully!");
+      navigate(`/organizations/${orgId}/email-templates`);
+    } catch (error) {
+      console.error("Failed to create template:", error);
+      alert("Failed to create template. Please try again.");
+    }
   };
 
   const getCategoryColor = (category: string) => {
@@ -236,10 +229,11 @@ Best regards,
                 </button>
                 <button
                   onClick={handleSave}
-                  className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                  disabled={isCreating}
+                  className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
                 >
                   <CheckIcon className="-ml-1 mr-2 h-4 w-4" />
-                  Create Template
+                  {isCreating ? "Creating..." : "Create Template"}
                 </button>
               </div>
             </div>

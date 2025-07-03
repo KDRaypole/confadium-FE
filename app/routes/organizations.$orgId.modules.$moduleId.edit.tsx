@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import Layout from "~/components/layout/Layout";
 import EmailEditor from "~/components/email/EmailEditor";
 import EmailPreview from "~/components/email/EmailPreview";
+import EmailTemplateManager from "~/components/email/EmailTemplateManager";
 import { getTemplateById } from "~/components/email/EmailTemplates";
 import { getTagColorClass } from "~/components/tags/TagsData";
 import SimpleSelect, { type SimpleSelectOption } from "~/components/ui/SimpleSelect";
@@ -251,6 +252,7 @@ export default function ModuleEdit() {
   const [emailEditorOpen, setEmailEditorOpen] = useState(false);
   const [currentActionId, setCurrentActionId] = useState<string | null>(null);
   const [emailPreviewOpen, setEmailPreviewOpen] = useState(false);
+  const [emailTemplateManagerOpen, setEmailTemplateManagerOpen] = useState(false);
   
   // Tags state
   const { tags: availableTags } = useTags();
@@ -525,6 +527,13 @@ export default function ModuleEdit() {
               </div>
               
               <div className="flex items-center space-x-3">
+                <button
+                  onClick={() => setEmailTemplateManagerOpen(true)}
+                  className="inline-flex items-center px-3 py-2 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-md text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <EnvelopeIcon className="h-4 w-4 mr-2" />
+                  Email Templates
+                </button>
                 <button
                   onClick={() => handleSave("draft")}
                   disabled={isCreating || isUpdating}
@@ -1068,11 +1077,22 @@ export default function ModuleEdit() {
         variables={getCurrentEmailVariables()}
         onTemplateSelect={handleEmailTemplateSelect}
         onVariablesChange={handleEmailVariablesChange}
+        onNewTemplate={() => {
+          setEmailEditorOpen(false);
+          setEmailTemplateManagerOpen(true);
+        }}
         onClose={() => {
           setEmailEditorOpen(false);
           setCurrentActionId(null);
         }}
         isDarkMode={false} // You can integrate with your dark mode context here
+      />
+
+      {/* Email Template Manager Modal */}
+      <EmailTemplateManager
+        isOpen={emailTemplateManagerOpen}
+        onClose={() => setEmailTemplateManagerOpen(false)}
+        isDarkMode={false}
       />
 
       {/* Email Preview Modal */}
