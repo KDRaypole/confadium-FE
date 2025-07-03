@@ -17,12 +17,16 @@ interface EmailTemplateManagerProps {
   isOpen: boolean;
   onClose: () => void;
   isDarkMode?: boolean;
+  selectionMode?: boolean;
+  onTemplateSelect?: (templateId: string) => void;
 }
 
 export default function EmailTemplateManager({
   isOpen,
   onClose,
-  isDarkMode = false
+  isDarkMode = false,
+  selectionMode = false,
+  onTemplateSelect
 }: EmailTemplateManagerProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
@@ -89,6 +93,8 @@ export default function EmailTemplateManager({
   };
 
   const getCategoryColor = (category: EmailTemplate["category"]) => {
+    if (!category) return "bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200";
+    
     const colors = {
       welcome: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200",
       follow_up: "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200",
@@ -122,9 +128,11 @@ export default function EmailTemplateManager({
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
           <div>
-            <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">Email Template Manager</h2>
+            <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">
+              {selectionMode ? "Select Email Template" : "Email Template Manager"}
+            </h2>
             <p className="text-sm text-gray-600 dark:text-gray-400">
-              Manage and organize your email templates
+              {selectionMode ? "Choose a template for your automation workflow" : "Manage and organize your email templates"}
             </p>
           </div>
           <button
@@ -144,7 +152,7 @@ export default function EmailTemplateManager({
               </span>
               {Object.entries(stats.byCategory).map(([category, count]) => (
                 <span key={category} className="text-gray-600 dark:text-gray-300">
-                  <strong>{count}</strong> {category.replace('_', ' ')}
+                  <strong>{count}</strong> {category?.replace('_', ' ') || 'uncategorized'}
                 </span>
               ))}
             </div>
@@ -181,13 +189,15 @@ export default function EmailTemplateManager({
               </select>
             </div>
 
-            <button
-              onClick={handleNew}
-              className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-            >
-              <PlusIcon className="h-4 w-4 mr-2" />
-              New Template
-            </button>
+            {!selectionMode && (
+              <button
+                onClick={handleNew}
+                className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+              >
+                <PlusIcon className="h-4 w-4 mr-2" />
+                New Template
+              </button>
+            )}
           </div>
         </div>
 
@@ -235,7 +245,7 @@ export default function EmailTemplateManager({
 
                     <div className="flex items-center justify-between mb-3">
                       <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getCategoryColor(template.category)}`}>
-                        {template.category.replace('_', ' ')}
+                        {template.category?.replace('_', ' ') || 'uncategorized'}
                       </span>
                     </div>
 
@@ -250,35 +260,50 @@ export default function EmailTemplateManager({
                       </span>
 
                       <div className="flex items-center space-x-1">
-                        <button
-                          onClick={() => setPreviewTemplate(template)}
-                          className="p-1.5 text-gray-400 hover:text-blue-600 dark:hover:text-blue-400"
-                          title="Preview"
-                        >
-                          <EyeIcon className="h-4 w-4" />
-                        </button>
-                        <button
-                          onClick={() => handleEdit(template)}
-                          className="p-1.5 text-gray-400 hover:text-blue-600 dark:hover:text-blue-400"
-                          title="Edit"
-                        >
-                          <PencilIcon className="h-4 w-4" />
-                        </button>
-                        <button
-                          onClick={() => handleDuplicate(template.id)}
-                          disabled={isDuplicating}
-                          className="p-1.5 text-gray-400 hover:text-green-600 dark:hover:text-green-400 disabled:opacity-50"
-                          title="Duplicate"
-                        >
-                          <DocumentDuplicateIcon className="h-4 w-4" />
-                        </button>
-                        <button
-                          onClick={() => setDeleteConfirm(template.id)}
-                          className="p-1.5 text-gray-400 hover:text-red-600 dark:hover:text-red-400"
-                          title="Delete"
-                        >
-                          <TrashIcon className="h-4 w-4" />
-                        </button>
+                        {selectionMode ? (
+                          <button
+                            onClick={() => {
+                              onTemplateSelect?.(template.id);
+                              onClose();
+                            }}
+                            className="px-3 py-1.5 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-md transition-colors"
+                            title="Select Template"
+                          >
+                            Select
+                          </button>
+                        ) : (
+                          <>
+                            <button
+                              onClick={() => setPreviewTemplate(template)}
+                              className="p-1.5 text-gray-400 hover:text-blue-600 dark:hover:text-blue-400"
+                              title="Preview"
+                            >
+                              <EyeIcon className="h-4 w-4" />
+                            </button>
+                            <button
+                              onClick={() => handleEdit(template)}
+                              className="p-1.5 text-gray-400 hover:text-blue-600 dark:hover:text-blue-400"
+                              title="Edit"
+                            >
+                              <PencilIcon className="h-4 w-4" />
+                            </button>
+                            <button
+                              onClick={() => handleDuplicate(template.id)}
+                              disabled={isDuplicating}
+                              className="p-1.5 text-gray-400 hover:text-green-600 dark:hover:text-green-400 disabled:opacity-50"
+                              title="Duplicate"
+                            >
+                              <DocumentDuplicateIcon className="h-4 w-4" />
+                            </button>
+                            <button
+                              onClick={() => setDeleteConfirm(template.id)}
+                              className="p-1.5 text-gray-400 hover:text-red-600 dark:hover:text-red-400"
+                              title="Delete"
+                            >
+                              <TrashIcon className="h-4 w-4" />
+                            </button>
+                          </>
+                        )}
                       </div>
                     </div>
                   </div>

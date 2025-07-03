@@ -229,7 +229,7 @@ export default function EmailTemplates() {
                       <dl>
                         <dt className="text-sm font-medium text-gray-500 dark:text-gray-400 truncate">Most Popular</dt>
                         <dd className="text-lg font-medium text-gray-900 dark:text-gray-100">
-                          {Object.entries(stats.byCategory).sort(([,a], [,b]) => b - a)[0]?.[0]?.replace('_', ' ') || 'N/A'}
+                          {Object.entries(stats.byCategory).sort(([,a], [,b]) => b - a)[0]?.[0]?.replace?.('_', ' ') || 'N/A'}
                         </dd>
                       </dl>
                     </div>
@@ -281,7 +281,7 @@ export default function EmailTemplates() {
                 <div className="flex items-center space-x-3">
                   <span className="text-2xl">{getCategoryIcon(category)}</span>
                   <h2 className="text-lg font-medium text-gray-900 dark:text-gray-100 capitalize">
-                    {category.replace('_', ' ')} Templates
+                    {category?.replace('_', ' ') || 'uncategorized'} Templates
                   </h2>
                   <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getCategoryColor(category)}`}>
                     {categoryTemplates.length} template{categoryTemplates.length !== 1 ? 's' : ''}
@@ -303,7 +303,7 @@ export default function EmailTemplates() {
                               {template.name}
                             </h3>
                             <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getCategoryColor(template.category)}`}>
-                              {template.category}
+                              {template.category?.replace('_', ' ') || 'uncategorized'}
                             </span>
                           </div>
                           <p className="text-sm text-gray-600 dark:text-gray-400 line-clamp-2 mb-3">
