@@ -5,6 +5,7 @@ import Layout from "~/components/layout/Layout";
 import EmailEditor from "~/components/email/EmailEditor";
 import EmailPreview from "~/components/email/EmailPreview";
 import { getTemplateById } from "~/components/email/EmailTemplates";
+import { getAllTags, getTagColorClass, type Tag } from "~/components/tags/TagsData";
 import { 
   ArrowLeftIcon,
   PlusIcon,
@@ -238,6 +239,9 @@ export default function ModuleEdit() {
   const [emailEditorOpen, setEmailEditorOpen] = useState(false);
   const [currentActionId, setCurrentActionId] = useState<string | null>(null);
   const [emailPreviewOpen, setEmailPreviewOpen] = useState(false);
+  
+  // Tags state
+  const [availableTags] = useState<Tag[]>(getAllTags());
 
   const addCondition = () => {
     const newCondition: Condition = {
@@ -902,6 +906,55 @@ export default function ModuleEdit() {
                                     placeholder="New value..."
                                     className="block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-sm"
                                   />
+                                </>
+                              )}
+                              {action.type === "add_tag" && (
+                                <>
+                                  <div>
+                                    <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Select Tag to Add</label>
+                                    <select
+                                      value={action.parameters?.tagId || ""}
+                                      onChange={(e) => updateAction(action.id, {
+                                        parameters: { ...action.parameters, tagId: e.target.value }
+                                      })}
+                                      className="block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-sm"
+                                    >
+                                      <option value="">Select a tag...</option>
+                                      {availableTags.map((tag) => (
+                                        <option key={tag.id} value={tag.id}>
+                                          {tag.name}
+                                        </option>
+                                      ))}
+                                    </select>
+                                    {action.parameters?.tagId && (
+                                      <div className="mt-2 flex items-center space-x-2">
+                                        <span className="text-xs text-gray-500 dark:text-gray-400">Selected tag:</span>
+                                        {(() => {
+                                          const selectedTag = availableTags.find(t => t.id === action.parameters?.tagId);
+                                          return selectedTag ? (
+                                            <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getTagColorClass(selectedTag.color)}`}>
+                                              {selectedTag.name}
+                                            </span>
+                                          ) : null;
+                                        })()}
+                                      </div>
+                                    )}
+                                  </div>
+                                  <div>
+                                    <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Entity to Add Tag To</label>
+                                    <select
+                                      value={action.parameters?.entityType || ""}
+                                      onChange={(e) => updateAction(action.id, {
+                                        parameters: { ...action.parameters, entityType: e.target.value }
+                                      })}
+                                      className="block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-sm"
+                                    >
+                                      <option value="">Select entity type...</option>
+                                      <option value="contact">Contact</option>
+                                      <option value="deal">Deal</option>
+                                      <option value="activity">Activity</option>
+                                    </select>
+                                  </div>
                                 </>
                               )}
                             </div>
