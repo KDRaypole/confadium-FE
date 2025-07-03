@@ -1,6 +1,7 @@
 import type { MetaFunction } from "@remix-run/node";
 import { Link, useParams } from "@remix-run/react";
 import Layout from "~/components/layout/Layout";
+import { useModules, type Module } from "~/hooks/useModules";
 import { 
   CogIcon, 
   BellIcon, 
@@ -21,112 +22,10 @@ export const meta: MetaFunction = () => {
   ];
 };
 
-interface Module {
-  id: string;
-  name: string;
-  description: string;
-  category: "automation" | "integration" | "notification" | "workflow";
-  status: "active" | "inactive" | "configured";
-  icon: string;
-  configurationsCount: number;
-  lastModified: string;
-  triggerTypes: string[];
-}
-
-const mockModules: Module[] = [
-  {
-    id: "1",
-    name: "Lead Automation",
-    description: "Automatically assign leads to sales reps based on territory and workload",
-    category: "automation",
-    status: "active",
-    icon: "user-plus",
-    configurationsCount: 3,
-    lastModified: "2024-01-15",
-    triggerTypes: ["New Lead Created", "Lead Score Changed", "Territory Assignment"]
-  },
-  {
-    id: "2", 
-    name: "Email Workflows",
-    description: "Send automated email sequences based on customer behavior and actions",
-    category: "workflow",
-    status: "active",
-    icon: "envelope",
-    configurationsCount: 7,
-    lastModified: "2024-01-14",
-    triggerTypes: ["Contact Created", "Deal Stage Changed", "Email Opened", "Link Clicked"]
-  },
-  {
-    id: "3",
-    name: "Call Reminders",
-    description: "Schedule automatic reminders for follow-up calls and meetings",
-    category: "notification",
-    status: "configured",
-    icon: "phone",
-    configurationsCount: 2,
-    lastModified: "2024-01-13",
-    triggerTypes: ["Call Scheduled", "Meeting Created", "Follow-up Due"]
-  },
-  {
-    id: "4",
-    name: "Deal Notifications",
-    description: "Get notified when deals move through pipeline stages or reach milestones",
-    category: "notification",
-    status: "active",
-    icon: "bell",
-    configurationsCount: 5,
-    lastModified: "2024-01-12",
-    triggerTypes: ["Deal Created", "Stage Changed", "Value Updated", "Close Date Approaching"]
-  },
-  {
-    id: "5",
-    name: "Data Sync",
-    description: "Synchronize contact and deal data with external CRM systems",
-    category: "integration",
-    status: "inactive",
-    icon: "globe",
-    configurationsCount: 1,
-    lastModified: "2024-01-10",
-    triggerTypes: ["Data Import", "Field Mapping", "Sync Schedule"]
-  },
-  {
-    id: "6",
-    name: "Report Generation",
-    description: "Automatically generate and distribute reports on schedule",
-    category: "automation",
-    status: "configured",
-    icon: "chart",
-    configurationsCount: 4,
-    lastModified: "2024-01-11",
-    triggerTypes: ["Schedule Trigger", "Data Threshold", "Monthly Report"]
-  },
-  {
-    id: "7",
-    name: "Task Assignment",
-    description: "Automatically create and assign tasks based on customer interactions",
-    category: "workflow",
-    status: "active",
-    icon: "calendar",
-    configurationsCount: 6,
-    lastModified: "2024-01-09",
-    triggerTypes: ["Email Received", "Meeting Completed", "Deal Won", "Support Ticket"]
-  },
-  {
-    id: "8",
-    name: "Security Alerts",
-    description: "Monitor and alert on security-related events and data access",
-    category: "notification",
-    status: "active",
-    icon: "shield",
-    configurationsCount: 3,
-    lastModified: "2024-01-08",
-    triggerTypes: ["Failed Login", "Data Export", "Permission Change"]
-  }
-];
-
 export default function ModulesIndex() {
   const params = useParams();
   const orgId = params.orgId;
+  const { modules, loading, error, isDeleting, deleteModule } = useModules();
 
   const getIcon = (iconType: string) => {
     switch (iconType) {
@@ -192,8 +91,45 @@ export default function ModulesIndex() {
     }
   };
 
-  const activeModules = mockModules.filter(m => m.status === "active").length;
-  const totalConfigurations = mockModules.reduce((sum, m) => sum + m.configurationsCount, 0);
+  const activeModules = modules.filter(m => m.status === "active").length;
+  const totalConfigurations = modules.reduce((sum, m) => sum + m.configurationsCount, 0);
+
+  const handleDeleteModule = async (moduleId: string) => {
+    if (!confirm('Are you sure you want to delete this module? This action will also delete all its configurations.')) {
+      return;
+    }
+    deleteModule(moduleId);
+  };
+
+  if (loading) {
+    return (
+      <Layout>
+        <div className="py-6">
+          <div className="w-full px-4 sm:px-6 lg:px-8">
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+              <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">Loading modules...</p>
+            </div>
+          </div>
+        </div>
+      </Layout>
+    );
+  }
+
+  if (error) {
+    return (
+      <Layout>
+        <div className="py-6">
+          <div className="w-full px-4 sm:px-6 lg:px-8">
+            <div className="text-center">
+              <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Error Loading Modules</h1>
+              <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">{error}</p>
+            </div>
+          </div>
+        </div>
+      </Layout>
+    );
+  }
 
   return (
     <Layout>
@@ -235,7 +171,7 @@ export default function ModulesIndex() {
                   <div className="ml-5 w-0 flex-1">
                     <dl>
                       <dt className="text-sm font-medium text-gray-500 dark:text-gray-400 truncate">Total Modules</dt>
-                      <dd className="text-lg font-medium text-gray-900 dark:text-gray-100">{mockModules.length}</dd>
+                      <dd className="text-lg font-medium text-gray-900 dark:text-gray-100">{modules.length}</dd>
                     </dl>
                   </div>
                 </div>
@@ -279,7 +215,7 @@ export default function ModulesIndex() {
 
           {/* Modules Grid */}
           <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {mockModules.map((module) => (
+            {modules.map((module) => (
               <Link
                 key={module.id}
                 to={`/organizations/${orgId}/modules/${module.id}`}

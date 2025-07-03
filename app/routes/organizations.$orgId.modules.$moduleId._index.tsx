@@ -3,6 +3,7 @@ import { Link, useParams } from "@remix-run/react";
 import { useState } from "react";
 import Layout from "~/components/layout/Layout";
 import WorkflowGraph from "~/components/modules/WorkflowGraph";
+import { useModule, useModuleConfigurations, type Configuration } from "~/hooks/useModules";
 import { 
   CogIcon, 
   BellIcon, 
@@ -29,159 +30,20 @@ export const meta: MetaFunction = () => {
   ];
 };
 
-interface Configuration {
-  id: string;
-  name: string;
-  description: string;
-  trigger: string;
-  conditions: Array<{
-    field: string;
-    operator: string;
-    value: string;
-  }>;
-  actions: Array<{
-    type: string;
-    target: string;
-    parameters: Record<string, any>;
-  }>;
-  status: "active" | "inactive" | "draft";
-  lastRun: string | null;
-  runCount: number;
-  successRate: number;
-}
-
-// Mock data - this would normally come from API
-const getModuleData = (moduleId: string) => {
-  const modules: Record<string, any> = {
-    "1": {
-      id: "1",
-      name: "Lead Automation",
-      description: "Automatically assign leads to sales reps based on territory and workload",
-      category: "automation",
-      status: "active",
-      icon: "user-plus"
-    },
-    "2": {
-      id: "2", 
-      name: "Email Workflows",
-      description: "Send automated email sequences based on customer behavior and actions",
-      category: "workflow",
-      status: "active",
-      icon: "envelope"
-    }
-  };
-  
-  return modules[moduleId] || modules["1"];
-};
-
-const mockConfigurations: Configuration[] = [
-  {
-    id: "1",
-    name: "Territory-Based Lead Assignment",
-    description: "Assign new leads to sales reps based on their geographic territory",
-    trigger: "New Lead Created",
-    conditions: [
-      { field: "Lead Source", operator: "equals", value: "Website" },
-      { field: "Territory", operator: "not empty", value: "" }
-    ],
-    actions: [
-      { 
-        type: "Assign Lead", 
-        target: "Sales Rep", 
-        parameters: { 
-          assignmentType: "territory",
-          notifyRep: true,
-          createTask: true
-        }
-      },
-      {
-        type: "Send Email",
-        target: "Lead",
-        parameters: {
-          template: "welcome_email",
-          delay: "5 minutes"
-        }
-      }
-    ],
-    status: "active",
-    lastRun: "2024-01-15T10:30:00",
-    runCount: 47,
-    successRate: 94
-  },
-  {
-    id: "2",
-    name: "High-Value Lead Priority",
-    description: "Prioritize leads with high estimated value for immediate follow-up",
-    trigger: "Lead Score Changed",
-    conditions: [
-      { field: "Lead Score", operator: "greater than", value: "80" },
-      { field: "Estimated Value", operator: "greater than", value: "50000" }
-    ],
-    actions: [
-      {
-        type: "Update Priority",
-        target: "Lead",
-        parameters: {
-          priority: "high",
-          flag: "hot_lead"
-        }
-      },
-      {
-        type: "Create Task",
-        target: "Sales Manager",
-        parameters: {
-          title: "Review High-Value Lead",
-          dueDate: "2 hours",
-          priority: "urgent"
-        }
-      },
-      {
-        type: "Send Notification",
-        target: "Sales Team",
-        parameters: {
-          channel: "slack",
-          message: "New high-value lead requires immediate attention"
-        }
-      }
-    ],
-    status: "active",
-    lastRun: "2024-01-15T14:22:00",
-    runCount: 23,
-    successRate: 100
-  },
-  {
-    id: "3",
-    name: "Lead Nurturing Sequence",
-    description: "Send automated follow-up emails to leads who haven't responded",
-    trigger: "No Response for 3 Days",
-    conditions: [
-      { field: "Last Contact", operator: "older than", value: "3 days" },
-      { field: "Status", operator: "equals", value: "contacted" }
-    ],
-    actions: [
-      {
-        type: "Send Email",
-        target: "Lead",
-        parameters: {
-          template: "follow_up_sequence",
-          sequence: "nurturing_campaign"
-        }
-      }
-    ],
-    status: "draft",
-    lastRun: null,
-    runCount: 0,
-    successRate: 0
-  }
-];
-
 export default function ModuleDetail() {
   const params = useParams();
   const { orgId, moduleId } = params;
   const { isDarkMode } = useDarkMode();
   const [workflowChanges, setWorkflowChanges] = useState<any[]>([]);
   
-  const module = getModuleData(moduleId!);
+  const { module, loading: moduleLoading, error: moduleError } = useModule(moduleId);
+  const { 
+    configurations, 
+    loading: configsLoading, 
+    error: configsError,
+    deleteConfiguration,
+    isDeleting
+  } = useModuleConfigurations(moduleId);
 
   const getIcon = (iconType: string) => {
     switch (iconType) {
@@ -220,16 +82,73 @@ export default function ModuleDetail() {
   };
 
   const getTriggerColor = (trigger: string) => {
-    if (trigger.includes("Created")) return "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200";
-    if (trigger.includes("Changed")) return "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200";
+    if (trigger.includes("create")) return "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200";
+    if (trigger.includes("update")) return "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200";
     if (trigger.includes("Response")) return "bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200";
     return "bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200";
   };
 
-  const activeConfigurations = mockConfigurations.filter(c => c.status === "active").length;
-  const totalRuns = mockConfigurations.reduce((sum, c) => sum + c.runCount, 0);
-  const avgSuccessRate = mockConfigurations.length > 0 
-    ? mockConfigurations.reduce((sum, c) => sum + c.successRate, 0) / mockConfigurations.length 
+  const handleDeleteConfiguration = async (configId: string) => {
+    if (!confirm('Are you sure you want to delete this configuration? This action cannot be undone.')) {
+      return;
+    }
+    deleteConfiguration(configId);
+  };
+
+  // Loading states
+  if (moduleLoading || configsLoading) {
+    return (
+      <Layout>
+        <div className="py-6">
+          <div className="w-full px-4 sm:px-6 lg:px-8">
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+              <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">Loading module details...</p>
+            </div>
+          </div>
+        </div>
+      </Layout>
+    );
+  }
+
+  // Error states
+  if (moduleError || configsError) {
+    return (
+      <Layout>
+        <div className="py-6">
+          <div className="w-full px-4 sm:px-6 lg:px-8">
+            <div className="text-center">
+              <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Error Loading Module</h1>
+              <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">{moduleError || configsError}</p>
+            </div>
+          </div>
+        </div>
+      </Layout>
+    );
+  }
+
+  // Module not found
+  if (!module) {
+    return (
+      <Layout>
+        <div className="py-6">
+          <div className="w-full px-4 sm:px-6 lg:px-8">
+            <div className="text-center">
+              <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Module Not Found</h1>
+              <Link to={`/organizations/${orgId}/modules`} className="text-blue-600 hover:text-blue-500">
+                Back to Modules
+              </Link>
+            </div>
+          </div>
+        </div>
+      </Layout>
+    );
+  }
+
+  const activeConfigurations = configurations.filter(c => c.status === "active").length;
+  const totalRuns = configurations.reduce((sum, c) => sum + (c as any).runCount || 0, 0);
+  const avgSuccessRate = configurations.length > 0 
+    ? configurations.reduce((sum, c) => sum + ((c as any).successRate || 0), 0) / configurations.length 
     : 0;
 
   return (
@@ -296,7 +215,7 @@ export default function ModuleDetail() {
                   <div className="ml-5 w-0 flex-1">
                     <dl>
                       <dt className="text-sm font-medium text-gray-500 dark:text-gray-400 truncate">Total Configurations</dt>
-                      <dd className="text-lg font-medium text-gray-900 dark:text-gray-100">{mockConfigurations.length}</dd>
+                      <dd className="text-lg font-medium text-gray-900 dark:text-gray-100">{configurations.length}</dd>
                     </dl>
                   </div>
                 </div>
@@ -364,7 +283,7 @@ export default function ModuleDetail() {
             </div>
             <div className="p-6">
               <WorkflowGraph 
-                configurations={mockConfigurations}
+                configurations={configurations}
                 onConfigurationChange={(changes) => {
                   setWorkflowChanges(prev => [...prev, changes]);
                   console.log("Workflow changes:", changes);
@@ -422,7 +341,7 @@ export default function ModuleDetail() {
             </div>
             
             <div className="divide-y divide-gray-200 dark:divide-gray-700">
-              {mockConfigurations.map((config) => (
+              {configurations.map((config) => (
                 <div key={config.id} className="p-6 hover:bg-gray-50 dark:hover:bg-gray-700">
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
@@ -443,8 +362,8 @@ export default function ModuleDetail() {
                       <div className="mb-3">
                         <span className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Trigger</span>
                         <div className="mt-1">
-                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getTriggerColor(config.trigger)}`}>
-                            {config.trigger}
+                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getTriggerColor(`${config.trigger.entityType} ${config.trigger.action}`)}`}>
+                            {config.trigger.entityType} {config.trigger.action}
                           </span>
                         </div>
                       </div>
@@ -482,11 +401,9 @@ export default function ModuleDetail() {
 
                       {/* Stats */}
                       <div className="flex items-center space-x-6 text-sm text-gray-500 dark:text-gray-400">
-                        <span>Runs: {config.runCount}</span>
-                        <span>Success Rate: {config.successRate}%</span>
-                        {config.lastRun && (
-                          <span>Last Run: {new Date(config.lastRun).toLocaleString()}</span>
-                        )}
+                        <span>Status: {config.status}</span>
+                        <span>Created: {new Date(config.createdDate).toLocaleDateString()}</span>
+                        <span>Updated: {new Date(config.updatedDate).toLocaleDateString()}</span>
                       </div>
                     </div>
 
@@ -510,7 +427,11 @@ export default function ModuleDetail() {
                           <PlayIcon className="h-4 w-4" />
                         </button>
                       )}
-                      <button className="p-2 text-gray-400 hover:text-red-600 dark:hover:text-red-400">
+                      <button 
+                        onClick={() => handleDeleteConfiguration(config.id!)}
+                        disabled={isDeleting}
+                        className="p-2 text-gray-400 hover:text-red-600 dark:hover:text-red-400 disabled:opacity-50"
+                      >
                         <TrashIcon className="h-4 w-4" />
                       </button>
                     </div>

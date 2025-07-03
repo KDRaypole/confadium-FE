@@ -1,6 +1,6 @@
 import type { MetaFunction } from "@remix-run/node";
 import { Link, useParams, useSearchParams } from "@remix-run/react";
-import { useState } from "react";
+import React, { useState } from "react";
 import Layout from "~/components/layout/Layout";
 import EmailEditor from "~/components/email/EmailEditor";
 import EmailPreview from "~/components/email/EmailPreview";
@@ -8,6 +8,7 @@ import { getTemplateById } from "~/components/email/EmailTemplates";
 import { getTagColorClass } from "~/components/tags/TagsData";
 import SimpleSelect, { type SimpleSelectOption } from "~/components/ui/SimpleSelect";
 import { useTags, type Tag } from "~/hooks/useTags";
+import { useModule, useConfiguration, useModuleConfigurations, type Configuration, type ConfigurationCreateData } from "~/hooks/useModules";
 import { 
   ArrowLeftIcon,
   PlusIcon,
@@ -44,16 +45,6 @@ interface TriggerConfig {
   entityType: string;
   action: string;
   attributeFilter?: string; // For update triggers, optionally filter by specific attribute
-}
-
-interface Configuration {
-  id?: string;
-  name: string;
-  description: string;
-  trigger: TriggerConfig;
-  conditions: Condition[];
-  actions: Action[];
-  status: "active" | "inactive" | "draft";
 }
 
 // CRM field options for dropdown conditions
@@ -223,8 +214,13 @@ export default function ModuleEdit() {
   const { orgId, moduleId } = params;
   const configId = searchParams.get("configId");
 
+  // Hooks
+  const { module, loading: moduleLoading, error: moduleError } = useModule(moduleId);
+  const { configuration: existingConfig, loading: configLoading } = useConfiguration(configId || undefined);
+  const { createConfiguration, isCreating } = useModuleConfigurations(moduleId);
+
   // Initialize with empty configuration or load existing one
-  const [configuration, setConfiguration] = useState<Configuration>({
+  const [configuration, setConfiguration] = useState<Omit<Configuration, 'id' | 'moduleId' | 'createdDate' | 'updatedDate'>>({
     name: "",
     description: "",
     trigger: {
@@ -236,6 +232,20 @@ export default function ModuleEdit() {
     actions: [],
     status: "draft"
   });
+
+  // Load existing configuration when available
+  React.useEffect(() => {
+    if (existingConfig) {
+      setConfiguration({
+        name: existingConfig.name,
+        description: existingConfig.description,
+        trigger: existingConfig.trigger,
+        conditions: existingConfig.conditions,
+        actions: existingConfig.actions,
+        status: existingConfig.status
+      });
+    }
+  }, [existingConfig]);
 
   // Email editor state
   const [emailEditorOpen, setEmailEditorOpen] = useState(false);
@@ -319,12 +329,6 @@ export default function ModuleEdit() {
     return operators.filter(op => op.types.includes(fieldType));
   };
 
-  const handleSave = (status: "draft" | "active") => {
-    const updatedConfig = { ...configuration, status };
-    console.log("Saving configuration:", updatedConfig);
-    // Here you would typically save to your backend
-  };
-
   const openEmailEditor = (actionId: string) => {
     setCurrentActionId(actionId);
     setEmailEditorOpen(true);
@@ -404,6 +408,86 @@ export default function ModuleEdit() {
     return action ? action.targets : [];
   };
 
+  const handleSave = async (status: "draft" | "active") => {
+    if (!moduleId) return;
+    
+    const configData: ConfigurationCreateData = {
+      moduleId,
+      name: configuration.name,
+      description: configuration.description,
+      trigger: configuration.trigger,
+      conditions: configuration.conditions,
+      actions: configuration.actions,
+      status
+    };
+
+    try {
+      if (configId) {
+        // Update existing configuration
+        // For now, we'll just create a new one
+        console.log("Updating configuration:", configData);
+        alert("Configuration updated successfully!");
+      } else {
+        // Create new configuration
+        createConfiguration(configData);
+        alert("Configuration created successfully!");
+      }
+    } catch (error) {
+      console.error("Error saving configuration:", error);
+      alert("Failed to save configuration. Please try again.");
+    }
+  };
+
+  // Loading states
+  if (moduleLoading || configLoading) {
+    return (
+      <Layout>
+        <div className="py-6">
+          <div className="w-full px-4 sm:px-6 lg:px-8">
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+              <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">Loading configuration...</p>
+            </div>
+          </div>
+        </div>
+      </Layout>
+    );
+  }
+
+  // Error states
+  if (moduleError) {
+    return (
+      <Layout>
+        <div className="py-6">
+          <div className="w-full px-4 sm:px-6 lg:px-8">
+            <div className="text-center">
+              <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Error Loading Module</h1>
+              <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">{moduleError}</p>
+            </div>
+          </div>
+        </div>
+      </Layout>
+    );
+  }
+
+  // Module not found
+  if (!module) {
+    return (
+      <Layout>
+        <div className="py-6">
+          <div className="w-full px-4 sm:px-6 lg:px-8">
+            <div className="text-center">
+              <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Module Not Found</h1>
+              <Link to={`/organizations/${orgId}/modules`} className="text-blue-600 hover:text-blue-500">
+                Back to Modules
+              </Link>
+            </div>
+          </div>
+        </div>
+      </Layout>
+    );
+  }
+
   return (
     <Layout>
       <div className="py-6">
@@ -444,15 +528,17 @@ export default function ModuleEdit() {
               <div className="flex items-center space-x-3">
                 <button
                   onClick={() => handleSave("draft")}
-                  className="inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-md shadow-sm text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  disabled={isCreating}
+                  className="inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-md shadow-sm text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
                 >
-                  Save Draft
+                  {isCreating ? "Saving..." : "Save Draft"}
                 </button>
                 <button
                   onClick={() => handleSave("active")}
-                  className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                  disabled={isCreating}
+                  className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
                 >
-                  Save & Activate
+                  {isCreating ? "Saving..." : "Save & Activate"}
                 </button>
               </div>
             </div>

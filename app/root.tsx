@@ -6,6 +6,8 @@ import {
   ScrollRestoration,
 } from "@remix-run/react";
 import type { LinksFunction } from "@remix-run/node";
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { useState } from 'react';
 
 import "./tailwind.css";
 import { DarkModeProvider } from "~/contexts/DarkModeContext";
@@ -43,11 +45,37 @@ export function Layout({ children }: { children: React.ReactNode }) {
 }
 
 export default function App() {
+  const [queryClient] = useState(() => new QueryClient({
+    defaultOptions: {
+      queries: {
+        staleTime: 5 * 60 * 1000, // 5 minutes
+        gcTime: 10 * 60 * 1000, // 10 minutes
+        retry: (failureCount, error: any) => {
+          // Don't retry on 4xx errors except 408, 409, 429
+          if (error?.response?.status >= 400 && error?.response?.status < 500) {
+            if ([408, 409, 429].includes(error.response.status)) {
+              return failureCount < 2;
+            }
+            return false;
+          }
+          // Retry on network errors and 5xx errors
+          return failureCount < 3;
+        },
+        retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
+      },
+      mutations: {
+        retry: 1,
+      },
+    },
+  }));
+
   return (
-    <DarkModeProvider>
-      <AuthProvider>
-        <Outlet />
-      </AuthProvider>
-    </DarkModeProvider>
+    <QueryClientProvider client={queryClient}>
+      <DarkModeProvider>
+        <AuthProvider>
+          <Outlet />
+        </AuthProvider>
+      </DarkModeProvider>
+    </QueryClientProvider>
   );
 }
