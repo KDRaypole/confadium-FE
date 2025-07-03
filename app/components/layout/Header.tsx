@@ -1,10 +1,20 @@
-import { MagnifyingGlassIcon, Bars3Icon, BellIcon, Cog6ToothIcon, QuestionMarkCircleIcon } from "@heroicons/react/24/outline";
+import { MagnifyingGlassIcon, Bars3Icon, BellIcon, Cog6ToothIcon, QuestionMarkCircleIcon, ChevronDownIcon, ArrowRightOnRectangleIcon, UserIcon, CogIcon } from "@heroicons/react/24/outline";
+import { useState } from "react";
+import { useAuth } from "~/contexts/AuthContext";
 
 interface HeaderProps {
   onMobileMenuClick: () => void;
 }
 
 export default function Header({ onMobileMenuClick }: HeaderProps) {
+  const { user, logout } = useAuth();
+  const [userDropdownOpen, setUserDropdownOpen] = useState(false);
+
+  const handleSignOut = () => {
+    logout();
+    setUserDropdownOpen(false);
+  };
+
   return (
     <div className="sticky top-0 z-40 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 shadow-sm">
       {/* Global Navigation Bar */}
@@ -26,8 +36,66 @@ export default function Header({ onMobileMenuClick }: HeaderProps) {
               <button className="text-white hover:text-blue-100 p-1">
                 <Cog6ToothIcon className="h-4 w-4" />
               </button>
-              <div className="h-6 w-6 bg-blue-500 rounded-full flex items-center justify-center">
-                <span className="text-white text-xs font-medium">KR</span>
+              
+              {/* User Profile Dropdown */}
+              <div className="relative">
+                <button
+                  onClick={() => setUserDropdownOpen(!userDropdownOpen)}
+                  className="flex items-center space-x-1 text-white hover:text-blue-100 focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-blue-600 rounded-full"
+                >
+                  <div className="h-6 w-6 bg-blue-500 rounded-full flex items-center justify-center">
+                    <span className="text-white text-xs font-medium">{user?.initials || "U"}</span>
+                  </div>
+                  <ChevronDownIcon className="h-3 w-3" />
+                </button>
+
+                {userDropdownOpen && (
+                  <>
+                    {/* Backdrop */}
+                    <div 
+                      className="fixed inset-0 z-10" 
+                      onClick={() => setUserDropdownOpen(false)}
+                    />
+                    
+                    {/* Dropdown Menu */}
+                    <div className="absolute right-0 mt-2 w-56 bg-white dark:bg-gray-800 rounded-md shadow-lg border border-gray-200 dark:border-gray-700 z-20">
+                      <div className="py-1">
+                        {/* User Info */}
+                        <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700">
+                          <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{user?.name || "User"}</p>
+                          <p className="text-sm text-gray-500 dark:text-gray-400 truncate">{user?.email || "user@example.com"}</p>
+                        </div>
+                        
+                        {/* Menu Items */}
+                        <button
+                          className="flex items-center w-full px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none"
+                          onClick={() => setUserDropdownOpen(false)}
+                        >
+                          <UserIcon className="mr-3 h-4 w-4" />
+                          Profile
+                        </button>
+                        
+                        <button
+                          className="flex items-center w-full px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none"
+                          onClick={() => setUserDropdownOpen(false)}
+                        >
+                          <CogIcon className="mr-3 h-4 w-4" />
+                          Settings
+                        </button>
+                        
+                        <div className="border-t border-gray-200 dark:border-gray-700">
+                          <button
+                            onClick={handleSignOut}
+                            className="flex items-center w-full px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none"
+                          >
+                            <ArrowRightOnRectangleIcon className="mr-3 h-4 w-4" />
+                            Sign out
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </>
+                )}
               </div>
             </div>
           </div>
