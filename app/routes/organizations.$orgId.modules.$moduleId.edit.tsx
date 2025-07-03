@@ -216,7 +216,7 @@ export default function ModuleEdit() {
 
   // Hooks
   const { module, loading: moduleLoading, error: moduleError } = useModule(moduleId);
-  const { configuration: existingConfig, loading: configLoading } = useConfiguration(configId || undefined);
+  const { configuration: existingConfig, loading: configLoading, updateConfiguration, isUpdating } = useConfiguration(configId || undefined);
   const { createConfiguration, isCreating } = useModuleConfigurations(moduleId);
 
   // Initialize with empty configuration or load existing one
@@ -422,14 +422,13 @@ export default function ModuleEdit() {
     };
 
     try {
-      if (configId) {
+      if (configId && existingConfig) {
         // Update existing configuration
-        // For now, we'll just create a new one
-        console.log("Updating configuration:", configData);
+        await updateConfiguration(configData);
         alert("Configuration updated successfully!");
       } else {
         // Create new configuration
-        createConfiguration(configData);
+        await createConfiguration(configData);
         alert("Configuration created successfully!");
       }
     } catch (error) {
@@ -528,17 +527,17 @@ export default function ModuleEdit() {
               <div className="flex items-center space-x-3">
                 <button
                   onClick={() => handleSave("draft")}
-                  disabled={isCreating}
+                  disabled={isCreating || isUpdating}
                   className="inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-md shadow-sm text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
                 >
-                  {isCreating ? "Saving..." : "Save Draft"}
+                  {(isCreating || isUpdating) ? "Saving..." : "Save Draft"}
                 </button>
                 <button
                   onClick={() => handleSave("active")}
-                  disabled={isCreating}
+                  disabled={isCreating || isUpdating}
                   className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
                 >
-                  {isCreating ? "Saving..." : "Save & Activate"}
+                  {(isCreating || isUpdating) ? "Saving..." : "Save & Activate"}
                 </button>
               </div>
             </div>

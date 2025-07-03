@@ -95,6 +95,19 @@ export default function ModuleDetail() {
     deleteConfiguration(configId);
   };
 
+  const handleWorkflowChange = (changes: any) => {
+    setWorkflowChanges(prev => [...prev, changes]);
+    console.log("Workflow changes:", changes);
+    
+    // TODO: Implement actual persistence of workflow changes
+    // This could involve updating the configuration that was modified
+    if (changes.type === "node_updated" && changes.data) {
+      // Find the configuration this node belongs to and update it
+      // For now, we'll just log it for demonstration
+      console.log("Node update would be persisted:", changes);
+    }
+  };
+
   // Loading states
   if (moduleLoading || configsLoading) {
     return (
@@ -284,10 +297,7 @@ export default function ModuleDetail() {
             <div className="p-6">
               <WorkflowGraph 
                 configurations={configurations}
-                onConfigurationChange={(changes) => {
-                  setWorkflowChanges(prev => [...prev, changes]);
-                  console.log("Workflow changes:", changes);
-                }}
+                onConfigurationChange={handleWorkflowChange}
                 isDarkMode={isDarkMode}
               />
             </div>
@@ -297,10 +307,26 @@ export default function ModuleDetail() {
           {workflowChanges.length > 0 && (
             <div className="bg-white dark:bg-gray-800 shadow rounded-lg mb-6 border border-gray-200 dark:border-gray-700">
               <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
-                <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">Recent Changes</h3>
-                <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
-                  JSON log of workflow modifications for tracking
-                </p>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">Recent Changes</h3>
+                    <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
+                      Workflow modifications pending save ({workflowChanges.length} changes)
+                    </p>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <button
+                      onClick={() => {
+                        // TODO: Implement actual save functionality
+                        alert("Workflow changes would be saved here");
+                        setWorkflowChanges([]);
+                      }}
+                      className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                      Save Changes
+                    </button>
+                  </div>
+                </div>
               </div>
               <div className="p-6">
                 <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 max-h-48 overflow-y-auto">

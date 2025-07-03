@@ -199,7 +199,7 @@ export default function WorkflowGraph({
       .attr("class", "fill-orange-500");
 
     // Create links
-    const linkSelection = g.selectAll(".link")
+    g.selectAll(".link")
       .data(links)
       .enter().append("line")
       .attr("class", (d: WorkflowLink) => `link link-${d.type}`)
@@ -333,12 +333,33 @@ export default function WorkflowGraph({
   }, [nodes, links, selectedNode, isDarkMode]);
 
   const handleNodeEdit = (nodeData: any) => {
+    if (!selectedNode) return;
+    
+    // Get the form data from the modal
+    const modal = document.querySelector('.edit-modal');
+    const nameInput = modal?.querySelector('input[data-field="name"]') as HTMLInputElement;
+    const descriptionInput = modal?.querySelector('textarea[data-field="description"]') as HTMLTextAreaElement;
+    
+    const updatedName = nameInput?.value || selectedNode.name;
+    const updatedDescription = descriptionInput?.value || selectedNode.description;
+    
+    // Update the node in the local state
+    setNodes(prev => prev.map(node => 
+      node.id === selectedNode.id 
+        ? { ...node, name: updatedName, description: updatedDescription }
+        : node
+    ));
+    
     // Generate change event for parent component
     const change = {
       type: "node_updated",
-      nodeId: selectedNode?.id,
-      nodeType: selectedNode?.type,
-      data: nodeData,
+      nodeId: selectedNode.id,
+      nodeType: selectedNode.type,
+      data: {
+        name: updatedName,
+        description: updatedDescription,
+        ...nodeData
+      },
       timestamp: new Date().toISOString()
     };
     onConfigurationChange(change);
@@ -488,7 +509,7 @@ export default function WorkflowGraph({
       {/* Quick Edit Modal */}
       {isEditMode && selectedNode && (
         <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center z-20">
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl p-6 w-96">
+          <div className="edit-modal bg-white dark:bg-gray-800 rounded-lg shadow-xl p-6 w-96">
             <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
               Edit {selectedNode.type}
             </h3>
@@ -499,6 +520,7 @@ export default function WorkflowGraph({
                 </label>
                 <input
                   type="text"
+                  data-field="name"
                   defaultValue={selectedNode.name}
                   className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
                 />
@@ -509,6 +531,7 @@ export default function WorkflowGraph({
                 </label>
                 <textarea
                   rows={3}
+                  data-field="description"
                   defaultValue={selectedNode.description}
                   className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
                 />
