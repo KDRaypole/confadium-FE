@@ -1,7 +1,6 @@
 import { useState } from "react";
 import Sidebar from "./Sidebar";
 import Header from "./Header";
-import { useDarkMode } from "~/contexts/DarkModeContext";
 import ProtectedRoute from "~/components/auth/ProtectedRoute";
 
 interface LayoutProps {
@@ -11,11 +10,10 @@ interface LayoutProps {
 
 export default function Layout({ children, showOrgNavigation = true }: LayoutProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const { isDarkMode } = useDarkMode();
 
   return (
     <ProtectedRoute>
-      <div className={`h-screen flex ${isDarkMode ? 'dark' : ''}`}>
+      <div className="h-screen flex">
         <Sidebar showOrgNavigation={showOrgNavigation} />
         
         {/* Mobile menu overlay */}
