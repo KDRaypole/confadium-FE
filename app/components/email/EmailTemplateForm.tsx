@@ -223,7 +223,7 @@ export default function EmailTemplateForm({
                       HTML Content
                     </label>
                     <HTMLEditor
-                      content={formData.htmlContent}
+                      value={formData.htmlContent}
                       onChange={(content) => handleInputChange("htmlContent", content)}
                       isDarkMode={isDarkMode}
                     />

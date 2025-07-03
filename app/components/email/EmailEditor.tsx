@@ -140,7 +140,7 @@ export default function EmailEditor({
                         <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">{template.description}</p>
                         <div className="mt-2">
                           <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
-                            {template.category}
+                            {template.category?.replace('_', ' ') || 'uncategorized'}
                           </span>
                         </div>
                       </div>
@@ -160,13 +160,13 @@ export default function EmailEditor({
                   {template.variables.map((variable) => (
                     <div key={variable}>
                       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                        {variable.replace(/_/g, " ").replace(/\b\w/g, l => l.toUpperCase())}
+                        {variable?.replace(/_/g, " ").replace(/\b\w/g, l => l.toUpperCase()) || 'variable'}
                       </label>
                       <input
                         type="text"
                         value={currentVariables[variable] || ""}
                         onChange={(e) => handleVariableChange(variable, e.target.value)}
-                        placeholder={`Enter ${variable.replace(/_/g, " ")}`}
+                        placeholder={`Enter ${variable?.replace(/_/g, " ") || 'variable'}`}
                         className="block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
                       />
                     </div>

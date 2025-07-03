@@ -210,7 +210,7 @@ export default function PreviewEmailTemplate() {
                   </h1>
                   <div className="flex items-center space-x-2 mt-1">
                     <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getCategoryColor(template.category)}`}>
-                      {template.category}
+                      {template.category?.replace('_', ' ') || 'uncategorized'}
                     </span>
                     <span className="text-sm text-gray-600 dark:text-gray-400">
                       {template.variables.length} variable{template.variables.length !== 1 ? 's' : ''}
