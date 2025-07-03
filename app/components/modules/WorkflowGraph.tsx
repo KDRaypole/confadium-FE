@@ -26,17 +26,25 @@ interface WorkflowLink {
   type: "success" | "failure" | "default";
 }
 
+interface TriggerConfig {
+  entityType: string;
+  action: string;
+  attributeFilter?: string;
+}
+
 interface Configuration {
   id: string;
   name: string;
-  trigger: string;
+  trigger: TriggerConfig;
   conditions: Array<{
+    id: string;
     field: string;
     operator: string;
     value: string;
     logicOperator?: "AND" | "OR";
   }>;
   actions: Array<{
+    id: string;
     type: string;
     target: string;
     parameters: Record<string, any>;
@@ -72,11 +80,12 @@ export default function WorkflowGraph({
       
       // Create trigger node
       const triggerId = `trigger-${config.id}`;
+      const triggerDisplay = `${config.trigger.entityType} ${config.trigger.action}`;
       graphNodes.push({
         id: triggerId,
         type: "trigger",
-        name: config.trigger || "New Trigger",
-        description: `Starts when: ${config.trigger}`,
+        name: triggerDisplay,
+        description: `Starts when: ${triggerDisplay}`,
         x: 100,
         y: baseY,
         data: { configId: config.id, trigger: config.trigger }
