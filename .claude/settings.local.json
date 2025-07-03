@@ -12,7 +12,8 @@
       "Bash(npm install:*)",
       "mcp__ide__getDiagnostics",
       "Bash(tail:*)",
-      "Bash(rg:*)"
+      "Bash(rg:*)",
+      "Bash(grep:*)"
     ],
     "deny": []
   }

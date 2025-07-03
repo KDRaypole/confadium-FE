@@ -61,7 +61,7 @@ export default function D3Chart({
         createBarChart(g, data, innerWidth, innerHeight, colors);
         break;
       case 'pie':
-        createPieChart(g, data, Math.min(innerWidth, innerHeight) / 2 - 10, colors);
+        createPieChart(g, data, colors, innerWidth, innerHeight);
         break;
       case 'timeline':
         createTimelineChart(g, data, innerWidth, innerHeight, colors);
@@ -142,7 +142,7 @@ export default function D3Chart({
       .style("stroke", colors.text);
   };
 
-  const createPieChart = (g: any, data: ChartData[], radius: number, colors: any) => {
+  const createPieChart = (g: any, data: ChartData[], colors: any, width: number, height: number) => {
     const statusCounts = d3.rollup(
       data,
       v => v.length,
@@ -153,15 +153,26 @@ export default function D3Chart({
       .value(d => d[1])
       .sort(null);
 
+    // Reserve space for the legend at the top
+    const legendHeight = 30;
+    const availableHeight = height - legendHeight;
+    
+    // Calculate radius to fit the available space, considering both width and remaining height
+    const maxRadius = Math.min(width, availableHeight) / 2 - 10;
+
     const arc = d3.arc<d3.PieArcDatum<[string, number]>>()
       .innerRadius(0)
-      .outerRadius(radius);
+      .outerRadius(maxRadius);
 
     const color = d3.scaleOrdinal()
       .domain(Array.from(statusCounts.keys()))
       .range(d3.schemeSet3);
 
-    const arcs = g.selectAll(".arc")
+    // Create a group for the pie chart and center it in the available space below the legend
+    const pieGroup = g.append("g")
+      .attr("transform", `translate(${width / 2}, ${legendHeight + availableHeight / 2})`);
+
+    const arcs = pieGroup.selectAll(".arc")
       .data(pie(Array.from(statusCounts)))
       .enter().append("g")
       .attr("class", "arc");
@@ -183,33 +194,46 @@ export default function D3Chart({
       .attr("transform", (d: any) => `translate(${arc.centroid(d)})`)
       .attr("dy", "0.35em")
       .style("text-anchor", "middle")
-      .style("font-size", "11px")
+      .style("font-size", "12px")
       .style("fill", "white")
       .style("font-weight", "bold")
-      .text((d: any) => d.data[1] > 2 ? d.data[0] : '');
+      .text((d: any) => {
+        // Show count if the slice is large enough and has more than 1 item
+        const angle = d.endAngle - d.startAngle;
+        return (angle > 0.3 && d.data[1] > 1) ? d.data[1] : '';
+      });
 
-    // Add legend
+    // Add horizontal legend at the top
     const legend = g.append("g")
-      .attr("transform", `translate(${radius + 20}, ${-radius})`);
+      .attr("transform", `translate(0, 10)`);
+
+    const legendData = Array.from(statusCounts);
+    const itemWidth = Math.min(120, width / legendData.length - 10);
+    const totalLegendWidth = legendData.length * itemWidth;
+    const legendStartX = (width - totalLegendWidth) / 2;
 
     const legendItems = legend.selectAll(".legend-item")
-      .data(Array.from(statusCounts))
+      .data(legendData)
       .enter().append("g")
       .attr("class", "legend-item")
-      .attr("transform", (d: any, i: number) => `translate(0, ${i * 20})`);
+      .attr("transform", (d: any, i: number) => `translate(${legendStartX + i * itemWidth}, 0)`);
 
     legendItems.append("rect")
-      .attr("width", 12)
-      .attr("height", 12)
+      .attr("width", 10)
+      .attr("height", 10)
       .attr("fill", (d: any) => color(d[0]));
 
     legendItems.append("text")
-      .attr("x", 16)
-      .attr("y", 6)
+      .attr("x", 14)
+      .attr("y", 5)
       .attr("dy", "0.35em")
-      .style("font-size", "12px")
+      .style("font-size", "10px")
       .style("fill", colors.text)
-      .text((d: any) => `${d[0]} (${d[1]})`);
+      .text((d: any) => {
+        const text = `${d[0]} (${d[1]})`;
+        // Truncate text if it's too long for the available space
+        return text.length > itemWidth / 8 ? text.substring(0, Math.floor(itemWidth / 8)) + '...' : text;
+      });
   };
 
   const createTimelineChart = (g: any, data: ChartData[], width: number, height: number, colors: any) => {
