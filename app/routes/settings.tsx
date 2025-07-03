@@ -1,5 +1,6 @@
 import type { MetaFunction } from "@remix-run/node";
 import Layout from "~/components/layout/Layout";
+import SimpleSelect from "~/components/ui/SimpleSelect";
 import { UserIcon, BellIcon, ShieldCheckIcon, CogIcon, KeyIcon, GlobeAltIcon } from "@heroicons/react/24/outline";
 
 export const meta: MetaFunction = () => {
@@ -275,31 +276,31 @@ export default function Settings() {
                     <label htmlFor="timezone" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                       Timezone
                     </label>
-                    <select
-                      id="timezone"
-                      name="timezone"
-                      className="mt-1 block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                    >
-                      <option>Pacific Standard Time (PST)</option>
-                      <option>Mountain Standard Time (MST)</option>
-                      <option>Central Standard Time (CST)</option>
-                      <option>Eastern Standard Time (EST)</option>
-                    </select>
+                    <SimpleSelect
+                      options={[
+                        { value: "pst", label: "Pacific Standard Time (PST)" },
+                        { value: "mst", label: "Mountain Standard Time (MST)" },
+                        { value: "cst", label: "Central Standard Time (CST)" },
+                        { value: "est", label: "Eastern Standard Time (EST)" }
+                      ]}
+                      value="pst"
+                      onChange={(value) => {/* Handle timezone change */}}
+                    />
                   </div>
                   <div>
                     <label htmlFor="language" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                       Language
                     </label>
-                    <select
-                      id="language"
-                      name="language"
-                      className="mt-1 block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                    >
-                      <option>English</option>
-                      <option>Spanish</option>
-                      <option>French</option>
-                      <option>German</option>
-                    </select>
+                    <SimpleSelect
+                      options={[
+                        { value: "en", label: "English" },
+                        { value: "es", label: "Spanish" },
+                        { value: "fr", label: "French" },
+                        { value: "de", label: "German" }
+                      ]}
+                      value="en"
+                      onChange={(value) => {/* Handle language change */}}
+                    />
                   </div>
                   <div className="flex items-start">
                     <div className="flex items-center h-5">

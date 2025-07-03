@@ -6,6 +6,7 @@ import EmailEditor from "~/components/email/EmailEditor";
 import EmailPreview from "~/components/email/EmailPreview";
 import { getTemplateById } from "~/components/email/EmailTemplates";
 import { getAllTags, getTagColorClass, type Tag } from "~/components/tags/TagsData";
+import SimpleSelect, { type SimpleSelectOption } from "~/components/ui/SimpleSelect";
 import { 
   ArrowLeftIcon,
   PlusIcon,
@@ -317,11 +318,6 @@ export default function ModuleEdit() {
     return operators.filter(op => op.types.includes(fieldType));
   };
 
-  const getAvailableTargets = (actionType: string) => {
-    const action = actionTypes.find(a => a.value === actionType);
-    return action?.targets || [];
-  };
-
   const handleSave = (status: "draft" | "active") => {
     const updatedConfig = { ...configuration, status };
     console.log("Saving configuration:", updatedConfig);
@@ -400,6 +396,11 @@ export default function ModuleEdit() {
     }
     
     return display;
+  };
+
+  const getAvailableTargets = (actionType: string): string[] => {
+    const action = actionTypes.find(at => at.value === actionType);
+    return action ? action.targets : [];
   };
 
   return (
@@ -504,28 +505,24 @@ export default function ModuleEdit() {
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                     Entity Type
                   </label>
-                  <div className="relative">
-                    <select
-                      value={configuration.trigger.entityType}
-                      onChange={(e) => setConfiguration(prev => ({ 
-                        ...prev, 
-                        trigger: { 
-                          entityType: e.target.value, 
-                          action: "", 
-                          attributeFilter: undefined 
-                        } 
-                      }))}
-                      className="block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm appearance-none"
-                    >
-                      <option value="">Select entity type...</option>
-                      {entityTypes.map((entity) => (
-                        <option key={entity.value} value={entity.value}>
-                          {entity.label}
-                        </option>
-                      ))}
-                    </select>
-                    <ChevronDownIcon className="absolute right-3 top-3 h-4 w-4 text-gray-400 pointer-events-none" />
-                  </div>
+                  <SimpleSelect
+                    options={[
+                      { value: "", label: "Select entity type..." },
+                      ...entityTypes.map(entity => ({
+                        value: entity.value,
+                        label: entity.label
+                      }))
+                    ]}
+                    value={configuration.trigger.entityType}
+                    onChange={(value) => setConfiguration(prev => ({ 
+                      ...prev, 
+                      trigger: { 
+                        entityType: value, 
+                        action: "", 
+                        attributeFilter: undefined 
+                      } 
+                    }))}
+                  />
                 </div>
 
                 {/* Action Selection */}
@@ -534,28 +531,24 @@ export default function ModuleEdit() {
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                       Action
                     </label>
-                    <div className="relative">
-                      <select
-                        value={configuration.trigger.action}
-                        onChange={(e) => setConfiguration(prev => ({ 
-                          ...prev, 
-                          trigger: { 
-                            ...prev.trigger, 
-                            action: e.target.value,
-                            attributeFilter: e.target.value === "update" ? prev.trigger.attributeFilter : undefined
-                          } 
-                        }))}
-                        className="block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm appearance-none"
-                      >
-                        <option value="">Select action...</option>
-                        {getAvailableActions(configuration.trigger.entityType).map((action) => (
-                          <option key={action} value={action}>
-                            {triggerActions[action as keyof typeof triggerActions]}
-                          </option>
-                        ))}
-                      </select>
-                      <ChevronDownIcon className="absolute right-3 top-3 h-4 w-4 text-gray-400 pointer-events-none" />
-                    </div>
+                    <SimpleSelect
+                      options={[
+                        { value: "", label: "Select action..." },
+                        ...getAvailableActions(configuration.trigger.entityType).map(action => ({
+                          value: action,
+                          label: triggerActions[action as keyof typeof triggerActions]
+                        }))
+                      ]}
+                      value={configuration.trigger.action}
+                      onChange={(value) => setConfiguration(prev => ({ 
+                        ...prev, 
+                        trigger: { 
+                          ...prev.trigger, 
+                          action: value,
+                          attributeFilter: value === "update" ? prev.trigger.attributeFilter : undefined
+                        } 
+                      }))}
+                    />
                   </div>
                 )}
 
@@ -565,27 +558,23 @@ export default function ModuleEdit() {
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                       Specific Attribute (Optional)
                     </label>
-                    <div className="relative">
-                      <select
-                        value={configuration.trigger.attributeFilter || ""}
-                        onChange={(e) => setConfiguration(prev => ({ 
-                          ...prev, 
-                          trigger: { 
-                            ...prev.trigger, 
-                            attributeFilter: e.target.value || undefined
-                          } 
-                        }))}
-                        className="block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm appearance-none"
-                      >
-                        <option value="">Any attribute (trigger on any update)</option>
-                        {getEntityAttributes(configuration.trigger.entityType).map((attribute) => (
-                          <option key={attribute.value} value={attribute.value}>
-                            {attribute.label}
-                          </option>
-                        ))}
-                      </select>
-                      <ChevronDownIcon className="absolute right-3 top-3 h-4 w-4 text-gray-400 pointer-events-none" />
-                    </div>
+                    <SimpleSelect
+                      options={[
+                        { value: "", label: "Any attribute (trigger on any update)" },
+                        ...getEntityAttributes(configuration.trigger.entityType).map(attribute => ({
+                          value: attribute.value,
+                          label: attribute.label
+                        }))
+                      ]}
+                      value={configuration.trigger.attributeFilter || ""}
+                      onChange={(value) => setConfiguration(prev => ({ 
+                        ...prev, 
+                        trigger: { 
+                          ...prev.trigger, 
+                          attributeFilter: value || undefined
+                        } 
+                      }))}
+                    />
                     <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
                       Leave empty to trigger on any update, or select a specific attribute to only trigger when that attribute changes
                     </p>
@@ -643,63 +632,65 @@ export default function ModuleEdit() {
                       <div key={condition.id} className="border border-gray-200 dark:border-gray-600 rounded-lg p-4">
                         {index > 0 && (
                           <div className="mb-4">
-                            <select
-                              value={condition.logicOperator}
-                              onChange={(e) => updateCondition(condition.id, { logicOperator: e.target.value as "AND" | "OR" })}
-                              className="inline-flex px-3 py-1 border border-gray-300 dark:border-gray-600 rounded text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
-                            >
-                              <option value="AND">AND</option>
-                              <option value="OR">OR</option>
-                            </select>
+                            <SimpleSelect
+                              options={[
+                                { value: "AND", label: "AND" },
+                                { value: "OR", label: "OR" }
+                              ]}
+                              value={condition.logicOperator || ""}
+                              onChange={(value) => updateCondition(condition.id, { logicOperator: value as "AND" | "OR" })}
+                              size="sm"
+                              className="inline-flex"
+                            />
                           </div>
                         )}
                         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                           <div>
                             <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Field</label>
-                            <select
+                            <SimpleSelect
+                              options={[
+                                { value: "", label: "Select field..." },
+                                ...crmFields.map(field => ({
+                                  value: field.value,
+                                  label: field.label
+                                }))
+                              ]}
                               value={condition.field}
-                              onChange={(e) => updateCondition(condition.id, { field: e.target.value, operator: "", value: "" })}
-                              className="block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-sm"
-                            >
-                              <option value="">Select field...</option>
-                              {crmFields.map((field) => (
-                                <option key={field.value} value={field.value}>
-                                  {field.label}
-                                </option>
-                              ))}
-                            </select>
+                              onChange={(value) => updateCondition(condition.id, { field: value, operator: "", value: "" })}
+                              size="sm"
+                            />
                           </div>
                           <div>
                             <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Operator</label>
-                            <select
+                            <SimpleSelect
+                              options={[
+                                { value: "", label: "Select operator..." },
+                                ...getAvailableOperators(condition.field).map(operator => ({
+                                  value: operator.value,
+                                  label: operator.label
+                                }))
+                              ]}
                               value={condition.operator}
-                              onChange={(e) => updateCondition(condition.id, { operator: e.target.value })}
-                              className="block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-sm"
+                              onChange={(value) => updateCondition(condition.id, { operator: value })}
                               disabled={!condition.field}
-                            >
-                              <option value="">Select operator...</option>
-                              {getAvailableOperators(condition.field).map((operator) => (
-                                <option key={operator.value} value={operator.value}>
-                                  {operator.label}
-                                </option>
-                              ))}
-                            </select>
+                              size="sm"
+                            />
                           </div>
                           <div>
                             <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Value</label>
                             {getFieldType(condition.field) === "select" ? (
-                              <select
+                              <SimpleSelect
+                                options={[
+                                  { value: "", label: "Select value..." },
+                                  ...getFieldOptions(condition.field).map(option => ({
+                                    value: option,
+                                    label: option
+                                  }))
+                                ]}
                                 value={condition.value}
-                                onChange={(e) => updateCondition(condition.id, { value: e.target.value })}
-                                className="block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-sm"
-                              >
-                                <option value="">Select value...</option>
-                                {getFieldOptions(condition.field).map((option) => (
-                                  <option key={option} value={option}>
-                                    {option}
-                                  </option>
-                                ))}
-                              </select>
+                                onChange={(value) => updateCondition(condition.id, { value })}
+                                size="sm"
+                              />
                             ) : (
                               <input
                                 type={getFieldType(condition.field) === "number" ? "number" : getFieldType(condition.field) === "date" ? "date" : "text"}
@@ -764,34 +755,34 @@ export default function ModuleEdit() {
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                           <div>
                             <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Action Type</label>
-                            <select
+                            <SimpleSelect
+                              options={[
+                                { value: "", label: "Select action type..." },
+                                ...actionTypes.map(actionType => ({
+                                  value: actionType.value,
+                                  label: actionType.label
+                                }))
+                              ]}
                               value={action.type}
-                              onChange={(e) => updateAction(action.id, { type: e.target.value, target: "" })}
-                              className="block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-sm"
-                            >
-                              <option value="">Select action type...</option>
-                              {actionTypes.map((actionType) => (
-                                <option key={actionType.value} value={actionType.value}>
-                                  {actionType.label}
-                                </option>
-                              ))}
-                            </select>
+                              onChange={(value) => updateAction(action.id, { type: value, target: "" })}
+                              size="sm"
+                            />
                           </div>
                           <div>
                             <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Target</label>
-                            <select
+                            <SimpleSelect
+                              options={[
+                                { value: "", label: "Select target..." },
+                                ...getAvailableTargets(action.type).map(target => ({
+                                  value: target,
+                                  label: target
+                                }))
+                              ]}
                               value={action.target}
-                              onChange={(e) => updateAction(action.id, { target: e.target.value })}
-                              className="block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-sm"
+                              onChange={(value) => updateAction(action.id, { target: value })}
                               disabled={!action.type}
-                            >
-                              <option value="">Select target...</option>
-                              {getAvailableTargets(action.type).map((target) => (
-                                <option key={target} value={target}>
-                                  {target}
-                                </option>
-                              ))}
-                            </select>
+                              size="sm"
+                            />
                           </div>
                         </div>
                         
@@ -882,25 +873,38 @@ export default function ModuleEdit() {
                                     placeholder="Due date (e.g., 2 hours, tomorrow)..."
                                     className="block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-sm"
                                   />
-                                  <select className="block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-sm">
-                                    <option>Task priority...</option>
-                                    <option>Low</option>
-                                    <option>Medium</option>
-                                    <option>High</option>
-                                    <option>Urgent</option>
-                                  </select>
+                                  <SimpleSelect
+                                    options={[
+                                      { value: "", label: "Task priority..." },
+                                      { value: "low", label: "Low" },
+                                      { value: "medium", label: "Medium" },
+                                      { value: "high", label: "High" },
+                                      { value: "urgent", label: "Urgent" }
+                                    ]}
+                                    value={action.parameters?.priority || ""}
+                                    onChange={(value) => updateAction(action.id, {
+                                      parameters: { ...action.parameters, priority: value }
+                                    })}
+                                    size="sm"
+                                  />
                                 </>
                               )}
                               {action.type === "update_field" && (
                                 <>
-                                  <select className="block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-sm">
-                                    <option>Field to update...</option>
-                                    {crmFields.map((field) => (
-                                      <option key={field.value} value={field.value}>
-                                        {field.label}
-                                      </option>
-                                    ))}
-                                  </select>
+                                  <SimpleSelect
+                                    options={[
+                                      { value: "", label: "Field to update..." },
+                                      ...crmFields.map(field => ({
+                                        value: field.value,
+                                        label: field.label
+                                      }))
+                                    ]}
+                                    value={action.parameters?.fieldToUpdate || ""}
+                                    onChange={(value) => updateAction(action.id, {
+                                      parameters: { ...action.parameters, fieldToUpdate: value }
+                                    })}
+                                    size="sm"
+                                  />
                                   <input
                                     type="text"
                                     placeholder="New value..."
@@ -912,20 +916,20 @@ export default function ModuleEdit() {
                                 <>
                                   <div>
                                     <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Select Tag to Add</label>
-                                    <select
+                                    <SimpleSelect
+                                      options={[
+                                        { value: "", label: "Select a tag..." },
+                                        ...availableTags.map(tag => ({
+                                          value: tag.id,
+                                          label: tag.name
+                                        }))
+                                      ]}
                                       value={action.parameters?.tagId || ""}
-                                      onChange={(e) => updateAction(action.id, {
-                                        parameters: { ...action.parameters, tagId: e.target.value }
+                                      onChange={(value) => updateAction(action.id, {
+                                        parameters: { ...action.parameters, tagId: value }
                                       })}
-                                      className="block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-sm"
-                                    >
-                                      <option value="">Select a tag...</option>
-                                      {availableTags.map((tag) => (
-                                        <option key={tag.id} value={tag.id}>
-                                          {tag.name}
-                                        </option>
-                                      ))}
-                                    </select>
+                                      size="sm"
+                                    />
                                     {action.parameters?.tagId && (
                                       <div className="mt-2 flex items-center space-x-2">
                                         <span className="text-xs text-gray-500 dark:text-gray-400">Selected tag:</span>
@@ -942,18 +946,19 @@ export default function ModuleEdit() {
                                   </div>
                                   <div>
                                     <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Entity to Add Tag To</label>
-                                    <select
+                                    <SimpleSelect
+                                      options={[
+                                        { value: "", label: "Select entity type..." },
+                                        { value: "contact", label: "Contact" },
+                                        { value: "deal", label: "Deal" },
+                                        { value: "activity", label: "Activity" }
+                                      ]}
                                       value={action.parameters?.entityType || ""}
-                                      onChange={(e) => updateAction(action.id, {
-                                        parameters: { ...action.parameters, entityType: e.target.value }
+                                      onChange={(value) => updateAction(action.id, {
+                                        parameters: { ...action.parameters, entityType: value }
                                       })}
-                                      className="block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-sm"
-                                    >
-                                      <option value="">Select entity type...</option>
-                                      <option value="contact">Contact</option>
-                                      <option value="deal">Deal</option>
-                                      <option value="activity">Activity</option>
-                                    </select>
+                                      size="sm"
+                                    />
                                   </div>
                                 </>
                               )}

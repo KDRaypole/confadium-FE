@@ -1,5 +1,6 @@
 import type { MetaFunction } from "@remix-run/node";
 import Layout from "~/components/layout/Layout";
+import SimpleSelect from "~/components/ui/SimpleSelect";
 import { PlusIcon, MagnifyingGlassIcon, PhoneIcon, ClockIcon } from "@heroicons/react/24/outline";
 
 export const meta: MetaFunction = () => {
@@ -163,18 +164,26 @@ export default function Calls() {
                   </div>
                 </div>
                 <div className="flex gap-2">
-                  <select className="block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
-                    <option>All Types</option>
-                    <option>Incoming</option>
-                    <option>Outgoing</option>
-                    <option>Missed</option>
-                  </select>
-                  <select className="block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
-                    <option>All Status</option>
-                    <option>Completed</option>
-                    <option>Scheduled</option>
-                    <option>Cancelled</option>
-                  </select>
+                  <SimpleSelect
+                    options={[
+                      { value: "all", label: "All Types" },
+                      { value: "incoming", label: "Incoming" },
+                      { value: "outgoing", label: "Outgoing" },
+                      { value: "missed", label: "Missed" }
+                    ]}
+                    value="all"
+                    onChange={(value) => {/* Handle type filter */}}
+                  />
+                  <SimpleSelect
+                    options={[
+                      { value: "all", label: "All Status" },
+                      { value: "completed", label: "Completed" },
+                      { value: "scheduled", label: "Scheduled" },
+                      { value: "cancelled", label: "Cancelled" }
+                    ]}
+                    value="all"
+                    onChange={(value) => {/* Handle status filter */}}
+                  />
                 </div>
               </div>
             </div>

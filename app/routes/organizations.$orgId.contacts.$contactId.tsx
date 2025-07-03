@@ -2,6 +2,7 @@ import type { MetaFunction } from "@remix-run/node";
 import { Link, useParams } from "@remix-run/react";
 import { useState } from "react";
 import { getAllTags, getTagColorClass, type Tag } from "~/components/tags/TagsData";
+import SimpleSelect from "~/components/ui/SimpleSelect";
 import { 
   ArrowLeftIcon,
   PencilIcon,
@@ -235,15 +236,15 @@ export default function ContactShow() {
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
             {label}
           </label>
-          <select
+          <SimpleSelect
+            options={options.map(option => ({
+              value: option,
+              label: option
+            }))}
             value={value as string}
-            onChange={(e) => updateField(field, e.target.value)}
-            className="block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-          >
-            {options.map(option => (
-              <option key={option} value={option}>{option}</option>
-            ))}
-          </select>
+            onChange={(optionValue) => updateField(field, optionValue)}
+            size="sm"
+          />
         </div>
       );
     }

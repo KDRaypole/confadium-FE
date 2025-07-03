@@ -1,8 +1,8 @@
 import type { MetaFunction } from "@remix-run/node";
 import { Link, useParams, useNavigate } from "@remix-run/react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Layout from "~/components/layout/Layout";
-import { tagColors, tagPriorities, getTagColorClass, getTagPriorityClass, type Tag } from "~/components/tags/TagsData";
+import { tagColors, tagPriorities, getTagColorClass, getTagPriorityClass, getAllTags, type Tag } from "~/components/tags/TagsData";
 import SimpleSelect from "~/components/ui/SimpleSelect";
 import { 
   ArrowLeftIcon,
@@ -17,12 +17,12 @@ import {
 
 export const meta: MetaFunction = () => {
   return [
-    { title: "Create Tag - CRM Dashboard" },
-    { name: "description", content: "Create a new tag for organizing contacts" },
+    { title: "Edit Tag - CRM Dashboard" },
+    { name: "description", content: "Edit tag properties and settings" },
   ];
 };
 
-interface NewTag {
+interface EditableTag {
   name: string;
   color: string;
   priority: "low" | "medium" | "high" | "critical";
@@ -31,12 +31,13 @@ interface NewTag {
   category: string;
 }
 
-export default function CreateTag() {
+export default function EditTag() {
   const params = useParams();
   const navigate = useNavigate();
-  const { orgId } = params;
+  const { orgId, tagId } = params;
   
-  const [tagData, setTagData] = useState<NewTag>({
+  const [originalTag, setOriginalTag] = useState<Tag | null>(null);
+  const [tagData, setTagData] = useState<EditableTag>({
     name: "",
     color: "blue",
     priority: "medium",
@@ -46,7 +47,8 @@ export default function CreateTag() {
   });
 
   const [showPreview, setShowPreview] = useState(true);
-  const [errors, setErrors] = useState<Partial<NewTag>>({});
+  const [errors, setErrors] = useState<Partial<EditableTag>>({});
+  const [loading, setLoading] = useState(true);
 
   const categories = [
     "Customer Type",
@@ -60,8 +62,34 @@ export default function CreateTag() {
     "Other"
   ];
 
+  // Load existing tag data
+  useEffect(() => {
+    const loadTag = () => {
+      const allTags = getAllTags();
+      const tag = allTags.find(t => t.id === tagId);
+      
+      if (tag) {
+        setOriginalTag(tag);
+        setTagData({
+          name: tag.name,
+          color: tag.color,
+          priority: tag.priority,
+          level: tag.level,
+          description: tag.description || "",
+          category: tag.category || ""
+        });
+      }
+      
+      setLoading(false);
+    };
+
+    if (tagId) {
+      loadTag();
+    }
+  }, [tagId]);
+
   const validateForm = (): boolean => {
-    const newErrors: Partial<NewTag> = {};
+    const newErrors: Partial<EditableTag> = {};
     
     if (!tagData.name.trim()) {
       newErrors.name = "Tag name is required";
@@ -84,23 +112,22 @@ export default function CreateTag() {
   };
 
   const handleSave = () => {
-    if (!validateForm()) {
+    if (!validateForm() || !originalTag) {
       return;
     }
     
-    // Generate a unique ID for the new tag
-    const newId = `custom_${Date.now()}`;
-    
-    const newTag: Tag = {
+    const updatedTag: Tag = {
+      ...originalTag,
       ...tagData,
-      id: newId,
-      createdDate: new Date().toISOString().split('T')[0],
-      usageCount: 0
+      // Keep original metadata
+      id: originalTag.id,
+      createdDate: originalTag.createdDate,
+      usageCount: originalTag.usageCount
     };
     
     // Here you would typically save to your backend
-    console.log("Creating new tag:", newTag);
-    alert("Tag created successfully!");
+    console.log("Updating tag:", updatedTag);
+    alert("Tag updated successfully!");
     
     // Navigate back to tags list
     navigate(`/organizations/${orgId}/tags`);
@@ -110,7 +137,7 @@ export default function CreateTag() {
     navigate(`/organizations/${orgId}/tags`);
   };
 
-  const updateField = <K extends keyof NewTag>(field: K, value: NewTag[K]) => {
+  const updateField = <K extends keyof EditableTag>(field: K, value: EditableTag[K]) => {
     setTagData(prev => ({ ...prev, [field]: value }));
     // Clear error for this field when user starts typing
     if (errors[field]) {
@@ -142,6 +169,44 @@ export default function CreateTag() {
     ));
   };
 
+  if (loading) {
+    return (
+      <Layout>
+        <div className="py-6">
+          <div className="w-full px-4 sm:px-6 lg:px-8">
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+              <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">Loading tag...</p>
+            </div>
+          </div>
+        </div>
+      </Layout>
+    );
+  }
+
+  if (!originalTag) {
+    return (
+      <Layout>
+        <div className="py-6">
+          <div className="w-full px-4 sm:px-6 lg:px-8">
+            <div className="text-center">
+              <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Tag Not Found</h1>
+              <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
+                The tag you're looking for doesn't exist or has been deleted.
+              </p>
+              <Link
+                to={`/organizations/${orgId}/tags`}
+                className="mt-4 inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700"
+              >
+                Back to Tags
+              </Link>
+            </div>
+          </div>
+        </div>
+      </Layout>
+    );
+  }
+
   return (
     <Layout>
       <div className="py-6">
@@ -153,7 +218,7 @@ export default function CreateTag() {
                 Tags
               </Link>
               <span>/</span>
-              <span>Create New Tag</span>
+              <span>Edit "{originalTag.name}"</span>
             </nav>
             
             <div className="flex items-center justify-between">
@@ -167,10 +232,10 @@ export default function CreateTag() {
                 </Link>
                 <div>
                   <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-                    Create New Tag
+                    Edit Tag
                   </h1>
                   <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
-                    Create a new tag to organize and categorize your contacts
+                    Modify tag properties and appearance settings
                   </p>
                 </div>
               </div>
@@ -195,7 +260,7 @@ export default function CreateTag() {
                   className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
                 >
                   <CheckIcon className="-ml-1 mr-2 h-4 w-4" />
-                  Create Tag
+                  Save Changes
                 </button>
               </div>
             </div>
@@ -377,6 +442,37 @@ export default function CreateTag() {
                   </div>
                 </div>
               </div>
+
+              {/* Tag Metadata */}
+              <div className="bg-white dark:bg-gray-800 shadow rounded-lg border border-gray-200 dark:border-gray-700">
+                <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+                  <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">
+                    Tag Information
+                  </h3>
+                </div>
+                <div className="p-6">
+                  <dl className="space-y-3">
+                    <div className="flex justify-between text-sm">
+                      <dt className="text-gray-500 dark:text-gray-400">Created:</dt>
+                      <dd className="text-gray-900 dark:text-gray-100">
+                        {new Date(originalTag.createdDate).toLocaleDateString()}
+                      </dd>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <dt className="text-gray-500 dark:text-gray-400">Usage Count:</dt>
+                      <dd className="text-gray-900 dark:text-gray-100">
+                        {originalTag.usageCount} times
+                      </dd>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <dt className="text-gray-500 dark:text-gray-400">Tag ID:</dt>
+                      <dd className="text-gray-900 dark:text-gray-100 font-mono text-xs">
+                        {originalTag.id}
+                      </dd>
+                    </div>
+                  </dl>
+                </div>
+              </div>
             </div>
 
             {/* Right Panel - Preview */}
@@ -428,9 +524,28 @@ export default function CreateTag() {
                       </p>
                     </div>
 
+                    {/* Before/After Comparison */}
+                    <div className="border-t border-gray-200 dark:border-gray-600 pt-4">
+                      <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">Changes Preview</h4>
+                      <div className="space-y-3">
+                        <div>
+                          <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Before:</p>
+                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-sm font-medium ${getTagColorClass(originalTag.color)}`}>
+                            {originalTag.name}
+                          </span>
+                        </div>
+                        <div>
+                          <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">After:</p>
+                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-sm font-medium ${getTagColorClass(tagData.color)}`}>
+                            {tagData.name || "Tag Name"}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
                     {/* Summary */}
                     <div className="border-t border-gray-200 dark:border-gray-600 pt-4">
-                      <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">Tag Summary</h4>
+                      <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">Updated Tag Summary</h4>
                       <dl className="space-y-2">
                         <div className="flex justify-between text-sm">
                           <dt className="text-gray-500 dark:text-gray-400">Name:</dt>

@@ -1,6 +1,7 @@
 import { Fragment, useState, useEffect } from "react";
 import { Dialog, Transition } from "@headlessui/react";
 import { XMarkIcon, UserIcon } from "@heroicons/react/24/outline";
+import SimpleSelect from "~/components/ui/SimpleSelect";
 
 interface Contact {
   id: string;
@@ -255,16 +256,16 @@ export default function ContactEditModal({ contact, isOpen, onClose, onSave }: C
                               <label htmlFor="status" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                                 Status
                               </label>
-                              <select
-                                id="status"
+                              <SimpleSelect
+                                options={[
+                                  { value: "hot", label: "Hot" },
+                                  { value: "warm", label: "Warm" },
+                                  { value: "cold", label: "Cold" }
+                                ]}
                                 value={formData.status}
-                                onChange={(e) => handleInputChange('status', e.target.value)}
-                                className="mt-1 block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                              >
-                                <option value="hot">Hot</option>
-                                <option value="warm">Warm</option>
-                                <option value="cold">Cold</option>
-                              </select>
+                                onChange={(value) => handleInputChange('status', value)}
+                                size="sm"
+                              />
                             </div>
 
                             <div>

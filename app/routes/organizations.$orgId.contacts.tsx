@@ -4,6 +4,7 @@ import { useState } from "react";
 import Layout from "~/components/layout/Layout";
 import ContactModal from "~/components/contacts/ContactModal";
 import ContactEditModal from "~/components/contacts/ContactEditModal";
+import SimpleSelect from "~/components/ui/SimpleSelect";
 import { PlusIcon, MagnifyingGlassIcon } from "@heroicons/react/24/outline";
 
 export const meta: MetaFunction = () => {
@@ -209,18 +210,26 @@ export default function Contacts() {
                   </div>
                 </div>
                 <div className="flex gap-2">
-                  <select className="block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded shadow-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
-                    <option>All Status</option>
-                    <option>Hot</option>
-                    <option>Warm</option>
-                    <option>Cold</option>
-                  </select>
-                  <select className="block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded shadow-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
-                    <option>All Companies</option>
-                    <option>TechCorp Inc.</option>
-                    <option>Innovation Labs</option>
-                    <option>StartupXYZ</option>
-                  </select>
+                  <SimpleSelect
+                    options={[
+                      { value: "all", label: "All Status" },
+                      { value: "hot", label: "Hot" },
+                      { value: "warm", label: "Warm" },
+                      { value: "cold", label: "Cold" }
+                    ]}
+                    value="all"
+                    onChange={(value) => {/* Handle status filter */}}
+                  />
+                  <SimpleSelect
+                    options={[
+                      { value: "all", label: "All Companies" },
+                      { value: "techcorp", label: "TechCorp Inc." },
+                      { value: "innovation", label: "Innovation Labs" },
+                      { value: "startup", label: "StartupXYZ" }
+                    ]}
+                    value="all"
+                    onChange={(value) => {/* Handle company filter */}}
+                  />
                 </div>
               </div>
             </div>
