@@ -1,8 +1,9 @@
 import type { MetaFunction } from "@remix-run/node";
 import { Link, useParams } from "@remix-run/react";
 import { useState } from "react";
-import { getAllTags, getTagColorClass, type Tag } from "~/components/tags/TagsData";
+import { getTagColorClass } from "~/components/tags/TagsData";
 import SimpleSelect from "~/components/ui/SimpleSelect";
+import { useTags, type Tag } from "~/hooks/useTags";
 import { 
   ArrowLeftIcon,
   PencilIcon,
@@ -156,7 +157,7 @@ export default function ContactShow() {
   const [contact, setContact] = useState<Contact>(getContactData(contactId!));
   const [isEditing, setIsEditing] = useState(false);
   const [editedContact, setEditedContact] = useState<Contact>(contact);
-  const [availableTags] = useState<Tag[]>(getAllTags());
+  const { tags: availableTags, incrementUsage } = useTags();
   const [showTagDropdown, setShowTagDropdown] = useState(false);
 
   const handleEdit = () => {
@@ -200,9 +201,14 @@ export default function ContactShow() {
     updateField('tags', editedContact.tags.filter(tag => tag !== tagToRemove));
   };
 
-  const addTagFromDropdown = (tagName: string) => {
+  const addTagFromDropdown = async (tagName: string) => {
     if (!editedContact.tags.includes(tagName)) {
       updateField('tags', [...editedContact.tags, tagName]);
+      // Increment usage count for the tag
+      const tag = availableTags.find(t => t.name === tagName);
+      if (tag) {
+        await incrementUsage(tag.id);
+      }
     }
     setShowTagDropdown(false);
   };

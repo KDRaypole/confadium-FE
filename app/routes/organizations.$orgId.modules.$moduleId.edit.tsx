@@ -5,8 +5,9 @@ import Layout from "~/components/layout/Layout";
 import EmailEditor from "~/components/email/EmailEditor";
 import EmailPreview from "~/components/email/EmailPreview";
 import { getTemplateById } from "~/components/email/EmailTemplates";
-import { getAllTags, getTagColorClass, type Tag } from "~/components/tags/TagsData";
+import { getTagColorClass } from "~/components/tags/TagsData";
 import SimpleSelect, { type SimpleSelectOption } from "~/components/ui/SimpleSelect";
+import { useTags, type Tag } from "~/hooks/useTags";
 import { 
   ArrowLeftIcon,
   PlusIcon,
@@ -242,7 +243,7 @@ export default function ModuleEdit() {
   const [emailPreviewOpen, setEmailPreviewOpen] = useState(false);
   
   // Tags state
-  const [availableTags] = useState<Tag[]>(getAllTags());
+  const { tags: availableTags } = useTags();
 
   const addCondition = () => {
     const newCondition: Condition = {

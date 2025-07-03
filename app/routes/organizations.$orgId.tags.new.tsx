@@ -2,8 +2,9 @@ import type { MetaFunction } from "@remix-run/node";
 import { Link, useParams, useNavigate } from "@remix-run/react";
 import { useState } from "react";
 import Layout from "~/components/layout/Layout";
-import { tagColors, tagPriorities, getTagColorClass, getTagPriorityClass, type Tag } from "~/components/tags/TagsData";
+import { tagColors, tagPriorities, getTagColorClass, getTagPriorityClass } from "~/components/tags/TagsData";
 import SimpleSelect from "~/components/ui/SimpleSelect";
+import { useTags, type TagCreateData } from "~/hooks/useTags";
 import { 
   ArrowLeftIcon,
   CheckIcon,
@@ -22,19 +23,13 @@ export const meta: MetaFunction = () => {
   ];
 };
 
-interface NewTag {
-  name: string;
-  color: string;
-  priority: "low" | "medium" | "high" | "critical";
-  level: number;
-  description: string;
-  category: string;
-}
+type NewTag = TagCreateData;
 
 export default function CreateTag() {
   const params = useParams();
   const navigate = useNavigate();
   const { orgId } = params;
+  const { createTag, loading: apiLoading } = useTags();
   
   const [tagData, setTagData] = useState<NewTag>({
     name: "",
@@ -47,6 +42,7 @@ export default function CreateTag() {
 
   const [showPreview, setShowPreview] = useState(true);
   const [errors, setErrors] = useState<Partial<NewTag>>({});
+  const [saving, setSaving] = useState(false);
 
   const categories = [
     "Customer Type",
@@ -83,27 +79,27 @@ export default function CreateTag() {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!validateForm()) {
       return;
     }
     
-    // Generate a unique ID for the new tag
-    const newId = `custom_${Date.now()}`;
-    
-    const newTag: Tag = {
-      ...tagData,
-      id: newId,
-      createdDate: new Date().toISOString().split('T')[0],
-      usageCount: 0
-    };
-    
-    // Here you would typically save to your backend
-    console.log("Creating new tag:", newTag);
-    alert("Tag created successfully!");
-    
-    // Navigate back to tags list
-    navigate(`/organizations/${orgId}/tags`);
+    setSaving(true);
+    try {
+      const newTag = await createTag(tagData);
+      if (newTag) {
+        console.log("Tag created successfully:", newTag);
+        // Navigate back to tags list
+        navigate(`/organizations/${orgId}/tags`);
+      } else {
+        alert("Failed to create tag. Please try again.");
+      }
+    } catch (error) {
+      console.error("Error creating tag:", error);
+      alert("Failed to create tag. Please try again.");
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleCancel = () => {
@@ -192,10 +188,20 @@ export default function CreateTag() {
                 </button>
                 <button
                   onClick={handleSave}
-                  className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                  disabled={saving || apiLoading}
+                  className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  <CheckIcon className="-ml-1 mr-2 h-4 w-4" />
-                  Create Tag
+                  {saving ? (
+                    <>
+                      <div className="animate-spin -ml-1 mr-2 h-4 w-4 border-2 border-white border-t-transparent rounded-full" />
+                      Creating...
+                    </>
+                  ) : (
+                    <>
+                      <CheckIcon className="-ml-1 mr-2 h-4 w-4" />
+                      Create Tag
+                    </>
+                  )}
                 </button>
               </div>
             </div>

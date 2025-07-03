@@ -2,7 +2,8 @@ import type { MetaFunction } from "@remix-run/node";
 import { Link, useParams } from "@remix-run/react";
 import { useState } from "react";
 import Layout from "~/components/layout/Layout";
-import { getAllTags, getTagsByCategory, getTagColorClass, getTagPriorityClass, type Tag } from "~/components/tags/TagsData";
+import { getTagColorClass, getTagPriorityClass } from "~/components/tags/TagsData";
+import { useTags } from "~/hooks/useTags";
 import { 
   PlusIcon, 
   MagnifyingGlassIcon, 
@@ -23,13 +24,20 @@ export const meta: MetaFunction = () => {
 
 export default function TagsIndex() {
   const { orgId } = useParams();
-  const [tags] = useState<Tag[]>(getAllTags());
+  const { tags, loading, error, deleteTag } = useTags();
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [selectedPriority, setSelectedPriority] = useState("all");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
+  const [deletingTagId, setDeletingTagId] = useState<string | null>(null);
 
-  const tagsByCategory = getTagsByCategory();
+  // Get categories from current tags
+  const tagsByCategory = tags.reduce((acc, tag) => {
+    const category = tag.category || 'Other';
+    if (!acc[category]) acc[category] = [];
+    acc[category].push(tag);
+    return acc;
+  }, {} as Record<string, typeof tags>);
   const categories = Object.keys(tagsByCategory);
 
   const filteredTags = tags.filter(tag => {
@@ -41,16 +49,65 @@ export default function TagsIndex() {
     return matchesSearch && matchesCategory && matchesPriority;
   });
 
+  const handleDeleteTag = async (tagId: string) => {
+    if (!confirm('Are you sure you want to delete this tag? This action cannot be undone.')) {
+      return;
+    }
+
+    setDeletingTagId(tagId);
+    try {
+      const success = await deleteTag(tagId);
+      if (!success) {
+        alert('Failed to delete tag. Please try again.');
+      }
+    } catch (error) {
+      console.error('Error deleting tag:', error);
+      alert('Failed to delete tag. Please try again.');
+    } finally {
+      setDeletingTagId(null);
+    }
+  };
+
   const getUsageStats = () => {
     const totalTags = tags.length;
     const totalUsage = tags.reduce((sum, tag) => sum + tag.usageCount, 0);
     const avgUsage = totalTags > 0 ? Math.round(totalUsage / totalTags) : 0;
-    const mostUsed = tags.reduce((max, tag) => tag.usageCount > max.usageCount ? tag : max, tags[0]);
+    const mostUsed = tags.length > 0 ? tags.reduce((max, tag) => tag.usageCount > max.usageCount ? tag : max, tags[0]) : null;
     
     return { totalTags, totalUsage, avgUsage, mostUsed };
   };
 
   const stats = getUsageStats();
+
+  if (loading) {
+    return (
+      <Layout>
+        <div className="py-6">
+          <div className="w-full px-4 sm:px-6 lg:px-8">
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+              <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">Loading tags...</p>
+            </div>
+          </div>
+        </div>
+      </Layout>
+    );
+  }
+
+  if (error) {
+    return (
+      <Layout>
+        <div className="py-6">
+          <div className="w-full px-4 sm:px-6 lg:px-8">
+            <div className="text-center">
+              <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Error Loading Tags</h1>
+              <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">{error}</p>
+            </div>
+          </div>
+        </div>
+      </Layout>
+    );
+  }
 
   return (
     <Layout>
@@ -116,7 +173,7 @@ export default function TagsIndex() {
                 <TagIcon className="h-8 w-8 text-orange-600" />
                 <div className="ml-3">
                   <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Most Used</p>
-                  <p className="text-lg font-semibold text-gray-900 dark:text-gray-100">{stats.mostUsed?.name}</p>
+                  <p className="text-lg font-semibold text-gray-900 dark:text-gray-100">{stats.mostUsed?.name || 'None'}</p>
                 </div>
               </div>
             </div>
@@ -216,8 +273,16 @@ export default function TagsIndex() {
                         >
                           <PencilIcon className="h-4 w-4" />
                         </Link>
-                        <button className="p-1 text-gray-400 hover:text-red-600 dark:hover:text-red-400">
-                          <TrashIcon className="h-4 w-4" />
+                        <button 
+                          onClick={() => handleDeleteTag(tag.id)}
+                          disabled={deletingTagId === tag.id}
+                          className="p-1 text-gray-400 hover:text-red-600 dark:hover:text-red-400 disabled:opacity-50"
+                        >
+                          {deletingTagId === tag.id ? (
+                            <div className="animate-spin h-4 w-4 border-2 border-gray-400 border-t-transparent rounded-full" />
+                          ) : (
+                            <TrashIcon className="h-4 w-4" />
+                          )}
                         </button>
                       </div>
                     </div>
@@ -320,8 +385,12 @@ export default function TagsIndex() {
                             Edit
                           </Link>
                           <span className="text-gray-300 dark:text-gray-600">|</span>
-                          <button className="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300">
-                            Delete
+                          <button 
+                            onClick={() => handleDeleteTag(tag.id)}
+                            disabled={deletingTagId === tag.id}
+                            className="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300 disabled:opacity-50"
+                          >
+                            {deletingTagId === tag.id ? 'Deleting...' : 'Delete'}
                           </button>
                         </div>
                       </td>

@@ -1,7 +1,8 @@
 import type { MetaFunction } from "@remix-run/node";
 import { Link, useParams } from "@remix-run/react";
 import { useState, useEffect } from "react";
-import { getAllTags, getTagColorClass, type Tag } from "~/components/tags/TagsData";
+import { getTagColorClass } from "~/components/tags/TagsData";
+import { useTags, type Tag } from "~/hooks/useTags";
 import { useDarkMode } from "~/contexts/DarkModeContext";
 import D3Chart, { type ChartData } from "~/components/charts/D3Chart";
 import { 
@@ -123,7 +124,7 @@ export default function ReportShow() {
   const [report] = useState<ReportData | null>(mockReports[reportId || ""] || null);
   const [data, setData] = useState<EntityData[]>([]);
   const [filteredData, setFilteredData] = useState<EntityData[]>([]);
-  const [availableTags] = useState<Tag[]>(getAllTags());
+  const { tags: availableTags } = useTags();
   
   // Filter states
   const [filtersOpen, setFiltersOpen] = useState(false);

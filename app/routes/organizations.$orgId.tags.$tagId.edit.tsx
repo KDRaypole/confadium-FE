@@ -2,8 +2,9 @@ import type { MetaFunction } from "@remix-run/node";
 import { Link, useParams, useNavigate } from "@remix-run/react";
 import { useState, useEffect } from "react";
 import Layout from "~/components/layout/Layout";
-import { tagColors, tagPriorities, getTagColorClass, getTagPriorityClass, getAllTags, type Tag } from "~/components/tags/TagsData";
+import { tagColors, tagPriorities, getTagColorClass, getTagPriorityClass } from "~/components/tags/TagsData";
 import SimpleSelect from "~/components/ui/SimpleSelect";
+import { useTag, type TagUpdateData } from "~/hooks/useTags";
 import { 
   ArrowLeftIcon,
   CheckIcon,
@@ -22,21 +23,21 @@ export const meta: MetaFunction = () => {
   ];
 };
 
-interface EditableTag {
+type EditableTag = TagUpdateData & {
   name: string;
   color: string;
   priority: "low" | "medium" | "high" | "critical";
   level: number;
   description: string;
   category: string;
-}
+};
 
 export default function EditTag() {
   const params = useParams();
   const navigate = useNavigate();
   const { orgId, tagId } = params;
+  const { tag: originalTag, loading, error: tagError, updateTag: updateTagAPI } = useTag(tagId);
   
-  const [originalTag, setOriginalTag] = useState<Tag | null>(null);
   const [tagData, setTagData] = useState<EditableTag>({
     name: "",
     color: "blue",
@@ -48,7 +49,7 @@ export default function EditTag() {
 
   const [showPreview, setShowPreview] = useState(true);
   const [errors, setErrors] = useState<Partial<EditableTag>>({});
-  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
 
   const categories = [
     "Customer Type",
@@ -62,31 +63,19 @@ export default function EditTag() {
     "Other"
   ];
 
-  // Load existing tag data
+  // Load existing tag data when tag is loaded
   useEffect(() => {
-    const loadTag = () => {
-      const allTags = getAllTags();
-      const tag = allTags.find(t => t.id === tagId);
-      
-      if (tag) {
-        setOriginalTag(tag);
-        setTagData({
-          name: tag.name,
-          color: tag.color,
-          priority: tag.priority,
-          level: tag.level,
-          description: tag.description || "",
-          category: tag.category || ""
-        });
-      }
-      
-      setLoading(false);
-    };
-
-    if (tagId) {
-      loadTag();
+    if (originalTag) {
+      setTagData({
+        name: originalTag.name,
+        color: originalTag.color,
+        priority: originalTag.priority,
+        level: originalTag.level,
+        description: originalTag.description || "",
+        category: originalTag.category || ""
+      });
     }
-  }, [tagId]);
+  }, [originalTag]);
 
   const validateForm = (): boolean => {
     const newErrors: Partial<EditableTag> = {};
@@ -111,26 +100,27 @@ export default function EditTag() {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!validateForm() || !originalTag) {
       return;
     }
     
-    const updatedTag: Tag = {
-      ...originalTag,
-      ...tagData,
-      // Keep original metadata
-      id: originalTag.id,
-      createdDate: originalTag.createdDate,
-      usageCount: originalTag.usageCount
-    };
-    
-    // Here you would typically save to your backend
-    console.log("Updating tag:", updatedTag);
-    alert("Tag updated successfully!");
-    
-    // Navigate back to tags list
-    navigate(`/organizations/${orgId}/tags`);
+    setSaving(true);
+    try {
+      const updatedTag = await updateTagAPI(tagData);
+      if (updatedTag) {
+        console.log("Tag updated successfully:", updatedTag);
+        // Navigate back to tags list
+        navigate(`/organizations/${orgId}/tags`);
+      } else {
+        alert("Failed to update tag. Please try again.");
+      }
+    } catch (error) {
+      console.error("Error updating tag:", error);
+      alert("Failed to update tag. Please try again.");
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleCancel = () => {
@@ -177,6 +167,27 @@ export default function EditTag() {
             <div className="text-center">
               <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
               <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">Loading tag...</p>
+            </div>
+          </div>
+        </div>
+      </Layout>
+    );
+  }
+
+  if (tagError) {
+    return (
+      <Layout>
+        <div className="py-6">
+          <div className="w-full px-4 sm:px-6 lg:px-8">
+            <div className="text-center">
+              <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Error Loading Tag</h1>
+              <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">{tagError}</p>
+              <Link
+                to={`/organizations/${orgId}/tags`}
+                className="mt-4 inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700"
+              >
+                Back to Tags
+              </Link>
             </div>
           </div>
         </div>
@@ -257,10 +268,20 @@ export default function EditTag() {
                 </button>
                 <button
                   onClick={handleSave}
-                  className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                  disabled={saving || loading}
+                  className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  <CheckIcon className="-ml-1 mr-2 h-4 w-4" />
-                  Save Changes
+                  {saving ? (
+                    <>
+                      <div className="animate-spin -ml-1 mr-2 h-4 w-4 border-2 border-white border-t-transparent rounded-full" />
+                      Saving...
+                    </>
+                  ) : (
+                    <>
+                      <CheckIcon className="-ml-1 mr-2 h-4 w-4" />
+                      Save Changes
+                    </>
+                  )}
                 </button>
               </div>
             </div>
