@@ -295,41 +295,21 @@ export default function ModuleDetail() {
               <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
                 <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">All Configurations Overview</h3>
                 <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
-                  Visual representation of all automation workflows in this module
+                  Visual representation of all automation workflows in this module shown together
                 </p>
               </div>
-              <div className="p-6 space-y-8">
-                {configurations.map((config, index) => (
-                  <div key={config.id} className="space-y-3">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center space-x-3">
-                        <h4 className="text-md font-medium text-gray-900 dark:text-gray-100">
-                          {config.name}
-                        </h4>
-                        <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(config.status)}`}>
-                          {config.status}
-                        </span>
-                      </div>
-                      <div className="text-xs text-gray-500 dark:text-gray-400">
-                        Updated: {new Date(config.updatedDate).toLocaleDateString()}
-                      </div>
-                    </div>
-                    <ConfigurationFlowOverview
-                      configuration={{
-                        trigger: config.trigger,
-                        conditions: config.conditions || [],
-                        actions: config.actions || []
-                      }}
-                      height="200px"
-                      showControls={false}
-                      showBackground={true}
-                      className="border border-gray-200 dark:border-gray-600 rounded-lg"
-                    />
-                    {index < configurations.length - 1 && (
-                      <hr className="border-gray-200 dark:border-gray-600" />
-                    )}
-                  </div>
-                ))}
+              <div className="p-6">
+                <ConfigurationFlowOverview
+                  configuration={{
+                    trigger: undefined, // Will be handled specially for multiple configs
+                    conditions: [],
+                    actions: []
+                  }}
+                  allConfigurations={configurations}
+                  height="500px"
+                  showControls={true}
+                  showBackground={true}
+                />
               </div>
             </div>
           )}
