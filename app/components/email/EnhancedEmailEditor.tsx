@@ -57,10 +57,11 @@ export default function EnhancedEmailEditor({
   const [currentAssignments, setCurrentAssignments] = useState<VariableAssignment[]>(variableAssignments);
   const [editorMode, setEditorMode] = useState<'simple' | 'advanced'>(mode);
   const [activeTab, setActiveTab] = useState<'template' | 'variables' | 'preview'>('template');
+  const [localSelectedTemplate, setLocalSelectedTemplate] = useState<string | undefined>(selectedTemplate);
   
   // Use React Query hooks
   const { templates, loading: templatesLoading, error: templatesError } = useEmailTemplates();
-  const { template, loading: templateLoading } = useEmailTemplate(selectedTemplate);
+  const { template, loading: templateLoading } = useEmailTemplate(localSelectedTemplate);
 
   const entityFields = getEntityFieldsForType(entityType);
 
@@ -75,6 +76,10 @@ export default function EnhancedEmailEditor({
   useEffect(() => {
     setEditorMode(mode);
   }, [mode]);
+
+  useEffect(() => {
+    setLocalSelectedTemplate(selectedTemplate);
+  }, [selectedTemplate, isOpen]);
 
   // When template changes and we have entity data, auto-generate assignments if none exist
   useEffect(() => {
@@ -288,7 +293,12 @@ export default function EnhancedEmailEditor({
             <div className="w-full overflow-y-auto">
               <div className="p-6">
                 <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">Select Template</h3>
+                  <div>
+                    <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">Select Template</h3>
+                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                      Click on a template to preview it, then use the "Select Template" button to confirm your choice.
+                    </p>
+                  </div>
                   {onNewTemplate && (
                     <button
                       onClick={onNewTemplate}
@@ -314,18 +324,25 @@ export default function EnhancedEmailEditor({
                     {templates.map((tmpl) => (
                       <div
                         key={tmpl.id}
-                        onClick={() => onTemplateSelect(tmpl.id)}
-                        className={`cursor-pointer border rounded-lg p-4 transition-colors ${
-                          selectedTemplate === tmpl.id
+                        onClick={() => setLocalSelectedTemplate(tmpl.id)}
+                        className={`cursor-pointer border rounded-lg p-4 transition-colors relative ${
+                          localSelectedTemplate === tmpl.id
                             ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
                             : 'border-gray-200 dark:border-gray-600 hover:border-gray-300 dark:hover:border-gray-500'
                         }`}
                       >
                         <div className="flex items-center justify-between mb-2">
                           <h4 className="font-medium text-gray-900 dark:text-gray-100">{tmpl.name}</h4>
-                          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
-                            {tmpl.category}
-                          </span>
+                          <div className="flex items-center space-x-2">
+                            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
+                              {tmpl.category}
+                            </span>
+                            {selectedTemplate === tmpl.id && (
+                              <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
+                                Current
+                              </span>
+                            )}
+                          </div>
                         </div>
                         <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">{tmpl.description}</p>
                         <p className="text-xs text-gray-500 dark:text-gray-400">
@@ -338,6 +355,37 @@ export default function EnhancedEmailEditor({
                         )}
                       </div>
                     ))}
+                  </div>
+                )}
+                
+                {/* Save/Select Button */}
+                {localSelectedTemplate && (
+                  <div className="border-t border-gray-200 dark:border-gray-700 pt-4 mt-6">
+                    <div className="flex items-center justify-between">
+                      <div className="text-sm text-gray-600 dark:text-gray-400">
+                        {(() => {
+                          const selected = templates.find(t => t.id === localSelectedTemplate);
+                          return selected ? `Selected: ${selected.name}` : 'Template selected';
+                        })()}
+                      </div>
+                      <div className="flex space-x-3">
+                        <button
+                          onClick={() => setLocalSelectedTemplate(undefined)}
+                          className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        >
+                          Clear Selection
+                        </button>
+                        <button
+                          onClick={() => {
+                            onTemplateSelect(localSelectedTemplate);
+                            setActiveTab('variables');
+                          }}
+                          className="px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        >
+                          Select Template
+                        </button>
+                      </div>
+                    </div>
                   </div>
                 )}
               </div>
