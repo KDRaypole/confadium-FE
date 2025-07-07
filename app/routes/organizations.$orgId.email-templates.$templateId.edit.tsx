@@ -520,8 +520,8 @@ export default function EditEmailTemplate() {
             {/* Right Panel - Preview */}
             {showPreview && (
               <div className="space-y-6">
-                <div className="bg-white dark:bg-gray-800 shadow rounded-lg border border-gray-200 dark:border-gray-700">
-                  <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+                <div className="bg-white dark:bg-gray-800 shadow rounded-lg border border-gray-200 dark:border-gray-700 sticky top-6 max-h-[calc(100vh-8rem)] overflow-hidden flex flex-col">
+                  <div className="flex-shrink-0 px-6 py-4 border-b border-gray-200 dark:border-gray-700">
                     <div className="flex items-center justify-between">
                       <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">Live Preview</h3>
                       <div className="flex items-center space-x-2">
@@ -561,7 +561,7 @@ export default function EditEmailTemplate() {
                   </div>
 
                   {/* Email Details Preview */}
-                  <div className="p-6 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-700">
+                  <div className="flex-shrink-0 p-6 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-700">
                     <div className="space-y-2">
                       <div>
                         <label className="block text-xs font-medium text-gray-500 dark:text-gray-400">Subject</label>
@@ -579,18 +579,18 @@ export default function EditEmailTemplate() {
                   </div>
 
                   {/* Content Preview */}
-                  <div className="p-6">
+                  <div className="flex-1 overflow-y-auto p-6">
                     {previewMode === "html" ? (
                       <div className="border border-gray-200 dark:border-gray-600 rounded-lg bg-white overflow-hidden">
                         <iframe
                           srcDoc={generatePreview(templateData.htmlContent) || "<p>No HTML content set</p>"}
-                          className="w-full min-h-[400px] border-0"
+                          className="w-full h-[400px] border-0"
                           title="Email Preview"
                           sandbox="allow-same-origin"
                         />
                       </div>
                     ) : (
-                      <div className="border border-gray-200 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-900 p-4 min-h-[400px]">
+                      <div className="border border-gray-200 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-900 p-4 h-[400px] overflow-y-auto">
                         <pre className="whitespace-pre-wrap text-sm text-gray-700 dark:text-gray-300 font-mono">
                           {generatePreview(templateData.textContent) || "No text content set"}
                         </pre>
