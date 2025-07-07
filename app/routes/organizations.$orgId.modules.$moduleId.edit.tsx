@@ -11,6 +11,10 @@ import { getTagColorClass } from "~/components/tags/TagsData";
 import SimpleSelect, { type SimpleSelectOption } from "~/components/ui/SimpleSelect";
 import { useTags, type Tag } from "~/hooks/useTags";
 import { useModule, useConfiguration, useModuleConfigurations, type Configuration, type ConfigurationCreateData } from "~/hooks/useModules";
+import InteractiveFlowEditor from "~/components/flow/InteractiveFlowEditor";
+import TriggerConfigModal, { type TriggerConfig } from "~/components/flow/modals/TriggerConfigModal";
+import ConditionConfigModal, { type Condition } from "~/components/flow/modals/ConditionConfigModal";
+import ActionConfigModal, { type ActionConfig } from "~/components/flow/modals/ActionConfigModal";
 import { 
   ArrowLeftIcon,
   PlusIcon,
@@ -18,7 +22,9 @@ import {
   XMarkIcon,
   ChevronDownIcon,
   EnvelopeIcon,
-  EyeIcon
+  EyeIcon,
+  ComputerDesktopIcon,
+  ListBulletIcon
 } from "@heroicons/react/24/outline";
 
 export const meta: MetaFunction = () => {
@@ -28,26 +34,10 @@ export const meta: MetaFunction = () => {
   ];
 };
 
-interface Condition {
-  id: string;
-  field: string;
-  operator: string;
-  value: string;
-  logicOperator?: "AND" | "OR";
-}
-
-interface Action {
-  id: string;
-  type: string;
-  target: string;
-  parameters: Record<string, any>;
-}
-
-interface TriggerConfig {
-  entityType: string;
-  action: string;
-  attributeFilter?: string; // For update triggers, optionally filter by specific attribute
-}
+// Re-export types from modal components for consistency
+export type { Condition } from "~/components/flow/modals/ConditionConfigModal";
+export type { ActionConfig as Action } from "~/components/flow/modals/ActionConfigModal";
+export type { TriggerConfig } from "~/components/flow/modals/TriggerConfigModal";
 
 // CRM field options for dropdown conditions
 const crmFields = [
@@ -249,11 +239,20 @@ export default function ModuleEdit() {
     }
   }, [existingConfig]);
 
+  // View mode state
+  const [viewMode, setViewMode] = useState<'form' | 'flow'>('form');
+
   // Email editor state
   const [emailEditorOpen, setEmailEditorOpen] = useState(false);
   const [currentActionId, setCurrentActionId] = useState<string | null>(null);
   const [emailPreviewOpen, setEmailPreviewOpen] = useState(false);
   const [emailTemplateManagerOpen, setEmailTemplateManagerOpen] = useState(false);
+  
+  // Flow editor modal states
+  const [triggerModalOpen, setTriggerModalOpen] = useState(false);
+  const [conditionModalOpen, setConditionModalOpen] = useState(false);
+  const [actionModalOpen, setActionModalOpen] = useState(false);
+  const [editingActionId, setEditingActionId] = useState<string | null>(null);
   
   // Tags state
   const { tags: availableTags } = useTags();
@@ -457,6 +456,70 @@ export default function ModuleEdit() {
     }
   };
 
+  // Flow editor handlers
+  const handleFlowConfigurationChange = (flowConfig: any) => {
+    setConfiguration(prev => ({
+      ...prev,
+      trigger: flowConfig.trigger,
+      conditions: flowConfig.conditions,
+      actions: flowConfig.actions
+    }));
+  };
+
+  const handleNodeEdit = (nodeType: 'trigger' | 'condition' | 'action', nodeId?: string) => {
+    switch (nodeType) {
+      case 'trigger':
+        setTriggerModalOpen(true);
+        break;
+      case 'condition':
+        setConditionModalOpen(true);
+        break;
+      case 'action':
+        setEditingActionId(nodeId || null);
+        setActionModalOpen(true);
+        break;
+    }
+  };
+
+  const handleTriggerSave = (trigger: TriggerConfig) => {
+    setConfiguration(prev => ({
+      ...prev,
+      trigger
+    }));
+    setTriggerModalOpen(false);
+  };
+
+  const handleConditionsSave = (conditions: Condition[]) => {
+    setConfiguration(prev => ({
+      ...prev,
+      conditions
+    }));
+    setConditionModalOpen(false);
+  };
+
+  const handleActionSave = (action: ActionConfig) => {
+    if (editingActionId) {
+      // Update existing action
+      setConfiguration(prev => ({
+        ...prev,
+        actions: prev.actions.map(a => a.id === editingActionId ? action : a)
+      }));
+    } else {
+      // Add new action
+      setConfiguration(prev => ({
+        ...prev,
+        actions: [...prev.actions, action]
+      }));
+    }
+    setActionModalOpen(false);
+    setEditingActionId(null);
+  };
+
+  const getEditingAction = (): ActionConfig | undefined => {
+    if (!editingActionId) return undefined;
+    return configuration.actions.find(action => action.id === editingActionId);
+  };
+
   // Loading states
   if (moduleLoading || configLoading) {
     return (
@@ -545,6 +608,32 @@ export default function ModuleEdit() {
               </div>
               
               <div className="flex items-center space-x-3">
+                {/* View Mode Toggle */}
+                <div className="inline-flex items-center bg-gray-100 dark:bg-gray-700 rounded-lg p-1">
+                  <button
+                    onClick={() => setViewMode('form')}
+                    className={`inline-flex items-center px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
+                      viewMode === 'form'
+                        ? 'bg-white dark:bg-gray-600 text-gray-900 dark:text-gray-100 shadow-sm'
+                        : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100'
+                    }`}
+                  >
+                    <ListBulletIcon className="h-4 w-4 mr-1.5" />
+                    Form
+                  </button>
+                  <button
+                    onClick={() => setViewMode('flow')}
+                    className={`inline-flex items-center px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
+                      viewMode === 'flow'
+                        ? 'bg-white dark:bg-gray-600 text-gray-900 dark:text-gray-100 shadow-sm'
+                        : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100'
+                    }`}
+                  >
+                    <ComputerDesktopIcon className="h-4 w-4 mr-1.5" />
+                    Flow
+                  </button>
+                </div>
+
                 <button
                   onClick={() => setEmailTemplateManagerOpen(true)}
                   className="inline-flex items-center px-3 py-2 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-md text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -570,41 +659,66 @@ export default function ModuleEdit() {
             </div>
           </div>
 
-          <div className="space-y-6">
-            {/* Basic Information */}
-            <div className="bg-white dark:bg-gray-800 shadow rounded-lg border border-gray-200 dark:border-gray-700">
-              <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
-                <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">Basic Information</h3>
+          {/* Basic Information - Always shown */}
+          <div className="bg-white dark:bg-gray-800 shadow rounded-lg border border-gray-200 dark:border-gray-700">
+            <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+              <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">Basic Information</h3>
+            </div>
+            <div className="p-6 space-y-4">
+              <div>
+                <label htmlFor="name" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                  Configuration Name
+                </label>
+                <input
+                  type="text"
+                  id="name"
+                  value={configuration.name}
+                  onChange={(e) => setConfiguration(prev => ({ ...prev, name: e.target.value }))}
+                  className="mt-1 block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                  placeholder="Enter a descriptive name for this configuration"
+                />
               </div>
-              <div className="p-6 space-y-4">
-                <div>
-                  <label htmlFor="name" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                    Configuration Name
-                  </label>
-                  <input
-                    type="text"
-                    id="name"
-                    value={configuration.name}
-                    onChange={(e) => setConfiguration(prev => ({ ...prev, name: e.target.value }))}
-                    className="mt-1 block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                    placeholder="Enter a descriptive name for this configuration"
-                  />
-                </div>
-                <div>
-                  <label htmlFor="description" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                    Description
-                  </label>
-                  <textarea
-                    id="description"
-                    rows={3}
-                    value={configuration.description}
-                    onChange={(e) => setConfiguration(prev => ({ ...prev, description: e.target.value }))}
-                    className="mt-1 block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                    placeholder="Describe what this configuration does"
-                  />
-                </div>
+              <div>
+                <label htmlFor="description" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                  Description
+                </label>
+                <textarea
+                  id="description"
+                  rows={3}
+                  value={configuration.description}
+                  onChange={(e) => setConfiguration(prev => ({ ...prev, description: e.target.value }))}
+                  className="mt-1 block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                  placeholder="Describe what this configuration does"
+                />
               </div>
             </div>
+          </div>
+
+          {/* Conditional Content Based on View Mode */}
+          {viewMode === 'flow' ? (
+            /* Interactive Flow Editor */
+            <div className="bg-white dark:bg-gray-800 shadow rounded-lg border border-gray-200 dark:border-gray-700 h-[600px]">
+              <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+                <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">Workflow Designer</h3>
+                <p className="text-sm text-gray-600 dark:text-gray-400">
+                  Build your automation visually by adding and connecting nodes
+                </p>
+              </div>
+              <div className="h-[532px]">
+                <InteractiveFlowEditor
+                  configuration={{
+                    trigger: configuration.trigger,
+                    conditions: configuration.conditions,
+                    actions: configuration.actions
+                  }}
+                  onConfigurationChange={handleFlowConfigurationChange}
+                  onNodeEdit={handleNodeEdit}
+                />
+              </div>
+            </div>
+          ) : (
+            /* Traditional Form View */
+            <div className="space-y-6">
 
             {/* Trigger Selection */}
             <div className="bg-white dark:bg-gray-800 shadow rounded-lg border border-gray-200 dark:border-gray-700">
@@ -1089,9 +1203,36 @@ export default function ModuleEdit() {
                 )}
               </div>
             </div>
-          </div>
+            </div>
+          )}
         </div>
       </div>
+
+      {/* Flow Editor Modals */}
+      <TriggerConfigModal
+        isOpen={triggerModalOpen}
+        trigger={configuration.trigger}
+        onSave={handleTriggerSave}
+        onClose={() => setTriggerModalOpen(false)}
+      />
+
+      <ConditionConfigModal
+        isOpen={conditionModalOpen}
+        conditions={configuration.conditions}
+        onSave={handleConditionsSave}
+        onClose={() => setConditionModalOpen(false)}
+      />
+
+      <ActionConfigModal
+        isOpen={actionModalOpen}
+        action={getEditingAction()}
+        entityType={configuration.trigger.entityType}
+        onSave={handleActionSave}
+        onClose={() => {
+          setActionModalOpen(false);
+          setEditingActionId(null);
+        }}
+      />
 
       {/* Enhanced Email Editor Modal */}
       <EnhancedEmailEditor
