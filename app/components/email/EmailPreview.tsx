@@ -1,9 +1,10 @@
 import { XMarkIcon, ClipboardDocumentIcon } from "@heroicons/react/24/outline";
-import { getTemplateById, replaceVariables } from "./EmailTemplates";
+import { replaceVariables, type EmailTemplate } from "./EmailTemplates";
 
 interface EmailPreviewProps {
   isOpen: boolean;
   templateId?: string;
+  templates?: EmailTemplate[];
   variables?: Record<string, string>;
   onClose: () => void;
   isDarkMode?: boolean;
@@ -12,13 +13,14 @@ interface EmailPreviewProps {
 export default function EmailPreview({
   isOpen,
   templateId,
+  templates = [],
   variables = {},
   onClose,
   isDarkMode = false
 }: EmailPreviewProps) {
   if (!isOpen || !templateId) return null;
 
-  const template = getTemplateById(templateId);
+  const template = templates.find(t => t.id === templateId);
   if (!template) return null;
 
   const copyToClipboard = (text: string) => {

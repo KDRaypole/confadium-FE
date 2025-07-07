@@ -6,7 +6,7 @@ import EnhancedEmailEditor from "~/components/email/EnhancedEmailEditor";
 import { type VariableAssignment } from "~/components/email/VariableAssignmentEditor";
 import EmailPreview from "~/components/email/EmailPreview";
 import EmailTemplateManager from "~/components/email/EmailTemplateManager";
-import { getTemplateById } from "~/components/email/EmailTemplates";
+import { useEmailTemplates } from "~/hooks/useEmailTemplates";
 import { getTagColorClass } from "~/components/tags/TagsData";
 import SimpleSelect, { type SimpleSelectOption } from "~/components/ui/SimpleSelect";
 import { useTags, type Tag } from "~/hooks/useTags";
@@ -210,6 +210,12 @@ export default function ModuleEdit() {
   const { module, loading: moduleLoading, error: moduleError } = useModule(moduleId);
   const { configuration: existingConfig, loading: configLoading, updateConfiguration, isUpdating } = useConfiguration(configId || undefined);
   const { createConfiguration, isCreating } = useModuleConfigurations(moduleId);
+  const { templates: emailTemplates } = useEmailTemplates();
+
+  // Helper function to get template by ID from the proper templates source
+  const getTemplateById = (templateId: string) => {
+    return emailTemplates.find(template => template.id === templateId);
+  };
 
   // Initialize with empty configuration or load existing one (trigger is always present)
   const [configuration, setConfiguration] = useState<Omit<Configuration, 'id' | 'moduleId' | 'createdDate' | 'updatedDate'>>({
@@ -1268,6 +1274,7 @@ export default function ModuleEdit() {
       <EmailPreview
         isOpen={emailPreviewOpen}
         templateId={getCurrentEmailTemplate()}
+        templates={emailTemplates}
         variables={getCurrentEmailVariables()}
         onClose={() => {
           setEmailPreviewOpen(false);
