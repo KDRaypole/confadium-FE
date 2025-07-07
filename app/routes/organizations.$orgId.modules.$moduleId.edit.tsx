@@ -253,6 +253,7 @@ export default function ModuleEdit() {
   const [currentActionId, setCurrentActionId] = useState<string | null>(null);
   const [emailPreviewOpen, setEmailPreviewOpen] = useState(false);
   const [emailTemplateManagerOpen, setEmailTemplateManagerOpen] = useState(false);
+  const [emailEditorOpenedFromActionModal, setEmailEditorOpenedFromActionModal] = useState(false);
   
   // Flow editor modal states
   const [triggerModalOpen, setTriggerModalOpen] = useState(false);
@@ -340,6 +341,17 @@ export default function ModuleEdit() {
   const openEmailEditor = (actionId: string) => {
     setCurrentActionId(actionId);
     setEmailEditorOpen(true);
+    setEmailEditorOpenedFromActionModal(false);
+  };
+
+  // Handle email editor request from ActionConfigModal
+  const handleEmailEditorRequest = (actionId: string, currentTemplate?: string, currentVariables?: Record<string, string>, currentAssignments?: any[]) => {
+    // Close the action modal temporarily
+    setActionModalOpen(false);
+    // Open email editor with the current action context
+    setCurrentActionId(actionId);
+    setEmailEditorOpen(true);
+    setEmailEditorOpenedFromActionModal(true);
   };
 
   const handleEmailTemplateSelect = (templateId: string) => {
@@ -1234,6 +1246,7 @@ export default function ModuleEdit() {
         action={getEditingAction()}
         entityType={configuration.trigger.entityType}
         onSave={handleActionSave}
+        onRequestEmailEditor={handleEmailEditorRequest}
         onClose={() => {
           setActionModalOpen(false);
           setEditingActionId(null);
@@ -1257,7 +1270,13 @@ export default function ModuleEdit() {
         }}
         onClose={() => {
           setEmailEditorOpen(false);
-          setCurrentActionId(null);
+          // If email editor was opened from action modal, reopen the action modal
+          if (emailEditorOpenedFromActionModal) {
+            setActionModalOpen(true);
+            setEmailEditorOpenedFromActionModal(false);
+          } else {
+            setCurrentActionId(null);
+          }
         }}
         mode="advanced"
         isDarkMode={false} // You can integrate with your dark mode context here

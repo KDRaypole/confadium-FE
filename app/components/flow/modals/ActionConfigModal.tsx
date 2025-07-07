@@ -21,6 +21,7 @@ interface ActionConfigModalProps {
   entityType?: string;
   onSave: (action: ActionConfig) => void;
   onClose: () => void;
+  onRequestEmailEditor?: (actionId: string, currentTemplate?: string, currentVariables?: Record<string, string>, currentAssignments?: VariableAssignment[]) => void;
 }
 
 const actionTypes = [
@@ -42,7 +43,8 @@ const ActionConfigModal: React.FC<ActionConfigModalProps> = ({
   action,
   entityType = 'contact',
   onSave,
-  onClose
+  onClose,
+  onRequestEmailEditor
 }) => {
   const { isDarkMode } = useDarkMode();
   const { tags, getTagById } = useTags();
@@ -54,7 +56,6 @@ const ActionConfigModal: React.FC<ActionConfigModalProps> = ({
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const [emailEditorOpen, setEmailEditorOpen] = useState(false);
   const [selectedTagIds, setSelectedTagIds] = useState<string[]>([]);
 
   useEffect(() => {
@@ -165,16 +166,15 @@ const ActionConfigModal: React.FC<ActionConfigModalProps> = ({
     setErrors({});
   };
 
-  const handleEmailTemplateSelect = (templateId: string) => {
-    updateParameter('emailTemplate', templateId);
-  };
-
-  const handleEmailVariablesChange = (variables: Record<string, string>) => {
-    updateParameter('emailVariables', variables);
-  };
-
-  const handleVariableAssignmentsChange = (assignments: VariableAssignment[]) => {
-    updateParameter('variableAssignments', assignments);
+  const handleRequestEmailEditor = () => {
+    if (onRequestEmailEditor) {
+      onRequestEmailEditor(
+        formData.id,
+        formData.parameters.emailTemplate,
+        formData.parameters.emailVariables,
+        formData.parameters.variableAssignments
+      );
+    }
   };
 
   const formatActionPreview = () => {
@@ -325,7 +325,7 @@ const ActionConfigModal: React.FC<ActionConfigModalProps> = ({
                             <div className="flex items-center space-x-2">
                               <button
                                 type="button"
-                                onClick={() => setEmailEditorOpen(true)}
+                                onClick={handleRequestEmailEditor}
                                 className="flex-1 inline-flex items-center justify-center px-3 py-2 border border-blue-300 dark:border-blue-600 shadow-sm text-sm leading-4 font-medium rounded-md text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-900 hover:bg-blue-100 dark:hover:bg-blue-800"
                               >
                                 <EnvelopeIcon className="h-4 w-4 mr-2" />
@@ -542,22 +542,6 @@ const ActionConfigModal: React.FC<ActionConfigModalProps> = ({
           </div>
         </Dialog>
       </Transition>
-
-      {/* Enhanced Email Editor Modal */}
-      <EnhancedEmailEditor
-        isOpen={emailEditorOpen}
-        selectedTemplate={formData.parameters.emailTemplate}
-        variables={formData.parameters.emailVariables || {}}
-        variableAssignments={formData.parameters.variableAssignments || []}
-        entityType={entityType}
-        entityData={{}}
-        onTemplateSelect={handleEmailTemplateSelect}
-        onVariablesChange={handleEmailVariablesChange}
-        onVariableAssignmentsChange={handleVariableAssignmentsChange}
-        onClose={() => setEmailEditorOpen(false)}
-        mode="advanced"
-        isDarkMode={isDarkMode}
-      />
     </>
   );
 };
