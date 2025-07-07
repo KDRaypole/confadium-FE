@@ -39,7 +39,7 @@ const ConditionNode: React.FC<NodeProps<ConditionNodeData>> = ({ data, selected 
 
   return (
     <div className={`
-      relative bg-gradient-to-r from-yellow-500 to-yellow-600 text-white rounded-lg shadow-lg min-w-[200px] border-2
+      relative bg-gradient-to-r from-yellow-500 to-yellow-600 text-white rounded-lg shadow-lg min-w-[240px] max-w-[300px] border-2
       ${selected ? 'border-yellow-300' : 'border-transparent'}
       ${!isValid || !hasValidConditions ? 'border-red-400 border-dashed' : ''}
     `}>
@@ -98,8 +98,19 @@ const ConditionNode: React.FC<NodeProps<ConditionNodeData>> = ({ data, selected 
           {getDisplayText()}
         </div>
         {conditions.length > 1 && (
-          <div className="text-xs text-yellow-100 mt-1">
-            {conditions.slice(1).map(c => c.logicOperator).join(', ')} logic
+          <div className="text-xs text-yellow-100 mt-2 space-y-1">
+            {conditions.map((condition, index) => (
+              <div key={condition.id || index} className="flex items-center">
+                {index > 0 && (
+                  <span className="text-yellow-200 font-medium mr-1">
+                    {condition.logicOperator || 'AND'}
+                  </span>
+                )}
+                <span className="truncate">
+                  {condition.field} {condition.operator} {condition.value}
+                </span>
+              </div>
+            ))}
           </div>
         )}
         {(!isValid || !hasValidConditions) && (
