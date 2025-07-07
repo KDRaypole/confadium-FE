@@ -18,7 +18,6 @@ import ReactFlow, {
 import 'reactflow/dist/style.css';
 import { useDarkMode } from '~/contexts/DarkModeContext';
 
-import StartNode from './StartNode';
 import TriggerNode, { type TriggerNodeData } from './TriggerNode';
 import ConditionNode, { type ConditionNodeData } from './ConditionNode';
 import ActionNode, { type ActionNodeData } from './ActionNode';
@@ -36,7 +35,6 @@ import {
 
 // Node type definitions
 const nodeTypes: NodeTypes = {
-  start: StartNode,
   trigger: TriggerNode,
   condition: ConditionNode,
   action: ActionNode,
@@ -96,34 +94,23 @@ const InteractiveFlowEditor: React.FC<InteractiveFlowEditorProps> = ({
     const yPosition = 200;
     const nodeSpacing = 300;
 
-    // Start node
+    // Trigger node (always present, not deletable)
     nodes.push({
-      id: 'start',
-      type: 'start',
+      id: 'trigger',
+      type: 'trigger',
       position: { x: xPosition, y: yPosition },
-      data: { label: 'Start' },
+      data: {
+        label: 'Trigger',
+        entityType: configuration.trigger?.entityType || '',
+        action: configuration.trigger?.action || '',
+        attributeFilter: configuration.trigger?.attributeFilter,
+        isValid: !!(configuration.trigger?.entityType && configuration.trigger?.action),
+        onEdit: () => onNodeEdit('trigger'),
+        onDelete: undefined, // No delete function to prevent removal
+      } as TriggerNodeData,
       deletable: false,
     });
     xPosition += nodeSpacing;
-
-    // Trigger node
-    if (configuration.trigger) {
-      nodes.push({
-        id: 'trigger',
-        type: 'trigger',
-        position: { x: xPosition, y: yPosition },
-        data: {
-          label: 'Trigger',
-          entityType: configuration.trigger.entityType,
-          action: configuration.trigger.action,
-          attributeFilter: configuration.trigger.attributeFilter,
-          isValid: !!(configuration.trigger.entityType && configuration.trigger.action),
-          onEdit: () => onNodeEdit('trigger'),
-          onDelete: () => handleDeleteTrigger(),
-        } as TriggerNodeData,
-      });
-      xPosition += nodeSpacing;
-    }
 
     // Conditions node (if any conditions exist)
     if (configuration.conditions.length > 0) {
@@ -170,18 +157,7 @@ const InteractiveFlowEditor: React.FC<InteractiveFlowEditorProps> = ({
 
   const generateEdgesFromConfig = useCallback((): Edge[] => {
     const edges: Edge[] = [];
-    let sourceId = 'start';
-
-    // Connect start to trigger
-    if (configuration.trigger) {
-      edges.push({
-        id: `${sourceId}-trigger`,
-        source: sourceId,
-        target: 'trigger',
-        ...defaultEdgeOptions,
-      });
-      sourceId = 'trigger';
-    }
+    let sourceId = 'trigger'; // Always start from trigger since it's always present
 
     // Connect trigger to conditions (if any)
     if (configuration.conditions.length > 0) {
@@ -233,12 +209,7 @@ const InteractiveFlowEditor: React.FC<InteractiveFlowEditorProps> = ({
     [setEdges]
   );
 
-  const handleDeleteTrigger = () => {
-    onConfigurationChange({
-      ...configuration,
-      trigger: undefined,
-    });
-  };
+  // Trigger deletion is not allowed, so this function is removed
 
   const handleDeleteConditions = () => {
     onConfigurationChange({
@@ -255,6 +226,10 @@ const InteractiveFlowEditor: React.FC<InteractiveFlowEditorProps> = ({
   };
 
   const addNewNode = (nodeType: 'trigger' | 'condition' | 'action') => {
+    // Prevent adding trigger nodes since there's always exactly one
+    if (nodeType === 'trigger') {
+      return;
+    }
     onNodeEdit(nodeType);
   };
 
@@ -277,7 +252,7 @@ const InteractiveFlowEditor: React.FC<InteractiveFlowEditorProps> = ({
       if (!reactFlowBounds) return;
 
       const type = event.dataTransfer.getData('application/reactflow');
-      if (!type) return;
+      if (!type || type === 'trigger') return; // Prevent dropping trigger nodes
 
       const position = {
         x: event.clientX - reactFlowBounds.left,
@@ -293,7 +268,7 @@ const InteractiveFlowEditor: React.FC<InteractiveFlowEditorProps> = ({
 
   const clearFlow = () => {
     onConfigurationChange({
-      trigger: undefined,
+      trigger: { entityType: '', action: '', attributeFilter: undefined }, // Reset trigger but keep it
       conditions: [],
       actions: [],
     });
@@ -362,23 +337,7 @@ const InteractiveFlowEditor: React.FC<InteractiveFlowEditorProps> = ({
               Add Components
             </h3>
             <div className="space-y-2">
-              {!configuration.trigger && (
-                <button
-                  onClick={() => addNewNode('trigger')}
-                  onDragStart={(event) => onDragStart(event, 'trigger')}
-                  draggable
-                  className={`
-                    w-full flex items-center space-x-2 px-3 py-2 rounded border transition-colors
-                    ${isDarkMode 
-                      ? 'border-blue-600 bg-blue-900 text-blue-100 hover:bg-blue-800' 
-                      : 'border-blue-300 bg-blue-50 text-blue-800 hover:bg-blue-100'
-                    }
-                  `}
-                >
-                  <BoltIcon className="h-4 w-4" />
-                  <span className="text-sm">Trigger</span>
-                </button>
-              )}
+              {/* Trigger is always present and cannot be added manually */}
 
               <button
                 onClick={() => addNewNode('condition')}
@@ -463,13 +422,16 @@ const InteractiveFlowEditor: React.FC<InteractiveFlowEditorProps> = ({
             ${isDarkMode ? 'bg-gray-800 border-gray-600 text-gray-100' : 'bg-white border-gray-200 text-gray-700'}
           `}>
             <span className="text-sm">
-              <strong>{nodes.length}</strong> nodes
+              <strong>1</strong> trigger
             </span>
             <span className="text-sm">
-              <strong>{edges.length}</strong> connections
+              <strong>{configuration.conditions.length}</strong> conditions
             </span>
             <span className="text-sm">
               <strong>{configuration.actions.length}</strong> actions
+            </span>
+            <span className="text-sm">
+              <strong>{edges.length}</strong> connections
             </span>
           </div>
         </Panel>

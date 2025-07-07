@@ -211,7 +211,7 @@ export default function ModuleEdit() {
   const { configuration: existingConfig, loading: configLoading, updateConfiguration, isUpdating } = useConfiguration(configId || undefined);
   const { createConfiguration, isCreating } = useModuleConfigurations(moduleId);
 
-  // Initialize with empty configuration or load existing one
+  // Initialize with empty configuration or load existing one (trigger is always present)
   const [configuration, setConfiguration] = useState<Omit<Configuration, 'id' | 'moduleId' | 'createdDate' | 'updatedDate'>>({
     name: "",
     description: "",
@@ -231,7 +231,7 @@ export default function ModuleEdit() {
       setConfiguration({
         name: existingConfig.name,
         description: existingConfig.description,
-        trigger: existingConfig.trigger,
+        trigger: existingConfig.trigger || { entityType: "", action: "", attributeFilter: undefined },
         conditions: existingConfig.conditions,
         actions: existingConfig.actions,
         status: existingConfig.status
