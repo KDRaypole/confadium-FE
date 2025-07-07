@@ -2,7 +2,8 @@ import type { MetaFunction } from "@remix-run/node";
 import { Link, useParams, useSearchParams } from "@remix-run/react";
 import React, { useState } from "react";
 import Layout from "~/components/layout/Layout";
-import EmailEditor from "~/components/email/EmailEditor";
+import EnhancedEmailEditor from "~/components/email/EnhancedEmailEditor";
+import { type VariableAssignment } from "~/components/email/VariableAssignmentEditor";
 import EmailPreview from "~/components/email/EmailPreview";
 import EmailTemplateManager from "~/components/email/EmailTemplateManager";
 import { getTemplateById } from "~/components/email/EmailTemplates";
@@ -359,6 +360,17 @@ export default function ModuleEdit() {
     }
   };
 
+  const handleVariableAssignmentsChange = (assignments: VariableAssignment[]) => {
+    if (currentActionId) {
+      updateAction(currentActionId, {
+        parameters: {
+          ...getActionById(currentActionId)?.parameters,
+          variableAssignments: assignments
+        }
+      });
+    }
+  };
+
   const getActionById = (actionId: string) => {
     return configuration.actions.find(action => action.id === actionId);
   };
@@ -373,6 +385,12 @@ export default function ModuleEdit() {
     if (!currentActionId) return {};
     const action = getActionById(currentActionId);
     return action?.parameters?.emailVariables || {};
+  };
+
+  const getCurrentVariableAssignments = () => {
+    if (!currentActionId) return [];
+    const action = getActionById(currentActionId);
+    return action?.parameters?.variableAssignments || [];
   };
 
   const getEntityType = (entityValue: string) => {
@@ -934,6 +952,11 @@ export default function ModuleEdit() {
                                               {template.variables.length > 0 && (
                                                 <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                                                   <strong>Variables:</strong> {template.variables.join(", ")}
+                                                  {action.parameters?.variableAssignments && action.parameters.variableAssignments.length > 0 && (
+                                                    <div className="mt-1">
+                                                      <strong>Assignments:</strong> {action.parameters.variableAssignments.length}/{template.variables.length} configured
+                                                    </div>
+                                                  )}
                                                 </div>
                                               )}
                                             </div>
@@ -1070,13 +1093,17 @@ export default function ModuleEdit() {
         </div>
       </div>
 
-      {/* Email Editor Modal */}
-      <EmailEditor
+      {/* Enhanced Email Editor Modal */}
+      <EnhancedEmailEditor
         isOpen={emailEditorOpen}
         selectedTemplate={getCurrentEmailTemplate()}
         variables={getCurrentEmailVariables()}
+        variableAssignments={getCurrentVariableAssignments()}
+        entityType={configuration.trigger.entityType || 'contact'}
+        entityData={{}}
         onTemplateSelect={handleEmailTemplateSelect}
         onVariablesChange={handleEmailVariablesChange}
+        onVariableAssignmentsChange={handleVariableAssignmentsChange}
         onNewTemplate={() => {
           setEmailEditorOpen(false);
           setEmailTemplateManagerOpen(true);
@@ -1085,6 +1112,7 @@ export default function ModuleEdit() {
           setEmailEditorOpen(false);
           setCurrentActionId(null);
         }}
+        mode="advanced"
         isDarkMode={false} // You can integrate with your dark mode context here
       />
 
