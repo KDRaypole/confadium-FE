@@ -157,7 +157,7 @@ const ConfigurationFlowOverview: React.FC<ConfigurationFlowOverviewProps> = ({
           xPosition += nodeSpacing;
         }
 
-        // Action nodes
+        // Action nodes (all actions at same X position, spread vertically)
         config.actions.forEach((action, actionIndex) => {
           const actionYOffset = config.actions.length > 1 
             ? (actionIndex - (config.actions.length - 1) / 2) * 120 
@@ -224,7 +224,7 @@ const ConfigurationFlowOverview: React.FC<ConfigurationFlowOverviewProps> = ({
         xPosition += nodeSpacing;
       }
 
-      // Action nodes
+      // Action nodes (all actions at same X position, spread vertically)
       configuration.actions.forEach((action, index) => {
         const actionYOffset = configuration.actions.length > 1 
           ? (index - (configuration.actions.length - 1) / 2) * 120 
@@ -279,28 +279,15 @@ const ConfigurationFlowOverview: React.FC<ConfigurationFlowOverviewProps> = ({
           sourceId = `conditions-${configIndex}`;
         }
 
-        // Connect to actions
+        // Connect to actions (each action connects directly from the source, no action-to-action connections)
         if (config.actions.length > 0) {
           config.actions.forEach((action, actionIndex) => {
-            // Connect from previous node to first action
-            if (actionIndex === 0) {
-              edgeList.push({
-                id: `${sourceId}-action-${configIndex}-${action.id}`,
-                source: sourceId,
-                target: `action-${configIndex}-${action.id}`,
-                ...defaultEdgeOptions,
-              });
-            }
-
-            // Connect actions in sequence
-            if (config.actions.length > 1 && actionIndex < config.actions.length - 1) {
-              edgeList.push({
-                id: `action-${configIndex}-${action.id}-action-${configIndex}-${config.actions[actionIndex + 1].id}`,
-                source: `action-${configIndex}-${action.id}`,
-                target: `action-${configIndex}-${config.actions[actionIndex + 1].id}`,
-                ...defaultEdgeOptions,
-              });
-            }
+            edgeList.push({
+              id: `${sourceId}-action-${configIndex}-${action.id}`,
+              source: sourceId,
+              target: `action-${configIndex}-${action.id}`,
+              ...defaultEdgeOptions,
+            });
           });
         }
       });
@@ -327,26 +314,15 @@ const ConfigurationFlowOverview: React.FC<ConfigurationFlowOverviewProps> = ({
         sourceId = 'conditions';
       }
 
-      // Connect to actions
+      // Connect to actions (each action connects directly from the source, no action-to-action connections)
       if (configuration.actions.length > 0 && sourceId) {
-        configuration.actions.forEach((action, index) => {
-          if (index === 0) {
-            edgeList.push({
-              id: `${sourceId}-action-${action.id}`,
-              source: sourceId!,
-              target: `action-${action.id}`,
-              ...defaultEdgeOptions,
-            });
-          }
-
-          if (configuration.actions.length > 1 && index < configuration.actions.length - 1) {
-            edgeList.push({
-              id: `action-${action.id}-action-${configuration.actions[index + 1].id}`,
-              source: `action-${action.id}`,
-              target: `action-${configuration.actions[index + 1].id}`,
-              ...defaultEdgeOptions,
-            });
-          }
+        configuration.actions.forEach((action) => {
+          edgeList.push({
+            id: `${sourceId}-action-${action.id}`,
+            source: sourceId!,
+            target: `action-${action.id}`,
+            ...defaultEdgeOptions,
+          });
         });
       }
     }

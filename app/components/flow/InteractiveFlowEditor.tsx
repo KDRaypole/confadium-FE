@@ -170,25 +170,15 @@ const InteractiveFlowEditor: React.FC<InteractiveFlowEditorProps> = ({
       sourceId = 'conditions';
     }
 
-    // Connect to actions
+    // Connect to actions (each action connects directly from the source, no action-to-action connections)
     if (configuration.actions.length > 0) {
-      configuration.actions.forEach((action, index) => {
+      configuration.actions.forEach((action) => {
         edges.push({
           id: `${sourceId}-action-${action.id}`,
           source: sourceId,
           target: `action-${action.id}`,
           ...defaultEdgeOptions,
         });
-
-        // Connect actions in sequence (only if more than one action)
-        if (configuration.actions.length > 1 && index < configuration.actions.length - 1) {
-          edges.push({
-            id: `action-${action.id}-action-${configuration.actions[index + 1].id}`,
-            source: `action-${action.id}`,
-            target: `action-${configuration.actions[index + 1].id}`,
-            ...defaultEdgeOptions,
-          });
-        }
       });
     }
 

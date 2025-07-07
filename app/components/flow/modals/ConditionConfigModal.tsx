@@ -2,7 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { Dialog, Transition } from '@headlessui/react';
 import { XMarkIcon, FunnelIcon, PlusIcon, TrashIcon, InformationCircleIcon } from '@heroicons/react/24/outline';
 import SimpleSelect from '~/components/ui/SimpleSelect';
+import { getTagColorClass } from '~/components/tags/TagsData';
 import { useDarkMode } from '~/contexts/DarkModeContext';
+import { useTags } from '~/hooks/useTags';
 
 export interface Condition {
   id: string;
@@ -20,7 +22,7 @@ interface ConditionConfigModalProps {
 }
 
 // CRM field options for dropdown conditions
-const crmFields = [
+const getBaseCrmFields = () => [
   { value: "contact.name", label: "Contact Name", type: "text" },
   { value: "contact.email", label: "Contact Email", type: "email" },
   { value: "contact.phone", label: "Contact Phone", type: "text" },
@@ -31,17 +33,21 @@ const crmFields = [
   { value: "contact.value", label: "Estimated Value", type: "number" },
   { value: "contact.territory", label: "Territory", type: "text" },
   { value: "contact.lastContact", label: "Last Contact Date", type: "date" },
+  { value: "contact.hasTag", label: "Contact Has Tag", type: "tag" },
+  { value: "contact.doesNotHaveTag", label: "Contact Does Not Have Tag", type: "tag" },
   { value: "deal.stage", label: "Deal Stage", type: "select", options: ["prospect", "qualified", "proposal", "negotiation", "closed-won", "closed-lost"] },
   { value: "deal.value", label: "Deal Value", type: "number" },
   { value: "deal.probability", label: "Deal Probability", type: "number" },
   { value: "deal.closeDate", label: "Close Date", type: "date" },
+  { value: "deal.hasTag", label: "Deal Has Tag", type: "tag" },
+  { value: "deal.doesNotHaveTag", label: "Deal Does Not Have Tag", type: "tag" },
   { value: "activity.type", label: "Activity Type", type: "select", options: ["call", "email", "meeting", "task"] },
   { value: "activity.status", label: "Activity Status", type: "select", options: ["completed", "scheduled", "overdue"] }
 ];
 
 const operators = [
-  { value: "equals", label: "equals", types: ["text", "email", "select"] },
-  { value: "not_equals", label: "does not equal", types: ["text", "email", "select"] },
+  { value: "equals", label: "equals", types: ["text", "email", "select", "tag"] },
+  { value: "not_equals", label: "does not equal", types: ["text", "email", "select", "tag"] },
   { value: "contains", label: "contains", types: ["text", "email"] },
   { value: "not_contains", label: "does not contain", types: ["text", "email"] },
   { value: "starts_with", label: "starts with", types: ["text", "email"] },
@@ -66,6 +72,7 @@ const ConditionConfigModal: React.FC<ConditionConfigModalProps> = ({
   onClose
 }) => {
   const { isDarkMode } = useDarkMode();
+  const { tags, getTagById } = useTags();
   const [formConditions, setFormConditions] = useState<Condition[]>([]);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
@@ -89,6 +96,8 @@ const ConditionConfigModal: React.FC<ConditionConfigModalProps> = ({
     return Math.random().toString(36).substr(2, 9);
   };
 
+  const crmFields = getBaseCrmFields();
+
   const getFieldType = (fieldValue: string) => {
     const field = crmFields.find(f => f.value === fieldValue);
     return field?.type || "text";
@@ -96,6 +105,9 @@ const ConditionConfigModal: React.FC<ConditionConfigModalProps> = ({
 
   const getFieldOptions = (fieldValue: string) => {
     const field = crmFields.find(f => f.value === fieldValue);
+    if (field?.type === 'tag') {
+      return tags.map(tag => ({ value: tag.id, label: tag.name }));
+    }
     return field?.options || [];
   };
 
@@ -328,14 +340,15 @@ const ConditionConfigModal: React.FC<ConditionConfigModalProps> = ({
                           {/* Value Input */}
                           <div>
                             <label className="block text-xs font-medium mb-1">Value</label>
-                            {getFieldType(condition.field) === "select" ? (
+                            {(getFieldType(condition.field) === "select" || getFieldType(condition.field) === "tag") ? (
                               <SimpleSelect
                                 options={[
-                                  { value: "", label: "Select value..." },
-                                  ...getFieldOptions(condition.field).map(option => ({
-                                    value: option,
-                                    label: option
-                                  }))
+                                  { value: "", label: getFieldType(condition.field) === "tag" ? "Select tag..." : "Select value..." },
+                                  ...getFieldOptions(condition.field).map(option => 
+                                    typeof option === 'string' 
+                                      ? ({ value: option, label: option })
+                                      : ({ value: option.value, label: option.label })
+                                  )
                                 ]}
                                 value={condition.value}
                                 onChange={(value) => updateCondition(condition.id, { value })}
@@ -355,6 +368,24 @@ const ConditionConfigModal: React.FC<ConditionConfigModalProps> = ({
                                 placeholder="Enter value..."
                               />
                             )}
+                            
+                            {/* Tag Preview */}
+                            {getFieldType(condition.field) === "tag" && condition.value && (
+                              <div className="mt-1">
+                                {(() => {
+                                  const selectedTag = getTagById(condition.value);
+                                  if (selectedTag) {
+                                    return (
+                                      <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${getTagColorClass(selectedTag.color)}`}>
+                                        {selectedTag.name}
+                                      </span>
+                                    );
+                                  }
+                                  return null;
+                                })()}
+                              </div>
+                            )}
+                            
                             {errors[`value-${index}`] && (
                               <p className="mt-1 text-xs text-red-600 dark:text-red-400">
                                 {errors[`value-${index}`]}
