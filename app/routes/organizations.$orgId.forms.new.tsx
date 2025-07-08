@@ -1,9 +1,10 @@
 import type { MetaFunction } from "@remix-run/node";
-import { Link, useParams } from "@remix-run/react";
+import { Link, useParams, useNavigate } from "@remix-run/react";
 import { useState } from "react";
 import Layout from "~/components/layout/Layout";
 import DynamicFormEditor from "~/components/forms/DynamicFormEditor";
-import { ArrowLeftIcon } from "@heroicons/react/24/outline";
+import { useForms } from "~/hooks/useForms";
+import { ArrowLeftIcon, CheckIcon } from "@heroicons/react/24/outline";
 
 export const meta: MetaFunction = () => {
   return [
@@ -67,16 +68,25 @@ const defaultTheme: FormTheme = {
 };
 
 const defaultSettings = {
-  allowMultipleSubmissions: true,
-  requireAuthentication: false,
-  showProgressBar: false,
   submitButtonText: "Submit",
   successMessage: "Thank you for your submission!",
-  redirectUrl: ""
+  errorMessage: "Sorry, there was an error submitting your form. Please try again.",
+  notificationEmail: "",
+  storeSubmissions: true,
+  requireAuth: false,
+  enableCaptcha: false,
+  submissionLimitPeriod: 'day' as const,
+  closedMessage: "This form is currently closed for submissions.",
+  allowMultipleSubmissions: true,
+  showProgressBar: false,
+  autoSaveDraft: false
 };
 
 export default function NewForm() {
   const { orgId } = useParams();
+  const navigate = useNavigate();
+  const { createForm } = useForms();
+  const [saving, setSaving] = useState(false);
   const [formData, setFormData] = useState<FormData>({
     name: "",
     description: "",
@@ -86,10 +96,36 @@ export default function NewForm() {
   });
 
   const handleSave = async (isDraft = true) => {
-    // Here you would implement the actual save logic
-    console.log("Saving form:", { ...formData, status: isDraft ? 'draft' : 'active' });
-    // For now, just show an alert
-    alert(`Form ${isDraft ? 'saved as draft' : 'published'} successfully!`);
+    if (!formData.name.trim()) {
+      alert('Please enter a form name');
+      return;
+    }
+
+    try {
+      setSaving(true);
+      const result = await createForm({
+        name: formData.name,
+        description: formData.description,
+        fields: formData.fields,
+        theme: formData.theme,
+        settings: formData.settings,
+        status: isDraft ? 'draft' : 'active'
+      });
+
+      if (result) {
+        // Navigate to the newly created form
+        if (isDraft) {
+          navigate(`/organizations/${orgId}/forms/${result.id}/edit`);
+        } else {
+          navigate(`/organizations/${orgId}/forms/${result.id}`);
+        }
+      }
+    } catch (err) {
+      console.error('Failed to save form:', err);
+      alert('Failed to save form. Please try again.');
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -147,16 +183,34 @@ export default function NewForm() {
             <div className="flex justify-end space-x-3 mb-8">
               <button
                 onClick={() => handleSave(true)}
-                className="px-4 py-2 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-md text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                disabled={saving || !formData.name.trim()}
+                className="px-4 py-2 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-md text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-purple-500 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Save Draft
+                {saving ? (
+                  <>
+                    <div className="animate-spin h-4 w-4 mr-2 border-2 border-gray-300 border-t-gray-600 rounded-full inline-block"></div>
+                    Saving...
+                  </>
+                ) : (
+                  'Save Draft'
+                )}
               </button>
               <button
                 onClick={() => handleSave(false)}
-                disabled={!formData.name.trim() || formData.fields.length === 0}
-                className="px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-purple-600 hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                disabled={saving || !formData.name.trim() || formData.fields.length === 0}
+                className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-purple-600 hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Publish Form
+                {saving ? (
+                  <>
+                    <div className="animate-spin h-4 w-4 mr-2 border-2 border-white border-t-transparent rounded-full"></div>
+                    Publishing...
+                  </>
+                ) : (
+                  <>
+                    <CheckIcon className="h-4 w-4 mr-2" />
+                    Publish Form
+                  </>
+                )}
               </button>
             </div>
           </div>
