@@ -12,7 +12,8 @@ import {
   ArrowLeftIcon,
   CogIcon,
   EnvelopeIcon,
-  TagIcon
+  TagIcon,
+  DocumentTextIcon
 } from "@heroicons/react/24/outline";
 
 interface SidebarProps {
@@ -34,6 +35,7 @@ const getOrgNavigation = (orgId: string) => [
   { name: "Calls", href: `/organizations/${orgId}/calls`, icon: PhoneIcon },
   { name: "Reports", href: `/organizations/${orgId}/reports`, icon: ChartBarIcon },
   { name: "Email Templates", href: `/organizations/${orgId}/email-templates`, icon: EnvelopeIcon },
+  { name: "Forms", href: `/organizations/${orgId}/forms`, icon: DocumentTextIcon },
   { name: "Tags", href: `/organizations/${orgId}/tags`, icon: TagIcon },
   { name: "Modules", href: `/organizations/${orgId}/modules`, icon: CogIcon },
 ];

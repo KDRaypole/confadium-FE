@@ -3,11 +3,13 @@ import { Dialog, Transition } from '@headlessui/react';
 import { XMarkIcon, BoltIcon, InformationCircleIcon } from '@heroicons/react/24/outline';
 import SimpleSelect from '~/components/ui/SimpleSelect';
 import { useDarkMode } from '~/contexts/DarkModeContext';
+import { useActiveForms } from '~/hooks/useForms';
 
 export interface TriggerConfig {
   entityType: string;
   action: string;
   attributeFilter?: string;
+  formId?: string; // Added for form-specific triggers
 }
 
 interface TriggerConfigModalProps {
@@ -120,10 +122,12 @@ const TriggerConfigModal: React.FC<TriggerConfigModalProps> = ({
   onClose
 }) => {
   const { isDarkMode } = useDarkMode();
+  const { forms: availableForms, loading: formsLoading } = useActiveForms();
   const [formData, setFormData] = useState<TriggerConfig>({
     entityType: '',
     action: '',
-    attributeFilter: undefined
+    attributeFilter: undefined,
+    formId: undefined
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -135,7 +139,8 @@ const TriggerConfigModal: React.FC<TriggerConfigModalProps> = ({
       setFormData({
         entityType: '',
         action: '',
-        attributeFilter: undefined
+        attributeFilter: undefined,
+        formId: undefined
       });
     }
     setErrors({});
@@ -166,6 +171,11 @@ const TriggerConfigModal: React.FC<TriggerConfigModalProps> = ({
       newErrors.action = 'Action is required';
     }
 
+    // Validate form selection for form triggers
+    if (formData.entityType === 'form' && formData.action === 'submitted' && !formData.formId) {
+      newErrors.formId = 'Please select a form';
+    }
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -183,7 +193,8 @@ const TriggerConfigModal: React.FC<TriggerConfigModalProps> = ({
     setFormData({
       entityType,
       action: '',
-      attributeFilter: undefined
+      attributeFilter: undefined,
+      formId: undefined
     });
     setErrors({});
   };
@@ -192,7 +203,8 @@ const TriggerConfigModal: React.FC<TriggerConfigModalProps> = ({
     setFormData(prev => ({
       ...prev,
       action,
-      attributeFilter: action === 'update' ? prev.attributeFilter : undefined
+      attributeFilter: action === 'update' ? prev.attributeFilter : undefined,
+      formId: prev.entityType === 'form' ? prev.formId : undefined
     }));
     setErrors({});
   };
@@ -210,6 +222,13 @@ const TriggerConfigModal: React.FC<TriggerConfigModalProps> = ({
     if (formData.attributeFilter && formData.action === 'update') {
       const attribute = entity?.attributes.find(attr => attr.value === formData.attributeFilter);
       preview += ` (specifically when ${attribute?.label || formData.attributeFilter} changes)`;
+    }
+    
+    if (formData.entityType === 'form' && formData.formId) {
+      const selectedForm = availableForms.find(f => f.id === formData.formId);
+      if (selectedForm) {
+        preview = `When the "${selectedForm.name}" form is submitted`;
+      }
     }
     
     return preview;
@@ -343,6 +362,64 @@ const TriggerConfigModal: React.FC<TriggerConfigModalProps> = ({
                       <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
                         Leave empty to trigger on any update, or select a specific attribute
                       </p>
+                    </div>
+                  )}
+
+                  {/* Form Selection for Form Triggers */}
+                  {formData.entityType === "form" && formData.action === "submitted" && (
+                    <div>
+                      <label className="block text-sm font-medium mb-2">
+                        Select Form *
+                      </label>
+                      <SimpleSelect
+                        options={[
+                          { value: "", label: formsLoading ? "Loading forms..." : "Select a form..." },
+                          ...availableForms.map(form => ({
+                            value: form.id,
+                            label: form.name
+                          }))
+                        ]}
+                        value={formData.formId || ""}
+                        onChange={(value) => setFormData(prev => ({ 
+                          ...prev, 
+                          formId: value || undefined 
+                        }))}
+                        size="sm"
+                        disabled={formsLoading}
+                      />
+                      {errors.formId && (
+                        <p className="mt-1 text-sm text-red-600 dark:text-red-400">
+                          {errors.formId}
+                        </p>
+                      )}
+                      {formData.formId && (
+                        <div className="mt-2 p-3 bg-gray-50 dark:bg-gray-700 rounded-md">
+                          {(() => {
+                            const selectedForm = availableForms.find(f => f.id === formData.formId);
+                            return selectedForm ? (
+                              <div>
+                                <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                                  {selectedForm.name}
+                                </p>
+                                <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
+                                  {selectedForm.description}
+                                </p>
+                                <div className="flex items-center space-x-4 mt-2 text-xs text-gray-500 dark:text-gray-400">
+                                  <span>Fields: {selectedForm.fields}</span>
+                                  <span>Submissions: {selectedForm.submissions}</span>
+                                  <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
+                                    selectedForm.status === 'active' 
+                                      ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
+                                      : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200'
+                                  }`}>
+                                    {selectedForm.status}
+                                  </span>
+                                </div>
+                              </div>
+                            ) : null;
+                          })()}
+                        </div>
+                      )}
                     </div>
                   )}
 

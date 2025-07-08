@@ -11,6 +11,7 @@ import { getTagColorClass } from "~/components/tags/TagsData";
 import SimpleSelect, { type SimpleSelectOption } from "~/components/ui/SimpleSelect";
 import { useTags, type Tag } from "~/hooks/useTags";
 import { useModule, useConfiguration, useModuleConfigurations, type Configuration, type ConfigurationCreateData } from "~/hooks/useModules";
+import { useActiveForms } from "~/hooks/useForms";
 import InteractiveFlowEditor from "~/components/flow/InteractiveFlowEditor";
 import TriggerConfigModal, { type TriggerConfig } from "~/components/flow/modals/TriggerConfigModal";
 import ConditionConfigModal, { type Condition } from "~/components/flow/modals/ConditionConfigModal";
@@ -217,6 +218,7 @@ export default function ModuleEdit() {
   const { configuration: existingConfig, loading: configLoading, updateConfiguration, isUpdating } = useConfiguration(configId || undefined);
   const { createConfiguration, isCreating } = useModuleConfigurations(moduleId);
   const { templates: emailTemplates } = useEmailTemplates();
+  const { forms: availableForms } = useActiveForms();
 
   // Helper function to get template by ID from the proper templates source
   const getTemplateById = (templateId: string) => {
@@ -441,6 +443,14 @@ export default function ModuleEdit() {
     if (trigger.attributeFilter && trigger.action === "update") {
       const attribute = entity?.attributes.find(attr => attr.value === trigger.attributeFilter);
       display += ` (${attribute?.label || trigger.attributeFilter})`;
+    }
+    
+    // Handle form-specific trigger display
+    if (trigger.entityType === 'form' && trigger.formId) {
+      const selectedForm = availableForms.find(f => f.id === trigger.formId);
+      if (selectedForm) {
+        display = `Form "${selectedForm.name}" Submitted`;
+      }
     }
     
     return display;
@@ -770,7 +780,8 @@ export default function ModuleEdit() {
                       trigger: { 
                         entityType: value, 
                         action: "", 
-                        attributeFilter: undefined 
+                        attributeFilter: undefined,
+                        formId: undefined 
                       } 
                     }))}
                   />
@@ -829,6 +840,50 @@ export default function ModuleEdit() {
                     <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
                       Leave empty to trigger on any update, or select a specific attribute to only trigger when that attribute changes
                     </p>
+                  </div>
+                )}
+
+                {/* Form Selection for Form Triggers */}
+                {configuration.trigger.entityType === "form" && configuration.trigger.action === "submitted" && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      Select Form
+                    </label>
+                    <SimpleSelect
+                      options={[
+                        { value: "", label: "Select a form..." },
+                        ...availableForms.map(form => ({
+                          value: form.id,
+                          label: form.name
+                        }))
+                      ]}
+                      value={configuration.trigger.formId || ""}
+                      onChange={(value) => setConfiguration(prev => ({ 
+                        ...prev, 
+                        trigger: { 
+                          ...prev.trigger, 
+                          formId: value || undefined
+                        } 
+                      }))}
+                    />
+                    {configuration.trigger.formId && (() => {
+                      const selectedForm = availableForms.find(f => f.id === configuration.trigger.formId);
+                      return selectedForm ? (
+                        <div className="mt-2 p-3 bg-gray-50 dark:bg-gray-700 rounded-md">
+                          <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                            {selectedForm.name}
+                          </p>
+                          <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
+                            {selectedForm.description}
+                          </p>
+                          <div className="flex items-center space-x-3 mt-2 text-xs text-gray-500 dark:text-gray-400">
+                            <span>Fields: {selectedForm.fields}</span>
+                            <span>•</span>
+                            <span>Submissions: {selectedForm.submissions}</span>
+                          </div>
+                        </div>
+                      ) : null;
+                    })()}
                   </div>
                 )}
 
