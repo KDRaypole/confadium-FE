@@ -22,7 +22,7 @@ const entityTypes = [
   {
     value: "contact",
     label: "Contact",
-    actions: ["create", "update", "delete"],
+    actions: ["create", "update", "delete", "tag_added", "tag_removed"],
     attributes: [
       { value: "name", label: "Name" },
       { value: "email", label: "Email" },
@@ -40,7 +40,7 @@ const entityTypes = [
   {
     value: "deal",
     label: "Deal/Opportunity",
-    actions: ["create", "update", "delete"],
+    actions: ["create", "update", "delete", "tag_added", "tag_removed"],
     attributes: [
       { value: "name", label: "Deal Name" },
       { value: "stage", label: "Stage" },
@@ -108,7 +108,9 @@ const triggerActions = {
   replied: "Replied to",
   submitted: "Submitted",
   completed: "Completed",
-  missed: "Missed"
+  missed: "Missed",
+  tag_added: "Tag Added",
+  tag_removed: "Tag Removed"
 };
 
 const TriggerConfigModal: React.FC<TriggerConfigModalProps> = ({

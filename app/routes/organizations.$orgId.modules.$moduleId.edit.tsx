@@ -51,10 +51,12 @@ const crmFields = [
   { value: "contact.value", label: "Estimated Value", type: "number" },
   { value: "contact.territory", label: "Territory", type: "text" },
   { value: "contact.lastContact", label: "Last Contact Date", type: "date" },
+  { value: "contact.tags", label: "Contact Tags", type: "tag" },
   { value: "deal.stage", label: "Deal Stage", type: "select", options: ["prospect", "qualified", "proposal", "negotiation", "closed-won", "closed-lost"] },
   { value: "deal.value", label: "Deal Value", type: "number" },
   { value: "deal.probability", label: "Deal Probability", type: "number" },
   { value: "deal.closeDate", label: "Close Date", type: "date" },
+  { value: "deal.tags", label: "Deal Tags", type: "tag" },
   { value: "activity.type", label: "Activity Type", type: "select", options: ["call", "email", "meeting", "task"] },
   { value: "activity.status", label: "Activity Status", type: "select", options: ["completed", "scheduled", "overdue"] }
 ];
@@ -76,7 +78,9 @@ const operators = [
   { value: "before", label: "before", types: ["date"] },
   { value: "after", label: "after", types: ["date"] },
   { value: "older_than", label: "older than", types: ["date"] },
-  { value: "newer_than", label: "newer than", types: ["date"] }
+  { value: "newer_than", label: "newer than", types: ["date"] },
+  { value: "has_tag", label: "has tag", types: ["tag"] },
+  { value: "not_has_tag", label: "does not have tag", types: ["tag"] }
 ];
 
 // Entity types and their available actions
@@ -84,7 +88,7 @@ const entityTypes = [
   {
     value: "contact",
     label: "Contact",
-    actions: ["create", "update", "delete"],
+    actions: ["create", "update", "delete", "tag_added", "tag_removed"],
     attributes: [
       { value: "name", label: "Name", type: "text" },
       { value: "email", label: "Email", type: "email" },
@@ -102,7 +106,7 @@ const entityTypes = [
   {
     value: "deal",
     label: "Deal/Opportunity",
-    actions: ["create", "update", "delete"],
+    actions: ["create", "update", "delete", "tag_added", "tag_removed"],
     attributes: [
       { value: "name", label: "Deal Name", type: "text" },
       { value: "stage", label: "Stage", type: "select", options: ["prospect", "qualified", "proposal", "negotiation", "closed-won", "closed-lost"] },
@@ -183,7 +187,9 @@ const triggerActions = {
   replied: "Replied to",
   submitted: "Submitted",
   completed: "Completed",
-  missed: "Missed"
+  missed: "Missed",
+  tag_added: "Tag Added",
+  tag_removed: "Tag Removed"
 };
 
 const actionTypes = [
@@ -936,6 +942,32 @@ export default function ModuleEdit() {
                                 onChange={(value) => updateCondition(condition.id, { value })}
                                 size="sm"
                               />
+                            ) : getFieldType(condition.field) === "tag" ? (
+                              <div className="space-y-2">
+                                <SimpleSelect
+                                  options={[
+                                    { value: "", label: "Select tag..." },
+                                    ...availableTags.map(tag => ({
+                                      value: tag.id,
+                                      label: tag.name
+                                    }))
+                                  ]}
+                                  value={condition.value}
+                                  onChange={(value) => updateCondition(condition.id, { value })}
+                                  size="sm"
+                                />
+                                {condition.value && (() => {
+                                  const selectedTag = availableTags.find(t => t.id === condition.value);
+                                  return selectedTag ? (
+                                    <div className="flex items-center space-x-2">
+                                      <span className="text-xs text-gray-500 dark:text-gray-400">Selected:</span>
+                                      <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getTagColorClass(selectedTag.color)}`}>
+                                        {selectedTag.name}
+                                      </span>
+                                    </div>
+                                  ) : null;
+                                })()}
+                              </div>
                             ) : (
                               <input
                                 type={getFieldType(condition.field) === "number" ? "number" : getFieldType(condition.field) === "date" ? "date" : "text"}
