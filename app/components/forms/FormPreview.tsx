@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { FormData } from '~/routes/organizations.$orgId.forms.new';
 import { EyeIcon, ComputerDesktopIcon, DevicePhoneMobileIcon } from '@heroicons/react/24/outline';
+import MultiStageFormPreview from './MultiStageFormPreview';
 
 interface FormPreviewProps {
   formData: FormData;
@@ -12,6 +13,9 @@ const FormPreview: React.FC<FormPreviewProps> = ({ formData }) => {
   const [previewMode, setPreviewMode] = useState<PreviewMode>('desktop');
   const [formValues, setFormValues] = useState<Record<string, any>>({});
 
+  // Check if multi-stage is enabled
+  const isMultiStage = formData.settings.enableMultiStage && formData.fields.length > 0;
+
   const handleInputChange = (fieldId: string, value: any) => {
     setFormValues(prev => ({ ...prev, [fieldId]: value }));
   };
@@ -21,6 +25,11 @@ const FormPreview: React.FC<FormPreviewProps> = ({ formData }) => {
     alert('Form submitted! (This is just a preview)');
     console.log('Form values:', formValues);
   };
+
+  // If multi-stage is enabled, use the MultiStageFormPreview component
+  if (isMultiStage) {
+    return <MultiStageFormPreview formData={formData} />;
+  }
 
   const renderField = (field: any) => {
     const commonClasses = `w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-opacity-50`;

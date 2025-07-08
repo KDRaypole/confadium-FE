@@ -45,6 +45,12 @@ export interface FormSettings {
   allowMultipleSubmissions: boolean;
   showProgressBar: boolean;
   autoSaveDraft: boolean;
+  // Multi-stage form settings
+  enableMultiStage: boolean;
+  nextButtonText: string;
+  previousButtonText: string;
+  showStepIndicator: boolean;
+  allowStepNavigation: boolean;
 }
 
 export interface Form {
@@ -115,7 +121,13 @@ const defaultSettings: FormSettings = {
   closedMessage: "This form is currently closed for submissions.",
   allowMultipleSubmissions: true,
   showProgressBar: false,
-  autoSaveDraft: false
+  autoSaveDraft: false,
+  // Multi-stage form settings
+  enableMultiStage: false,
+  nextButtonText: "Next",
+  previousButtonText: "Previous",
+  showStepIndicator: true,
+  allowStepNavigation: false
 };
 
 // Initialize mock data
@@ -164,7 +176,15 @@ const initializeMockData = () => {
           }
         ],
         theme: { ...defaultTheme },
-        settings: { ...defaultSettings, notificationEmail: "contact@company.com" },
+        settings: { 
+          ...defaultSettings, 
+          notificationEmail: "contact@company.com",
+          enableMultiStage: false,
+          nextButtonText: "Next",
+          previousButtonText: "Previous", 
+          showStepIndicator: true,
+          allowStepNavigation: false
+        },
         submissions: 142,
         status: "active",
         createdAt: "2024-01-15",
@@ -210,7 +230,15 @@ const initializeMockData = () => {
           }
         ],
         theme: { ...defaultTheme, primaryColor: "#059669", backgroundColor: "#f9fafb" },
-        settings: { ...defaultSettings, notificationEmail: "sales@company.com" },
+        settings: { 
+          ...defaultSettings, 
+          notificationEmail: "sales@company.com",
+          enableMultiStage: false,
+          nextButtonText: "Next",
+          previousButtonText: "Previous",
+          showStepIndicator: true,
+          allowStepNavigation: false
+        },
         submissions: 89,
         status: "active",
         createdAt: "2024-01-10",
@@ -220,11 +248,55 @@ const initializeMockData = () => {
         id: "3",
         name: "Event Registration",
         description: "Event registration and attendee information",
-        fields: [],
+        fields: [
+          {
+            id: "field_1",
+            type: "text",
+            label: "What's your full name?",
+            placeholder: "Enter your full name",
+            required: true
+          },
+          {
+            id: "field_2",
+            type: "email",
+            label: "What's your email address?",
+            placeholder: "you@example.com",
+            required: true
+          },
+          {
+            id: "field_3",
+            type: "select",
+            label: "Which session interests you most?",
+            required: true,
+            options: ["Morning Workshop", "Afternoon Keynote", "Evening Networking", "All Sessions"]
+          },
+          {
+            id: "field_4",
+            type: "radio",
+            label: "What's your experience level?",
+            required: true,
+            options: ["Beginner", "Intermediate", "Advanced", "Expert"]
+          },
+          {
+            id: "field_5",
+            type: "textarea",
+            label: "Any special requirements or questions?",
+            placeholder: "Let us know if you have any dietary restrictions, accessibility needs, or questions...",
+            required: false
+          }
+        ],
         theme: { ...defaultTheme, primaryColor: "#dc2626" },
-        settings: { ...defaultSettings },
+        settings: { 
+          ...defaultSettings,
+          enableMultiStage: true,
+          nextButtonText: "Continue",
+          previousButtonText: "Go Back",
+          showStepIndicator: true,
+          allowStepNavigation: true,
+          notificationEmail: "events@company.com"
+        },
         submissions: 234,
-        status: "draft",
+        status: "active",
         createdAt: "2024-01-08",
         updatedAt: "2024-01-16"
       }

@@ -79,7 +79,13 @@ const defaultSettings = {
   closedMessage: "This form is currently closed for submissions.",
   allowMultipleSubmissions: true,
   showProgressBar: false,
-  autoSaveDraft: false
+  autoSaveDraft: false,
+  // Multi-stage form settings
+  enableMultiStage: false,
+  nextButtonText: "Next",
+  previousButtonText: "Previous",
+  showStepIndicator: true,
+  allowStepNavigation: false
 };
 
 export default function NewForm() {

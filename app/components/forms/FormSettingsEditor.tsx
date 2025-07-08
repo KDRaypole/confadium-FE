@@ -8,7 +8,8 @@ import {
   EyeIcon,
   LockClosedIcon,
   ExclamationTriangleIcon,
-  CheckCircleIcon
+  CheckCircleIcon,
+  ArrowRightIcon
 } from '@heroicons/react/24/outline';
 
 interface FormSettingsEditorProps {
@@ -274,6 +275,108 @@ const FormSettingsEditor: React.FC<FormSettingsEditorProps> = ({ settings, onSet
               Message shown when form is outside availability window
             </p>
           </div>
+        </div>
+      </div>
+
+      {/* Multi-Stage Form Settings */}
+      <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-6">
+        <h4 className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-4 flex items-center">
+          <ArrowRightIcon className="h-4 w-4 mr-2" />
+          Multi-Stage Form
+        </h4>
+        
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                Enable Multi-Stage Form
+              </label>
+              <p className="text-xs text-gray-500 dark:text-gray-400">
+                Split form into multiple screens with one field per screen
+              </p>
+            </div>
+            <label className="relative inline-flex items-center cursor-pointer">
+              <input
+                type="checkbox"
+                checked={settings.enableMultiStage}
+                onChange={(e) => updateSettings({ enableMultiStage: e.target.checked })}
+                className="sr-only peer"
+              />
+              <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-purple-300 dark:peer-focus:ring-purple-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-purple-600"></div>
+            </label>
+          </div>
+
+          {settings.enableMultiStage && (
+            <>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Next Button Text
+                  </label>
+                  <input
+                    type="text"
+                    value={settings.nextButtonText}
+                    onChange={(e) => updateSettings({ nextButtonText: e.target.value })}
+                    className="block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-purple-500 focus:border-purple-500"
+                    placeholder="Next"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Previous Button Text
+                  </label>
+                  <input
+                    type="text"
+                    value={settings.previousButtonText}
+                    onChange={(e) => updateSettings({ previousButtonText: e.target.value })}
+                    className="block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-purple-500 focus:border-purple-500"
+                    placeholder="Previous"
+                  />
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between">
+                <div>
+                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Show Step Indicator
+                  </label>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">
+                    Display progress dots showing current step
+                  </p>
+                </div>
+                <label className="relative inline-flex items-center cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={settings.showStepIndicator}
+                    onChange={(e) => updateSettings({ showStepIndicator: e.target.checked })}
+                    className="sr-only peer"
+                  />
+                  <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-purple-300 dark:peer-focus:ring-purple-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-purple-600"></div>
+                </label>
+              </div>
+
+              <div className="flex items-center justify-between">
+                <div>
+                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Allow Step Navigation
+                  </label>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">
+                    Allow users to click on step indicators to navigate
+                  </p>
+                </div>
+                <label className="relative inline-flex items-center cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={settings.allowStepNavigation}
+                    onChange={(e) => updateSettings({ allowStepNavigation: e.target.checked })}
+                    className="sr-only peer"
+                  />
+                  <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-purple-300 dark:peer-focus:ring-purple-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-purple-600"></div>
+                </label>
+              </div>
+            </>
+          )}
         </div>
       </div>
 
