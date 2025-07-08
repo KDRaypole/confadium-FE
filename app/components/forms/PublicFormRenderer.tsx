@@ -24,6 +24,18 @@ const PublicFormRenderer: React.FC<PublicFormRendererProps> = ({ form, onSubmit 
   const isMultiStage = form.settings.enableMultiStage;
   const totalSteps = form.fields.length;
   const currentField = form.fields[currentStep];
+  
+  // Debug current field access
+  useEffect(() => {
+    console.log('Current step data:', {
+      currentStep,
+      totalSteps,
+      currentFieldExists: !!currentField,
+      currentFieldId: currentField?.id,
+      fieldsCount: form.fields.length,
+      allFieldIds: form.fields.map(f => f.id)
+    });
+  }, [currentStep, currentField, totalSteps, form.fields]);
 
   // Auto-save functionality
   useEffect(() => {
@@ -135,11 +147,29 @@ const PublicFormRenderer: React.FC<PublicFormRendererProps> = ({ form, onSubmit 
   };
 
   const handleNext = () => {
-    if (!validateCurrentStep()) return;
+    const actualFinalStep = form.fields.length - 1;
+    const canAdvance = currentStep < actualFinalStep;
     
-    if (currentStep < totalSteps - 1) {
+    console.log('handleNext called:', {
+      currentStep,
+      totalSteps,
+      actualFinalStep,
+      canAdvance,
+      nextStep: currentStep + 1,
+      formFieldsLength: form.fields.length
+    });
+    
+    if (!validateCurrentStep()) {
+      console.log('Validation failed, not advancing');
+      return;
+    }
+    
+    if (canAdvance) {
+      console.log('Advancing to next step:', currentStep + 1);
       setDirection('next');
       setCurrentStep(currentStep + 1);
+    } else {
+      console.log('Already on final step, cannot advance further');
     }
   };
 
@@ -157,8 +187,61 @@ const PublicFormRenderer: React.FC<PublicFormRendererProps> = ({ form, onSubmit 
     }
   };
 
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    // Prevent Enter key from submitting the form on non-final steps (except for textarea)
+    const isTextarea = (e.target as HTMLElement).tagName.toLowerCase() === 'textarea';
+    const actualFinalStep = form.fields.length - 1;
+    const isOnFinalStep = currentStep === actualFinalStep;
+    
+    console.log('Key pressed:', {
+      key: e.key,
+      currentStep,
+      totalSteps,
+      actualFinalStep,
+      isMultiStage,
+      isTextarea,
+      isOnFinalStep
+    });
+    
+    if (e.key === 'Enter' && isMultiStage && !isOnFinalStep && !isTextarea) {
+      console.log('Enter pressed on non-final step, preventing default and calling handleNext');
+      e.preventDefault();
+      handleNext(); // Move to next step instead
+    }
+    
+    // For textarea, allow Ctrl+Enter to move to next step
+    if (e.key === 'Enter' && e.ctrlKey && isMultiStage && !isOnFinalStep && isTextarea) {
+      console.log('Ctrl+Enter pressed in textarea on non-final step');
+      e.preventDefault();
+      handleNext();
+    }
+    
+    if (e.key === 'Enter' && isMultiStage && isOnFinalStep) {
+      console.log('Enter pressed on final step - allowing form submission');
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // More robust check: ensure we're actually on the final step
+    const actualFinalStep = form.fields.length - 1;
+    const isOnActualFinalStep = currentStep === actualFinalStep;
+    
+    console.log('Form submit triggered:', {
+      isMultiStage,
+      currentStep,
+      totalSteps,
+      actualFinalStep,
+      isOnActualFinalStep,
+      formFieldsLength: form.fields.length
+    });
+    
+    // For multi-stage forms, only submit on the final step
+    if (isMultiStage && !isOnActualFinalStep) {
+      console.log('Preventing submission - not on final step. Current:', currentStep, 'Required:', actualFinalStep);
+      return;
+    }
     
     if (!validateCurrentStep()) return;
     
@@ -218,6 +301,7 @@ const PublicFormRenderer: React.FC<PublicFormRendererProps> = ({ form, onSubmit 
               placeholder={field.placeholder}
               value={formValues[field.id] || ''}
               onChange={(e) => handleInputChange(field.id, e.target.value)}
+              onKeyDown={handleKeyDown}
               required={field.required}
               minLength={field.validation?.minLength}
               maxLength={field.validation?.maxLength}
@@ -235,6 +319,7 @@ const PublicFormRenderer: React.FC<PublicFormRendererProps> = ({ form, onSubmit 
               placeholder={field.placeholder}
               value={formValues[field.id] || ''}
               onChange={(e) => handleInputChange(field.id, e.target.value)}
+              onKeyDown={handleKeyDown}
               required={field.required}
               min={field.validation?.min}
               max={field.validation?.max}
@@ -250,6 +335,7 @@ const PublicFormRenderer: React.FC<PublicFormRendererProps> = ({ form, onSubmit 
               type="date"
               value={formValues[field.id] || ''}
               onChange={(e) => handleInputChange(field.id, e.target.value)}
+              onKeyDown={handleKeyDown}
               required={field.required}
               className={inputClasses}
               style={fieldStyle}
@@ -263,6 +349,7 @@ const PublicFormRenderer: React.FC<PublicFormRendererProps> = ({ form, onSubmit 
               placeholder={field.placeholder}
               value={formValues[field.id] || ''}
               onChange={(e) => handleInputChange(field.id, e.target.value)}
+              onKeyDown={handleKeyDown}
               required={field.required}
               minLength={field.validation?.minLength}
               maxLength={field.validation?.maxLength}
@@ -278,6 +365,7 @@ const PublicFormRenderer: React.FC<PublicFormRendererProps> = ({ form, onSubmit 
             <select
               value={formValues[field.id] || ''}
               onChange={(e) => handleInputChange(field.id, e.target.value)}
+              onKeyDown={handleKeyDown}
               required={field.required}
               className={inputClasses}
               style={fieldStyle}
@@ -513,7 +601,14 @@ const PublicFormRenderer: React.FC<PublicFormRendererProps> = ({ form, onSubmit 
         )}
 
         {/* Form */}
-        <form onSubmit={handleSubmit} className="space-y-6">
+        <form onSubmit={handleSubmit} onKeyDown={handleKeyDown} className="space-y-6">
+          {/* Hidden submit button to prevent implicit form submission on non-final steps */}
+          {isMultiStage && currentStep !== totalSteps - 1 && (
+            <button type="submit" disabled style={{ display: 'none' }} aria-hidden="true">
+              Hidden Submit
+            </button>
+          )}
+          
           {/* Form Title */}
           {form.name && (
             <h1 
@@ -646,7 +741,19 @@ const PublicFormRenderer: React.FC<PublicFormRendererProps> = ({ form, onSubmit 
                 {form.settings.previousButtonText}
               </button>
 
-              {currentStep === totalSteps - 1 ? (
+              {(() => {
+                const actualFinalStep = form.fields.length - 1;
+                const isOnFinalStep = currentStep === actualFinalStep;
+                console.log('Button render logic:', {
+                  currentStep,
+                  totalSteps,
+                  actualFinalStep,
+                  isOnFinalStep,
+                  showSubmitButton: isOnFinalStep,
+                  formFieldsLength: form.fields.length
+                });
+                return isOnFinalStep;
+              })() ? (
                 <button
                   type="submit"
                   disabled={isSubmitting}
