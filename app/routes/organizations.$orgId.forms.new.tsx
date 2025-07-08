@@ -4,6 +4,7 @@ import { useState } from "react";
 import Layout from "~/components/layout/Layout";
 import DynamicFormEditor from "~/components/forms/DynamicFormEditor";
 import { useForms } from "~/hooks/useForms";
+import { type FormField, type FormTheme, type FormSettings } from "~/lib/api/forms";
 import { ArrowLeftIcon, CheckIcon } from "@heroicons/react/24/outline";
 
 export const meta: MetaFunction = () => {
@@ -13,47 +14,12 @@ export const meta: MetaFunction = () => {
   ];
 };
 
-export interface FormField {
-  id: string;
-  type: 'text' | 'email' | 'number' | 'select' | 'textarea' | 'checkbox' | 'radio' | 'date' | 'url' | 'phone';
-  label: string;
-  placeholder?: string;
-  required: boolean;
-  options?: string[]; // For select, radio fields
-  validation?: {
-    minLength?: number;
-    maxLength?: number;
-    min?: number;
-    max?: number;
-    pattern?: string;
-  };
-  description?: string;
-}
-
-export interface FormTheme {
-  primaryColor: string;
-  backgroundColor: string;
-  textColor: string;
-  borderColor: string;
-  borderRadius: number;
-  fontSize: number;
-  fontFamily: string;
-  spacing: number;
-}
-
 export interface FormData {
   name: string;
   description: string;
   fields: FormField[];
   theme: FormTheme;
-  settings: {
-    allowMultipleSubmissions: boolean;
-    requireAuthentication: boolean;
-    showProgressBar: boolean;
-    submitButtonText: string;
-    successMessage: string;
-    redirectUrl?: string;
-  };
+  settings: FormSettings;
 }
 
 const defaultTheme: FormTheme = {
@@ -67,7 +33,7 @@ const defaultTheme: FormTheme = {
   spacing: 16
 };
 
-const defaultSettings = {
+const defaultSettings: FormSettings = {
   submitButtonText: "Submit",
   successMessage: "Thank you for your submission!",
   errorMessage: "Sorry, there was an error submitting your form. Please try again.",
@@ -75,7 +41,7 @@ const defaultSettings = {
   storeSubmissions: true,
   requireAuth: false,
   enableCaptcha: false,
-  submissionLimitPeriod: 'day' as const,
+  submissionLimitPeriod: 'day',
   closedMessage: "This form is currently closed for submissions.",
   allowMultipleSubmissions: true,
   showProgressBar: false,

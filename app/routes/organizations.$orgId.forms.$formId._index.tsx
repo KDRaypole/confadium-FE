@@ -14,7 +14,12 @@ import {
   Cog6ToothIcon,
   EyeIcon,
   ComputerDesktopIcon,
-  DevicePhoneMobileIcon
+  DevicePhoneMobileIcon,
+  LinkIcon,
+  ClipboardDocumentIcon,
+  CheckIcon,
+  XMarkIcon,
+  ExclamationTriangleIcon
 } from "@heroicons/react/24/outline";
 
 export const meta: MetaFunction = () => {
@@ -30,6 +35,23 @@ export default function ViewForm() {
   const { orgId, formId } = useParams();
   const { form, loading, error } = useForm(formId || null);
   const [previewMode, setPreviewMode] = useState<PreviewMode>('desktop');
+  const [showShareModal, setShowShareModal] = useState(false);
+  const [copiedToClipboard, setCopiedToClipboard] = useState(false);
+
+  // Generate public form URL
+  const publicFormUrl = typeof window !== 'undefined' 
+    ? `${window.location.origin}/forms/${formId}` 
+    : `https://your-domain.com/forms/${formId}`;
+
+  const copyToClipboard = async (text: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopiedToClipboard(true);
+      setTimeout(() => setCopiedToClipboard(false), 2000);
+    } catch (err) {
+      console.error('Failed to copy to clipboard:', err);
+    }
+  };
 
   if (loading) {
     return (
@@ -113,6 +135,7 @@ export default function ViewForm() {
 
               <div className="flex items-center space-x-3">
                 <button
+                  onClick={() => setShowShareModal(true)}
                   className="inline-flex items-center px-3 py-2 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-md text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700"
                 >
                   <ShareIcon className="h-4 w-4 mr-2" />
@@ -344,6 +367,104 @@ export default function ViewForm() {
           </div>
         </div>
       </div>
+
+      {/* Share Modal */}
+      {showShareModal && (
+        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 dark:bg-gray-900 dark:bg-opacity-50 overflow-y-auto h-full w-full z-50 flex items-center justify-center">
+          <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-xl max-w-md w-full mx-4">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">
+                Share Form
+              </h3>
+              <button
+                onClick={() => setShowShareModal(false)}
+                className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
+              >
+                <XMarkIcon className="h-6 w-6" />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Public Form URL
+                </label>
+                <div className="flex items-center space-x-2">
+                  <input
+                    type="text"
+                    value={publicFormUrl}
+                    readOnly
+                    className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-gray-100 text-sm"
+                  />
+                  <button
+                    onClick={() => copyToClipboard(publicFormUrl)}
+                    className="inline-flex items-center px-3 py-2 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-md text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700"
+                  >
+                    {copiedToClipboard ? (
+                      <CheckIcon className="h-4 w-4" />
+                    ) : (
+                      <ClipboardDocumentIcon className="h-4 w-4" />
+                    )}
+                  </button>
+                </div>
+                <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                  {copiedToClipboard ? (
+                    <span className="text-green-600 dark:text-green-400">✓ Copied to clipboard!</span>
+                  ) : (
+                    'Share this URL with anyone to collect form submissions'
+                  )}
+                </p>
+              </div>
+
+              {form?.status === 'active' ? (
+                <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-md p-3">
+                  <div className="flex">
+                    <div className="flex-shrink-0">
+                      <CheckIcon className="h-5 w-5 text-green-400" />
+                    </div>
+                    <div className="ml-2">
+                      <p className="text-sm text-green-800 dark:text-green-200">
+                        Form is live and accepting submissions
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-md p-3">
+                  <div className="flex">
+                    <div className="flex-shrink-0">
+                      <ExclamationTriangleIcon className="h-5 w-5 text-yellow-400" />
+                    </div>
+                    <div className="ml-2">
+                      <p className="text-sm text-yellow-800 dark:text-yellow-200">
+                        Form is in draft mode. Activate it to accept submissions.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              <div className="flex justify-end space-x-3 pt-4">
+                <button
+                  onClick={() => setShowShareModal(false)}
+                  className="px-4 py-2 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-md text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700"
+                >
+                  Close
+                </button>
+                <a
+                  href={publicFormUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-purple-600 hover:bg-purple-700"
+                >
+                  <LinkIcon className="h-4 w-4 mr-2" />
+                  Open Form
+                </a>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </Layout>
   );
 }

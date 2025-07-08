@@ -1,5 +1,10 @@
 import { db } from '~/lib/db';
 
+// TypeScript declaration for global forms store
+declare global {
+  var __mockFormsStore: Form[] | undefined;
+}
+
 export interface FormField {
   id: string;
   type: 'text' | 'email' | 'number' | 'select' | 'textarea' | 'checkbox' | 'radio' | 'date' | 'url' | 'phone';
@@ -96,7 +101,50 @@ export interface SimpleForm {
 }
 
 // Mock data store (in real app, this would be database calls)
-let mockFormsStore: Form[] = [];
+// Using localStorage in browser, globalThis on server
+const getFormsStore = (): Form[] => {
+  // Check if we're in browser environment
+  if (typeof window !== 'undefined' && window.localStorage) {
+    try {
+      const stored = localStorage.getItem('__mockFormsStore');
+      if (stored) {
+        return JSON.parse(stored);
+      }
+    } catch (error) {
+      console.error('Error loading forms from localStorage:', error);
+    }
+  }
+  
+  // Fallback to globalThis for server-side
+  if (!globalThis.__mockFormsStore) {
+    globalThis.__mockFormsStore = [];
+  }
+  return globalThis.__mockFormsStore;
+};
+
+const setFormsStore = (forms: Form[]): void => {
+  // Store in localStorage if in browser
+  if (typeof window !== 'undefined' && window.localStorage) {
+    try {
+      localStorage.setItem('__mockFormsStore', JSON.stringify(forms));
+    } catch (error) {
+      console.error('Error saving forms to localStorage:', error);
+    }
+  }
+  
+  // Also store in globalThis for server-side compatibility
+  globalThis.__mockFormsStore = forms;
+};
+
+// Get next available ID
+const getNextFormId = (): string => {
+  const mockFormsStore = getFormsStore();
+  const maxId = mockFormsStore.reduce((max, form) => {
+    const numericId = parseInt(form.id);
+    return isNaN(numericId) ? max : Math.max(max, numericId);
+  }, 0);
+  return (maxId + 1).toString();
+};
 
 const defaultTheme: FormTheme = {
   primaryColor: "#7c3aed",
@@ -130,10 +178,31 @@ const defaultSettings: FormSettings = {
   allowStepNavigation: false
 };
 
+// Sync data between globalThis and localStorage
+const syncFormsData = () => {
+  if (typeof window !== 'undefined' && window.localStorage) {
+    // If localStorage is empty but globalThis has data, sync it
+    const stored = localStorage.getItem('__mockFormsStore');
+    if (!stored && globalThis.__mockFormsStore && globalThis.__mockFormsStore.length > 0) {
+      localStorage.setItem('__mockFormsStore', JSON.stringify(globalThis.__mockFormsStore));
+    }
+    // If globalThis is empty but localStorage has data, sync it
+    else if (stored && (!globalThis.__mockFormsStore || globalThis.__mockFormsStore.length === 0)) {
+      try {
+        globalThis.__mockFormsStore = JSON.parse(stored);
+      } catch (error) {
+        console.error('Error syncing forms data:', error);
+      }
+    }
+  }
+};
+
 // Initialize mock data
 const initializeMockData = () => {
+  syncFormsData(); // Sync data first
+  const mockFormsStore = getFormsStore();
   if (mockFormsStore.length === 0) {
-    mockFormsStore = [
+    const initialForms: Form[] = [
       {
         id: "1",
         name: "Contact Form",
@@ -299,8 +368,56 @@ const initializeMockData = () => {
         status: "active",
         createdAt: "2024-01-08",
         updatedAt: "2024-01-16"
+      },
+      {
+        id: "4",
+        name: "Advanced Features Demo",
+        description: "Demo form showcasing all advanced features",
+        fields: [
+          {
+            id: "field_1",
+            type: "text",
+            label: "Your Name",
+            placeholder: "Enter your full name",
+            required: true
+          },
+          {
+            id: "field_2", 
+            type: "email",
+            label: "Email Address",
+            placeholder: "you@example.com",
+            required: true
+          },
+          {
+            id: "field_3",
+            type: "select",
+            label: "How did you hear about us?",
+            required: false,
+            options: ["Search Engine", "Social Media", "Referral", "Advertisement"]
+          }
+        ],
+        theme: { ...defaultTheme, primaryColor: "#059669" },
+        settings: { 
+          ...defaultSettings,
+          enableMultiStage: true,
+          showProgressBar: true,
+          autoSaveDraft: true,
+          showStepIndicator: true,
+          allowStepNavigation: true,
+          nextButtonText: "Continue",
+          previousButtonText: "Back",
+          submitButtonText: "Complete Survey",
+          successMessage: "Thank you! Your response has been recorded successfully.",
+          redirectUrl: "https://example.com/thank-you",
+          notificationEmail: "demo@example.com"
+        },
+        submissions: 12,
+        status: "active",
+        createdAt: "2024-01-05",
+        updatedAt: "2024-01-20"
       }
     ];
+    setFormsStore(initialForms);
   }
 };
 
@@ -309,6 +426,7 @@ export const formsApi = {
   async getAll(orgId: string): Promise<SimpleForm[]> {
     try {
       initializeMockData();
+      const mockFormsStore = getFormsStore();
       return mockFormsStore.map(form => ({
         id: form.id,
         name: form.name,
@@ -339,6 +457,7 @@ export const formsApi = {
   async getById(formId: string): Promise<Form | null> {
     try {
       initializeMockData();
+      const mockFormsStore = getFormsStore();
       return mockFormsStore.find(form => form.id === formId) || null;
     } catch (error) {
       console.error('Error fetching form:', error);
@@ -346,12 +465,103 @@ export const formsApi = {
     }
   },
 
+  // Get a form for public access (only returns active forms)
+  async getPublicForm(formId: string): Promise<Form | null> {
+    try {
+      initializeMockData();
+      const mockFormsStore = getFormsStore();
+      console.log('getPublicForm - total forms in store:', mockFormsStore.length);
+      console.log('getPublicForm - looking for formId:', formId);
+      console.log('getPublicForm - available form IDs:', mockFormsStore.map(f => f.id));
+      
+      const form = mockFormsStore.find(form => form.id === formId);
+      console.log('getPublicForm - found form:', !!form, 'status:', form?.status);
+      
+      // Only return active forms for public access
+      if (form && form.status === 'active') {
+        return form;
+      }
+      
+      return null;
+    } catch (error) {
+      console.error('Error fetching public form:', error);
+      throw new Error('Failed to fetch form');
+    }
+  },
+
+  // Submit a form (for public submissions)
+  async submitForm(formId: string, data: Record<string, any>): Promise<{ success: boolean; message: string }> {
+    try {
+      initializeMockData();
+      const mockFormsStore = getFormsStore();
+      const form = mockFormsStore.find(f => f.id === formId);
+      
+      if (!form) {
+        return { success: false, message: 'Form not found' };
+      }
+
+      if (form.status !== 'active') {
+        return { success: false, message: 'Form is not available for submissions' };
+      }
+
+      // Check submission limits
+      if (form.settings.submissionLimit && form.submissions >= form.settings.submissionLimit) {
+        return { 
+          success: false, 
+          message: 'This form has reached its submission limit and is no longer accepting responses.' 
+        };
+      }
+
+      // Check availability window
+      const now = new Date();
+      const startDate = form.settings.startDate ? new Date(form.settings.startDate) : null;
+      const endDate = form.settings.endDate ? new Date(form.settings.endDate) : null;
+
+      if ((startDate && now < startDate) || (endDate && now > endDate)) {
+        return { 
+          success: false, 
+          message: form.settings.closedMessage || 'This form is currently closed for submissions.' 
+        };
+      }
+
+      // Check authentication requirement
+      if (form.settings.requireAuth) {
+        return { 
+          success: false, 
+          message: 'This form requires authentication to submit.' 
+        };
+      }
+
+      // In a real app, this would save to database
+      // For now, just increment the submission count
+      form.submissions += 1;
+      form.updatedAt = new Date().toISOString();
+      
+      // Persist the changes
+      setFormsStore(mockFormsStore);
+
+      console.log('Form submission:', { formId, data });
+      
+      return { 
+        success: true, 
+        message: form.settings.successMessage || 'Thank you for your submission!' 
+      };
+    } catch (error) {
+      console.error('Error submitting form:', error);
+      return { 
+        success: false, 
+        message: 'An error occurred while submitting the form. Please try again.' 
+      };
+    }
+  },
+
   // Create a new form
   async create(orgId: string, data: FormCreateData): Promise<Form> {
     try {
       initializeMockData();
+      const mockFormsStore = getFormsStore();
       const newForm: Form = {
-        id: `form_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        id: getNextFormId(),
         ...data,
         status: data.status || 'draft',
         submissions: 0,
@@ -360,6 +570,7 @@ export const formsApi = {
       };
       
       mockFormsStore.push(newForm);
+      setFormsStore(mockFormsStore);
       return newForm;
     } catch (error) {
       console.error('Error creating form:', error);
@@ -371,6 +582,7 @@ export const formsApi = {
   async update(formId: string, data: FormUpdateData): Promise<Form | null> {
     try {
       initializeMockData();
+      const mockFormsStore = getFormsStore();
       const formIndex = mockFormsStore.findIndex(form => form.id === formId);
       
       if (formIndex === -1) {
@@ -385,6 +597,8 @@ export const formsApi = {
       };
 
       mockFormsStore[formIndex] = updatedForm;
+      setFormsStore(mockFormsStore);
+      
       return updatedForm;
     } catch (error) {
       console.error('Error updating form:', error);
@@ -396,6 +610,7 @@ export const formsApi = {
   async delete(formId: string): Promise<boolean> {
     try {
       initializeMockData();
+      const mockFormsStore = getFormsStore();
       const formIndex = mockFormsStore.findIndex(form => form.id === formId);
       
       if (formIndex === -1) {
@@ -403,6 +618,7 @@ export const formsApi = {
       }
 
       mockFormsStore.splice(formIndex, 1);
+      setFormsStore(mockFormsStore);
       return true;
     } catch (error) {
       console.error('Error deleting form:', error);
@@ -421,9 +637,9 @@ export const formsApi = {
       const duplicatedForm: FormCreateData = {
         name: `${originalForm.name} (Copy)`,
         description: originalForm.description,
-        fields: originalForm.fields.map(field => ({
+        fields: originalForm.fields.map((field, index) => ({
           ...field,
-          id: `field_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+          id: `field_${index + 1}`
         })),
         theme: { ...originalForm.theme },
         settings: { ...originalForm.settings },
@@ -435,5 +651,28 @@ export const formsApi = {
       console.error('Error duplicating form:', error);
       throw new Error('Failed to duplicate form');
     }
+  },
+
+  // Reset forms data (for testing)
+  async resetData(): Promise<void> {
+    setFormsStore([]);
+    initializeMockData();
+  },
+
+  // Force sync data between storage mechanisms
+  syncData(): void {
+    syncFormsData();
+  },
+
+  // Get current store state for debugging
+  getStoreState(): { localStorage: any; globalThis: any } {
+    const localData = typeof window !== 'undefined' && window.localStorage 
+      ? localStorage.getItem('__mockFormsStore') 
+      : null;
+    
+    return {
+      localStorage: localData ? JSON.parse(localData) : null,
+      globalThis: globalThis.__mockFormsStore || null
+    };
   }
 };

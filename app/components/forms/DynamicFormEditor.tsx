@@ -8,7 +8,8 @@ import FormPreview from './FormPreview';
 import FormThemeEditor from './FormThemeEditor';
 import FormSettingsEditor from './FormSettingsEditor';
 import SortableFormField from './SortableFormField';
-import { FormData, FormField } from '~/routes/organizations.$orgId.forms.new';
+import { type FormField } from '~/lib/api/forms';
+import { type FormData } from '~/routes/organizations.$orgId.forms.new';
 import {
   EyeIcon,
   PencilIcon,

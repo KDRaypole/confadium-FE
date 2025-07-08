@@ -1,5 +1,5 @@
 import React from 'react';
-import { FormSettings } from '~/routes/organizations.$orgId.forms.new';
+import { type FormSettings } from '~/lib/api/forms';
 import {
   Cog6ToothIcon,
   EnvelopeIcon,
