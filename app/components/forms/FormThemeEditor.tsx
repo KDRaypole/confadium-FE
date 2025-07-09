@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import { FormTheme } from '~/routes/organizations.$orgId.forms.new';
-import { SwatchIcon } from '@heroicons/react/24/outline';
+import { SwatchIcon, PhotoIcon, TrashIcon } from '@heroicons/react/24/outline';
 
 interface FormThemeEditorProps {
   theme: FormTheme;
@@ -19,6 +19,10 @@ const presetThemes: { name: string; theme: FormTheme }[] = [
       fontSize: 14,
       fontFamily: 'Inter, system-ui, sans-serif',
       spacing: 16,
+      headerImage: undefined,
+      headerImageHeight: 200,
+      headerImageFit: 'cover',
+      headerImageOpacity: 1,
     }
   },
   {
@@ -32,6 +36,10 @@ const presetThemes: { name: string; theme: FormTheme }[] = [
       fontSize: 14,
       fontFamily: 'Inter, system-ui, sans-serif',
       spacing: 20,
+      headerImage: undefined,
+      headerImageHeight: 200,
+      headerImageFit: 'cover',
+      headerImageOpacity: 1,
     }
   },
   {
@@ -45,6 +53,10 @@ const presetThemes: { name: string; theme: FormTheme }[] = [
       fontSize: 13,
       fontFamily: 'system-ui, sans-serif',
       spacing: 12,
+      headerImage: undefined,
+      headerImageHeight: 200,
+      headerImageFit: 'cover',
+      headerImageOpacity: 1,
     }
   },
   {
@@ -58,6 +70,10 @@ const presetThemes: { name: string; theme: FormTheme }[] = [
       fontSize: 16,
       fontFamily: 'Inter, system-ui, sans-serif',
       spacing: 24,
+      headerImage: undefined,
+      headerImageHeight: 200,
+      headerImageFit: 'cover',
+      headerImageOpacity: 1,
     }
   }
 ];
@@ -72,12 +88,30 @@ const fontOptions = [
 ];
 
 const FormThemeEditor: React.FC<FormThemeEditorProps> = ({ theme, onThemeChange }) => {
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  
   const updateTheme = (updates: Partial<FormTheme>) => {
     onThemeChange({ ...theme, ...updates });
   };
 
   const applyPreset = (presetTheme: FormTheme) => {
     onThemeChange(presetTheme);
+  };
+
+  const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const result = e.target?.result as string;
+        updateTheme({ headerImage: result });
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const removeHeaderImage = () => {
+    updateTheme({ headerImage: undefined });
   };
 
   return (
@@ -136,6 +170,110 @@ const FormThemeEditor: React.FC<FormThemeEditorProps> = ({ theme, onThemeChange 
         </h4>
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* Header Image */}
+          <div className="space-y-4">
+            <h5 className="text-sm font-medium text-gray-700 dark:text-gray-300">Header Image</h5>
+            
+            <div>
+              <label className="block text-sm text-gray-600 dark:text-gray-400 mb-2">
+                Upload Header Image
+              </label>
+              <div className="space-y-3">
+                {theme.headerImage ? (
+                  <div className="relative">
+                    <img
+                      src={theme.headerImage}
+                      alt="Header preview"
+                      className="w-full h-24 object-cover rounded-lg border border-gray-200 dark:border-gray-700"
+                    />
+                    <button
+                      onClick={removeHeaderImage}
+                      className="absolute top-2 right-2 p-1 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors"
+                    >
+                      <TrashIcon className="h-4 w-4" />
+                    </button>
+                  </div>
+                ) : (
+                  <div className="w-full h-24 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg flex items-center justify-center text-gray-500 dark:text-gray-400">
+                    <PhotoIcon className="h-8 w-8" />
+                  </div>
+                )}
+                
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={handleImageUpload}
+                  className="hidden"
+                />
+                
+                <button
+                  onClick={() => fileInputRef.current?.click()}
+                  className="flex items-center justify-center w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500"
+                >
+                  <PhotoIcon className="h-4 w-4 mr-2" />
+                  {theme.headerImage ? 'Change Image' : 'Upload Image'}
+                </button>
+              </div>
+            </div>
+
+            {theme.headerImage && (
+              <>
+                <div>
+                  <label className="block text-sm text-gray-600 dark:text-gray-400 mb-2">
+                    Image Height: {theme.headerImageHeight || 200}px
+                  </label>
+                  <input
+                    type="range"
+                    min="100"
+                    max="400"
+                    value={theme.headerImageHeight || 200}
+                    onChange={(e) => updateTheme({ headerImageHeight: parseInt(e.target.value) })}
+                    className="w-full h-2 bg-gray-200 dark:bg-gray-600 rounded-lg appearance-none cursor-pointer slider"
+                  />
+                  <div className="flex justify-between text-xs text-gray-500 dark:text-gray-400 mt-1">
+                    <span>100px</span>
+                    <span>400px</span>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm text-gray-600 dark:text-gray-400 mb-2">
+                    Image Fit
+                  </label>
+                  <select
+                    value={theme.headerImageFit || 'cover'}
+                    onChange={(e) => updateTheme({ headerImageFit: e.target.value as 'cover' | 'contain' | 'fill' })}
+                    className="block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-purple-500 focus:border-purple-500"
+                  >
+                    <option value="cover">Cover</option>
+                    <option value="contain">Contain</option>
+                    <option value="fill">Fill</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm text-gray-600 dark:text-gray-400 mb-2">
+                    Image Opacity: {Math.round((theme.headerImageOpacity || 1) * 100)}%
+                  </label>
+                  <input
+                    type="range"
+                    min="0.1"
+                    max="1"
+                    step="0.1"
+                    value={theme.headerImageOpacity || 1}
+                    onChange={(e) => updateTheme({ headerImageOpacity: parseFloat(e.target.value) })}
+                    className="w-full h-2 bg-gray-200 dark:bg-gray-600 rounded-lg appearance-none cursor-pointer slider"
+                  />
+                  <div className="flex justify-between text-xs text-gray-500 dark:text-gray-400 mt-1">
+                    <span>10%</span>
+                    <span>100%</span>
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
+
           {/* Colors */}
           <div className="space-y-4">
             <h5 className="text-sm font-medium text-gray-700 dark:text-gray-300">Colors</h5>
@@ -310,22 +448,35 @@ const FormThemeEditor: React.FC<FormThemeEditorProps> = ({ theme, onThemeChange 
         </h4>
         <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-4">
           <div
-            className="p-6 rounded-lg"
+            className="rounded-lg overflow-hidden"
             style={{
               backgroundColor: theme.backgroundColor,
               fontFamily: theme.fontFamily,
             }}
           >
-            <h3
-              style={{
-                color: theme.textColor,
-                fontSize: `${theme.fontSize + 4}px`,
-                marginBottom: `${theme.spacing}px`,
-              }}
-              className="font-semibold"
-            >
-              Sample Form
-            </h3>
+            {theme.headerImage && (
+              <div
+                className="w-full bg-cover bg-center"
+                style={{
+                  backgroundImage: `url(${theme.headerImage})`,
+                  height: `${theme.headerImageHeight || 200}px`,
+                  backgroundSize: theme.headerImageFit || 'cover',
+                  backgroundPosition: 'center',
+                  opacity: theme.headerImageOpacity || 1,
+                }}
+              />
+            )}
+            <div className="p-6">
+              <h3
+                style={{
+                  color: theme.textColor,
+                  fontSize: `${theme.fontSize + 4}px`,
+                  marginBottom: `${theme.spacing}px`,
+                }}
+                className="font-semibold"
+              >
+                Sample Form
+              </h3>
             
             <div style={{ marginBottom: `${theme.spacing}px` }}>
               <label
@@ -369,6 +520,7 @@ const FormThemeEditor: React.FC<FormThemeEditorProps> = ({ theme, onThemeChange 
             >
               Submit Form
             </button>
+            </div>
           </div>
         </div>
       </div>
@@ -389,7 +541,11 @@ const FormThemeEditor: React.FC<FormThemeEditorProps> = ({ theme, onThemeChange 
   --form-border-radius: ${theme.borderRadius}px;
   --form-font-size: ${theme.fontSize}px;
   --form-font-family: ${theme.fontFamily};
-  --form-spacing: ${theme.spacing}px;
+  --form-spacing: ${theme.spacing}px;${theme.headerImage ? `
+  --form-header-image: url(${theme.headerImage});
+  --form-header-height: ${theme.headerImageHeight || 200}px;
+  --form-header-fit: ${theme.headerImageFit || 'cover'};
+  --form-header-opacity: ${theme.headerImageOpacity || 1};` : ''}
 }`}
           </pre>
         </div>

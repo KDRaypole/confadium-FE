@@ -529,6 +529,19 @@ const PublicFormRenderer: React.FC<PublicFormRendererProps> = ({ form, onSubmit 
       }}
     >
       <div className="w-full max-w-2xl">
+        {/* Header Image */}
+        {form.theme.headerImage && (
+          <div 
+            className="w-full bg-cover bg-center mb-8 rounded-lg overflow-hidden"
+            style={{
+              backgroundImage: `url(${form.theme.headerImage})`,
+              height: `${form.theme.headerImageHeight || 200}px`,
+              backgroundSize: form.theme.headerImageFit || 'cover',
+              backgroundPosition: 'center',
+              opacity: form.theme.headerImageOpacity || 1,
+            }}
+          />
+        )}
         {/* Progress Bar - Show for both single and multi-stage if enabled */}
         {form.settings.showProgressBar && (
           <div className="mb-8">

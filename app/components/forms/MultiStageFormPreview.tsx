@@ -250,6 +250,20 @@ const MultiStageFormPreview: React.FC<MultiStageFormPreviewProps> = ({ formData 
             padding: `${formData.theme.spacing * 2}px`
           }}
         >
+          {/* Header Image */}
+          {formData.theme.headerImage && (
+            <div 
+              className="w-full bg-cover bg-center mb-8 rounded-lg overflow-hidden"
+              style={{
+                backgroundImage: `url(${formData.theme.headerImage})`,
+                height: `${formData.theme.headerImageHeight || 200}px`,
+                backgroundSize: formData.theme.headerImageFit || 'cover',
+                backgroundPosition: 'center',
+                opacity: formData.theme.headerImageOpacity || 1,
+              }}
+            />
+          )}
+          
           {/* Progress Bar */}
           {formData.settings.showProgressBar && (
             <div className="mb-8">

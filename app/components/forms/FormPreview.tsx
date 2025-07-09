@@ -267,6 +267,21 @@ const FormPreview: React.FC<FormPreviewProps> = ({ formData }) => {
             style={containerStyle}
           >
             <form onSubmit={handleSubmit} className="space-y-6">
+              {/* Header Image */}
+              {formData.theme.headerImage && (
+                <div 
+                  className="w-full bg-cover bg-center rounded-lg overflow-hidden"
+                  style={{
+                    backgroundImage: `url(${formData.theme.headerImage})`,
+                    height: `${formData.theme.headerImageHeight || 200}px`,
+                    backgroundSize: formData.theme.headerImageFit || 'cover',
+                    backgroundPosition: 'center',
+                    opacity: formData.theme.headerImageOpacity || 1,
+                    marginBottom: `${formData.theme.spacing}px`,
+                  }}
+                />
+              )}
+              
               {/* Form Header */}
               {formData.name && (
                 <h1 style={headingStyle} className="font-bold">

@@ -31,6 +31,10 @@ export interface FormTheme {
   fontSize: number;
   fontFamily: string;
   spacing: number;
+  headerImage?: string;
+  headerImageHeight?: number;
+  headerImageFit?: 'cover' | 'contain' | 'fill';
+  headerImageOpacity?: number;
 }
 
 export interface FormSettings {
@@ -154,7 +158,11 @@ const defaultTheme: FormTheme = {
   borderRadius: 6,
   fontSize: 14,
   fontFamily: "Inter, sans-serif",
-  spacing: 16
+  spacing: 16,
+  headerImage: undefined,
+  headerImageHeight: 200,
+  headerImageFit: 'cover',
+  headerImageOpacity: 1
 };
 
 const defaultSettings: FormSettings = {
