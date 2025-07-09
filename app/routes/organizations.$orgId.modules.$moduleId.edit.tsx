@@ -1324,6 +1324,7 @@ export default function ModuleEdit() {
       <ConditionConfigModal
         isOpen={conditionModalOpen}
         conditions={configuration.conditions}
+        trigger={configuration.trigger}
         onSave={handleConditionsSave}
         onClose={() => setConditionModalOpen(false)}
       />
@@ -1332,6 +1333,7 @@ export default function ModuleEdit() {
         isOpen={actionModalOpen}
         action={getEditingAction()}
         entityType={configuration.trigger.entityType}
+        trigger={configuration.trigger}
         onSave={handleActionSave}
         onRequestEmailEditor={handleEmailEditorRequest}
         onClose={() => {

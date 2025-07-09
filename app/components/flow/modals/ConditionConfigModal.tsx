@@ -5,6 +5,7 @@ import SimpleSelect from '~/components/ui/SimpleSelect';
 import { getTagColorClass } from '~/components/tags/TagsData';
 import { useDarkMode } from '~/contexts/DarkModeContext';
 import { useTags } from '~/hooks/useTags';
+import { formsApi, type FormField } from '~/lib/api/forms';
 
 export interface Condition {
   id: string;
@@ -14,9 +15,17 @@ export interface Condition {
   logicOperator?: "AND" | "OR";
 }
 
+interface TriggerConfig {
+  entityType: string;
+  action: string;
+  attributeFilter?: string;
+  formId?: string;
+}
+
 interface ConditionConfigModalProps {
   isOpen: boolean;
   conditions?: Condition[];
+  trigger?: TriggerConfig;
   onSave: (conditions: Condition[]) => void;
   onClose: () => void;
 }
@@ -44,8 +53,8 @@ const getBaseCrmFields = () => [
 ];
 
 const operators = [
-  { value: "equals", label: "equals", types: ["text", "email", "select"] },
-  { value: "not_equals", label: "does not equal", types: ["text", "email", "select"] },
+  { value: "equals", label: "equals", types: ["text", "email", "select", "checkbox"] },
+  { value: "not_equals", label: "does not equal", types: ["text", "email", "select", "checkbox"] },
   { value: "contains", label: "contains", types: ["text", "email"] },
   { value: "not_contains", label: "does not contain", types: ["text", "email"] },
   { value: "starts_with", label: "starts with", types: ["text", "email"] },
@@ -62,12 +71,15 @@ const operators = [
   { value: "older_than", label: "older than", types: ["date"] },
   { value: "newer_than", label: "newer than", types: ["date"] },
   { value: "has_tag", label: "has tag", types: ["tag"] },
-  { value: "not_has_tag", label: "does not have tag", types: ["tag"] }
+  { value: "not_has_tag", label: "does not have tag", types: ["tag"] },
+  { value: "is_checked", label: "is checked", types: ["checkbox"] },
+  { value: "is_unchecked", label: "is unchecked", types: ["checkbox"] }
 ];
 
 const ConditionConfigModal: React.FC<ConditionConfigModalProps> = ({
   isOpen,
   conditions = [],
+  trigger,
   onSave,
   onClose
 }) => {
@@ -75,6 +87,8 @@ const ConditionConfigModal: React.FC<ConditionConfigModalProps> = ({
   const { tags, getTagById } = useTags();
   const [formConditions, setFormConditions] = useState<Condition[]>([]);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [formFields, setFormFields] = useState<FormField[]>([]);
+  const [loadingFormFields, setLoadingFormFields] = useState(false);
 
   useEffect(() => {
     if (conditions.length > 0) {
@@ -92,11 +106,74 @@ const ConditionConfigModal: React.FC<ConditionConfigModalProps> = ({
     setErrors({});
   }, [conditions, isOpen]);
 
+  // Load form fields when trigger is form-based
+  useEffect(() => {
+    const loadFormFields = async () => {
+      if (trigger?.entityType === 'form' && trigger.formId) {
+        setLoadingFormFields(true);
+        try {
+          const form = await formsApi.getById(trigger.formId);
+          if (form) {
+            setFormFields(form.fields);
+          }
+        } catch (error) {
+          console.error('Error loading form fields:', error);
+          setFormFields([]);
+        } finally {
+          setLoadingFormFields(false);
+        }
+      } else {
+        setFormFields([]);
+      }
+    };
+
+    if (isOpen) {
+      loadFormFields();
+    }
+  }, [trigger, isOpen]);
+
   const generateId = () => {
     return Math.random().toString(36).substr(2, 9);
   };
 
-  const crmFields = getBaseCrmFields();
+  // Map FormField types to condition types
+  const mapFormFieldTypeToConditionType = (formFieldType: string): string => {
+    switch (formFieldType) {
+      case 'text':
+      case 'email':
+      case 'url':
+      case 'phone':
+      case 'textarea':
+        return 'text';
+      case 'number':
+        return 'number';
+      case 'date':
+        return 'date';
+      case 'select':
+      case 'radio':
+        return 'select';
+      case 'checkbox':
+        return 'checkbox';
+      default:
+        return 'text';
+    }
+  };
+
+  // Generate form field condition options
+  const getFormFieldOptions = () => {
+    if (!formFields.length) return [];
+    
+    return formFields.map(field => ({
+      value: `form.fields.${field.id}`,
+      label: `${field.label} (Form Field)`,
+      type: mapFormFieldTypeToConditionType(field.type),
+      options: field.options || [], // For select/radio fields
+      formField: field // Store reference to original field
+    }));
+  };
+
+  // Combine base CRM fields with form fields
+  const crmFields = [...getBaseCrmFields(), ...getFormFieldOptions()];
 
   const getFieldType = (fieldValue: string) => {
     const field = crmFields.find(f => f.value === fieldValue);
@@ -107,6 +184,12 @@ const ConditionConfigModal: React.FC<ConditionConfigModalProps> = ({
     const field = crmFields.find(f => f.value === fieldValue);
     if (field?.type === 'tag') {
       return tags.map(tag => ({ value: tag.id, label: tag.name }));
+    }
+    if (field?.type === 'checkbox') {
+      return [
+        { value: 'true', label: 'Checked' },
+        { value: 'false', label: 'Unchecked' }
+      ];
     }
     return field?.options || [];
   };
@@ -160,7 +243,7 @@ const ConditionConfigModal: React.FC<ConditionConfigModalProps> = ({
         newErrors[`operator-${index}`] = 'Operator is required';
         hasError = true;
       }
-      if (!condition.value && !["is_empty", "not_empty"].includes(condition.operator)) {
+      if (!condition.value && !["is_empty", "not_empty", "is_checked", "is_unchecked"].includes(condition.operator)) {
         newErrors[`value-${index}`] = 'Value is required';
         hasError = true;
       }
@@ -189,7 +272,7 @@ const ConditionConfigModal: React.FC<ConditionConfigModalProps> = ({
       const operator = operators.find(o => o.value === condition.operator);
       
       let conditionText = `${field?.label || condition.field} ${operator?.label || condition.operator}`;
-      if (condition.value && !["is_empty", "not_empty"].includes(condition.operator)) {
+      if (condition.value && !["is_empty", "not_empty", "is_checked", "is_unchecked"].includes(condition.operator)) {
         conditionText += ` "${condition.value}"`;
       }
       
@@ -312,6 +395,16 @@ const ConditionConfigModal: React.FC<ConditionConfigModalProps> = ({
                                 {errors[`field-${index}`]}
                               </p>
                             )}
+                            {loadingFormFields && (
+                              <p className="mt-1 text-xs text-blue-600 dark:text-blue-400">
+                                Loading form fields...
+                              </p>
+                            )}
+                            {formFields.length > 0 && (
+                              <p className="mt-1 text-xs text-green-600 dark:text-green-400">
+                                {formFields.length} form field{formFields.length !== 1 ? 's' : ''} available
+                              </p>
+                            )}
                           </div>
 
                           {/* Operator Selection */}
@@ -340,7 +433,7 @@ const ConditionConfigModal: React.FC<ConditionConfigModalProps> = ({
                           {/* Value Input */}
                           <div>
                             <label className="block text-xs font-medium mb-1">Value</label>
-                            {getFieldType(condition.field) === "select" ? (
+                            {getFieldType(condition.field) === "select" || getFieldType(condition.field) === "checkbox" ? (
                               <SimpleSelect
                                 options={[
                                   { value: "", label: "Select value..." },
@@ -353,7 +446,7 @@ const ConditionConfigModal: React.FC<ConditionConfigModalProps> = ({
                                 value={condition.value}
                                 onChange={(value) => updateCondition(condition.id, { value })}
                                 size="sm"
-                                disabled={["is_empty", "not_empty"].includes(condition.operator)}
+                                disabled={["is_empty", "not_empty", "is_checked", "is_unchecked"].includes(condition.operator)}
                               />
                             ) : getFieldType(condition.field) === "tag" ? (
                               <div className="space-y-2">
@@ -369,7 +462,7 @@ const ConditionConfigModal: React.FC<ConditionConfigModalProps> = ({
                                   value={condition.value}
                                   onChange={(value) => updateCondition(condition.id, { value })}
                                   size="sm"
-                                  disabled={["is_empty", "not_empty"].includes(condition.operator)}
+                                  disabled={["is_empty", "not_empty", "is_checked", "is_unchecked"].includes(condition.operator)}
                                 />
                                 {condition.value && (() => {
                                   const selectedTag = getTagById(condition.value);
@@ -391,7 +484,7 @@ const ConditionConfigModal: React.FC<ConditionConfigModalProps> = ({
                                 }
                                 value={condition.value}
                                 onChange={(e) => updateCondition(condition.id, { value: e.target.value })}
-                                disabled={["is_empty", "not_empty"].includes(condition.operator)}
+                                disabled={["is_empty", "not_empty", "is_checked", "is_unchecked"].includes(condition.operator)}
                                 className="block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-sm disabled:opacity-50"
                                 placeholder="Enter value..."
                               />

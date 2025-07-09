@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { Dialog, Transition } from '@headlessui/react';
-import { XMarkIcon, PlayIcon, InformationCircleIcon, EnvelopeIcon } from '@heroicons/react/24/outline';
+import { XMarkIcon, PlayIcon, InformationCircleIcon, EnvelopeIcon, ArrowsRightLeftIcon } from '@heroicons/react/24/outline';
 import SimpleSelect from '~/components/ui/SimpleSelect';
 import EnhancedEmailEditor from '~/components/email/EnhancedEmailEditor';
 import { type VariableAssignment } from '~/components/email/VariableAssignmentEditor';
 import { getTagColorClass } from '~/components/tags/TagsData';
 import { useDarkMode } from '~/contexts/DarkModeContext';
 import { useTags } from '~/hooks/useTags';
+import { formsApi, type FormField } from '~/lib/api/forms';
+import { getEntityFieldsForType } from '~/lib/utils/variableProcessor';
 
 export interface ActionConfig {
   id: string;
@@ -15,10 +17,27 @@ export interface ActionConfig {
   parameters: Record<string, any>;
 }
 
+interface TriggerConfig {
+  entityType: string;
+  action: string;
+  attributeFilter?: string;
+  formId?: string;
+}
+
+interface FieldMapping {
+  formFieldId: string;
+  entityField: string;
+  conversion?: {
+    type: string;
+    parameters?: Record<string, any>;
+  };
+}
+
 interface ActionConfigModalProps {
   isOpen: boolean;
   action?: ActionConfig;
   entityType?: string;
+  trigger?: TriggerConfig;
   onSave: (action: ActionConfig) => void;
   onClose: () => void;
   onRequestEmailEditor?: (actionId: string, currentTemplate?: string, currentVariables?: Record<string, string>, currentAssignments?: VariableAssignment[]) => void;
@@ -35,13 +54,17 @@ const actionTypes = [
   { value: "send_notification", label: "Send Notification", targets: ["Sales Team", "Management", "Support"] },
   { value: "create_deal", label: "Create Deal", targets: ["Contact"] },
   { value: "schedule_followup", label: "Schedule Follow-up", targets: ["Sales Rep", "Contact"] },
-  { value: "webhook", label: "Send Webhook", targets: ["External System", "API Endpoint"] }
+  { value: "webhook", label: "Send Webhook", targets: ["External System", "API Endpoint"] },
+  { value: "create_contact", label: "Create Contact", targets: ["From Form Data"] },
+  { value: "create_deal_from_form", label: "Create Deal from Form", targets: ["From Form Data"] },
+  { value: "create_activity_from_form", label: "Create Activity from Form", targets: ["From Form Data"] }
 ];
 
 const ActionConfigModal: React.FC<ActionConfigModalProps> = ({
   isOpen,
   action,
   entityType = 'contact',
+  trigger,
   onSave,
   onClose,
   onRequestEmailEditor
@@ -57,6 +80,9 @@ const ActionConfigModal: React.FC<ActionConfigModalProps> = ({
 
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [selectedTagIds, setSelectedTagIds] = useState<string[]>([]);
+  const [formFields, setFormFields] = useState<FormField[]>([]);
+  const [fieldMappings, setFieldMappings] = useState<FieldMapping[]>([]);
+  const [loadingFormFields, setLoadingFormFields] = useState(false);
 
   useEffect(() => {
     if (action) {
@@ -69,6 +95,12 @@ const ActionConfigModal: React.FC<ActionConfigModalProps> = ({
       } else {
         setSelectedTagIds([]);
       }
+      // Initialize field mappings from existing action parameters
+      if (action.parameters.fieldMappings) {
+        setFieldMappings(action.parameters.fieldMappings);
+      } else {
+        setFieldMappings([]);
+      }
     } else {
       setFormData({
         id: generateId(),
@@ -77,12 +109,82 @@ const ActionConfigModal: React.FC<ActionConfigModalProps> = ({
         parameters: {}
       });
       setSelectedTagIds([]);
+      setFieldMappings([]);
     }
     setErrors({});
   }, [action, isOpen]);
 
+  // Load form fields when trigger is form-based
+  useEffect(() => {
+    const loadFormFields = async () => {
+      if (trigger?.entityType === 'form' && trigger.formId) {
+        setLoadingFormFields(true);
+        try {
+          const form = await formsApi.getById(trigger.formId);
+          if (form) {
+            setFormFields(form.fields);
+          }
+        } catch (error) {
+          console.error('Error loading form fields:', error);
+          setFormFields([]);
+        } finally {
+          setLoadingFormFields(false);
+        }
+      } else {
+        setFormFields([]);
+      }
+    };
+
+    if (isOpen) {
+      loadFormFields();
+    }
+  }, [trigger, isOpen]);
+
   const generateId = () => {
     return Math.random().toString(36).substr(2, 9);
+  };
+
+  // Get entity type for creation actions
+  const getEntityTypeForAction = (actionType: string): string => {
+    switch (actionType) {
+      case 'create_contact':
+        return 'contact';
+      case 'create_deal_from_form':
+        return 'deal';
+      case 'create_activity_from_form':
+        return 'activity';
+      default:
+        return 'contact';
+    }
+  };
+
+  // Check if action type requires field mapping
+  const isFormBasedAction = (actionType: string): boolean => {
+    return ['create_contact', 'create_deal_from_form', 'create_activity_from_form'].includes(actionType);
+  };
+
+  // Add a new field mapping
+  const addFieldMapping = () => {
+    const newMapping: FieldMapping = {
+      formFieldId: '',
+      entityField: '',
+      conversion: undefined
+    };
+    setFieldMappings(prev => [...prev, newMapping]);
+  };
+
+  // Update a field mapping
+  const updateFieldMapping = (index: number, updates: Partial<FieldMapping>) => {
+    setFieldMappings(prev => 
+      prev.map((mapping, i) => 
+        i === index ? { ...mapping, ...updates } : mapping
+      )
+    );
+  };
+
+  // Remove a field mapping
+  const removeFieldMapping = (index: number) => {
+    setFieldMappings(prev => prev.filter((_, i) => i !== index));
   };
 
   const getAvailableTargets = (actionType: string): string[] => {
@@ -119,6 +221,21 @@ const ActionConfigModal: React.FC<ActionConfigModalProps> = ({
           newErrors.tagId = 'Tag selection is required';
         }
         break;
+      case 'create_contact':
+      case 'create_deal_from_form':
+      case 'create_activity_from_form':
+        if (fieldMappings.length === 0) {
+          newErrors.fieldMappings = 'At least one field mapping is required';
+        } else {
+          // Validate each field mapping
+          const incompleteMappings = fieldMappings.filter(mapping => 
+            !mapping.formFieldId || !mapping.entityField
+          );
+          if (incompleteMappings.length > 0) {
+            newErrors.fieldMappings = 'All field mappings must have both form field and entity field selected';
+          }
+        }
+        break;
     }
 
     setErrors(newErrors);
@@ -129,8 +246,9 @@ const ActionConfigModal: React.FC<ActionConfigModalProps> = ({
     e.preventDefault();
     
     if (validateForm()) {
-      // Update parameters with selected tag data
+      // Update parameters with selected tag data and field mappings
       const updatedFormData = { ...formData };
+      
       if ((formData.type === 'add_tag' || formData.type === 'remove_tag') && selectedTagIds.length > 0) {
         // Store both tag ID and tag name for backward compatibility
         updatedFormData.parameters.tagId = selectedTagIds[0];
@@ -139,6 +257,13 @@ const ActionConfigModal: React.FC<ActionConfigModalProps> = ({
           updatedFormData.parameters.tagName = selectedTag.name;
         }
       }
+      
+      // Add field mappings for form-based actions
+      if (isFormBasedAction(formData.type) && fieldMappings.length > 0) {
+        updatedFormData.parameters.fieldMappings = fieldMappings;
+        updatedFormData.parameters.entityType = getEntityTypeForAction(formData.type);
+      }
+      
       onSave(updatedFormData);
       onClose();
     }
@@ -152,6 +277,7 @@ const ActionConfigModal: React.FC<ActionConfigModalProps> = ({
       parameters: {}
     }));
     setSelectedTagIds([]);
+    setFieldMappings([]);
     setErrors({});
   };
 
@@ -461,6 +587,113 @@ const ActionConfigModal: React.FC<ActionConfigModalProps> = ({
                                   }
                                   return null;
                                 })()}
+                              </div>
+                            )}
+                          </div>
+                        )}
+
+                        {isFormBasedAction(formData.type) && (
+                          <div className="space-y-4">
+                            <div className="flex items-center justify-between">
+                              <div>
+                                <h5 className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                                  Field Mapping
+                                </h5>
+                                <p className="text-xs text-gray-500 dark:text-gray-400">
+                                  Map form fields to {getEntityTypeForAction(formData.type)} attributes
+                                </p>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={addFieldMapping}
+                                className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded text-blue-700 dark:text-blue-300 bg-blue-100 dark:bg-blue-900 hover:bg-blue-200 dark:hover:bg-blue-800"
+                                disabled={formFields.length === 0}
+                              >
+                                <ArrowsRightLeftIcon className="h-3 w-3 mr-1" />
+                                Add Mapping
+                              </button>
+                            </div>
+
+                            {loadingFormFields && (
+                              <div className="text-center py-4">
+                                <div className="text-sm text-gray-500 dark:text-gray-400">
+                                  Loading form fields...
+                                </div>
+                              </div>
+                            )}
+
+                            {formFields.length === 0 && !loadingFormFields && (
+                              <div className="text-center py-4 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg border border-yellow-200 dark:border-yellow-800">
+                                <div className="text-sm text-yellow-700 dark:text-yellow-300">
+                                  No form fields available. Make sure the trigger is set to a form submission.
+                                </div>
+                              </div>
+                            )}
+
+                            {fieldMappings.map((mapping, index) => (
+                              <div key={index} className="grid grid-cols-1 md:grid-cols-3 gap-3 p-3 border border-gray-200 dark:border-gray-600 rounded-lg">
+                                {/* Form Field Selection */}
+                                <div>
+                                  <label className="block text-xs font-medium mb-1">
+                                    Form Field
+                                  </label>
+                                  <SimpleSelect
+                                    options={[
+                                      { value: "", label: "Select form field..." },
+                                      ...formFields.map(field => ({
+                                        value: field.id,
+                                        label: field.label
+                                      }))
+                                    ]}
+                                    value={mapping.formFieldId}
+                                    onChange={(value) => updateFieldMapping(index, { formFieldId: value })}
+                                    size="sm"
+                                  />
+                                </div>
+
+                                {/* Entity Field Selection */}
+                                <div>
+                                  <label className="block text-xs font-medium mb-1">
+                                    {getEntityTypeForAction(formData.type)} Field
+                                  </label>
+                                  <SimpleSelect
+                                    options={[
+                                      { value: "", label: "Select target field..." },
+                                      ...getEntityFieldsForType(getEntityTypeForAction(formData.type)).map(field => ({
+                                        value: field.value,
+                                        label: field.label
+                                      }))
+                                    ]}
+                                    value={mapping.entityField}
+                                    onChange={(value) => updateFieldMapping(index, { entityField: value })}
+                                    size="sm"
+                                  />
+                                </div>
+
+                                {/* Remove Button */}
+                                <div className="flex items-end">
+                                  <button
+                                    type="button"
+                                    onClick={() => removeFieldMapping(index)}
+                                    className="w-full px-2 py-1.5 text-xs text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300 border border-red-300 dark:border-red-600 rounded hover:bg-red-50 dark:hover:bg-red-900/20"
+                                  >
+                                    Remove
+                                  </button>
+                                </div>
+                              </div>
+                            ))}
+
+                            {fieldMappings.length === 0 && formFields.length > 0 && (
+                              <div className="text-center py-4 text-gray-500 dark:text-gray-400 text-sm">
+                                Click "Add Mapping" to map form fields to {getEntityTypeForAction(formData.type)} attributes
+                              </div>
+                            )}
+
+                            {errors.fieldMappings && (
+                              <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+                                <p className="text-sm text-red-700 dark:text-red-300">
+                                  {errors.fieldMappings}
+                                </p>
                               </div>
                             )}
                           </div>
