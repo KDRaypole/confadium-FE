@@ -65,7 +65,10 @@ export default function PublicForm() {
     }
 
     try {
-      const result = await formsApi.submitForm(formId, data);
+      // Extract recaptcha token from the data
+      const { recaptchaToken, ...formData } = data;
+      
+      const result = await formsApi.submitForm(formId, formData, recaptchaToken);
       setSubmitResult(result);
       return result;
     } catch (error) {

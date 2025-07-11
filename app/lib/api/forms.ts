@@ -498,7 +498,7 @@ export const formsApi = {
   },
 
   // Submit a form (for public submissions)
-  async submitForm(formId: string, data: Record<string, any>): Promise<{ success: boolean; message: string }> {
+  async submitForm(formId: string, data: Record<string, any>, recaptchaToken?: string): Promise<{ success: boolean; message: string }> {
     try {
       initializeMockData();
       const mockFormsStore = getFormsStore();
@@ -538,6 +538,25 @@ export const formsApi = {
           success: false, 
           message: 'This form requires authentication to submit.' 
         };
+      }
+
+      // Check reCAPTCHA if enabled
+      if (form.settings.enableCaptcha && !recaptchaToken) {
+        return { 
+          success: false, 
+          message: 'Please complete the reCAPTCHA verification before submitting.' 
+        };
+      }
+
+      // In a real app, you would validate the reCAPTCHA token with Google's API
+      if (form.settings.enableCaptcha && recaptchaToken) {
+        // Mock reCAPTCHA validation - in production, this would call Google's API
+        if (!recaptchaToken.startsWith('mock_recaptcha_token_')) {
+          return { 
+            success: false, 
+            message: 'Invalid reCAPTCHA token. Please try again.' 
+          };
+        }
       }
 
       // In a real app, this would save to database

@@ -6,6 +6,7 @@ import {
   ChevronLeftIcon,
   ChevronRightIcon
 } from '@heroicons/react/24/outline';
+import MockRecaptcha from './MockRecaptcha';
 
 interface MultiStageFormPreviewProps {
   formData: FormData;
@@ -15,6 +16,7 @@ const MultiStageFormPreview: React.FC<MultiStageFormPreviewProps> = ({ formData 
   const [currentStep, setCurrentStep] = useState(0);
   const [formValues, setFormValues] = useState<Record<string, any>>({});
   const [direction, setDirection] = useState<'next' | 'prev'>('next');
+  const [recaptchaToken, setRecaptchaToken] = useState<string | null>(null);
 
   const totalSteps = formData.fields.length;
   const currentField = formData.fields[currentStep];
@@ -44,8 +46,20 @@ const MultiStageFormPreview: React.FC<MultiStageFormPreviewProps> = ({ formData 
     }
   };
 
+  const handleRecaptchaVerify = (token: string) => {
+    setRecaptchaToken(token);
+  };
+
+  const handleRecaptchaExpire = () => {
+    setRecaptchaToken(null);
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (formData.settings.enableCaptcha && !recaptchaToken) {
+      alert('Please complete the reCAPTCHA verification before submitting.');
+      return;
+    }
     alert('Form submitted! (This is just a preview)');
     console.log('Form values:', formValues);
   };
@@ -370,6 +384,20 @@ const MultiStageFormPreview: React.FC<MultiStageFormPreviewProps> = ({ formData 
                       {currentField.description}
                     </p>
                   )}
+                </div>
+              </div>
+            )}
+
+            {/* reCAPTCHA - only show on final step */}
+            {formData.settings.enableCaptcha && currentStep === totalSteps - 1 && (
+              <div className="pt-6">
+                <div className="flex justify-center">
+                  <MockRecaptcha
+                    onVerify={handleRecaptchaVerify}
+                    onExpire={handleRecaptchaExpire}
+                    theme={formData.theme.backgroundColor === '#1f2937' ? 'dark' : 'light'}
+                    size="normal"
+                  />
                 </div>
               </div>
             )}

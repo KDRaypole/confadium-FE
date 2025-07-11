@@ -6,6 +6,7 @@ import {
   CheckIcon,
   ExclamationTriangleIcon
 } from '@heroicons/react/24/outline';
+import MockRecaptcha from './MockRecaptcha';
 
 interface PublicFormRendererProps {
   form: Form;
@@ -20,6 +21,8 @@ const PublicFormRenderer: React.FC<PublicFormRendererProps> = ({ form, onSubmit 
   const [direction, setDirection] = useState<'next' | 'prev'>('next');
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [autoSaveStatus, setAutoSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
+  const [recaptchaToken, setRecaptchaToken] = useState<string | null>(null);
+  const [showRecaptchaError, setShowRecaptchaError] = useState(false);
 
   const isMultiStage = form.settings.enableMultiStage;
   const totalSteps = form.fields.length;
@@ -221,6 +224,15 @@ const PublicFormRenderer: React.FC<PublicFormRendererProps> = ({ form, onSubmit 
     }
   };
 
+  const handleRecaptchaVerify = (token: string) => {
+    setRecaptchaToken(token);
+    setShowRecaptchaError(false);
+  };
+
+  const handleRecaptchaExpire = () => {
+    setRecaptchaToken(null);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -245,9 +257,15 @@ const PublicFormRenderer: React.FC<PublicFormRendererProps> = ({ form, onSubmit 
     
     if (!validateCurrentStep()) return;
     
+    // Check reCAPTCHA if enabled
+    if (form.settings.enableCaptcha && !recaptchaToken) {
+      setShowRecaptchaError(true);
+      return;
+    }
+    
     setIsSubmitting(true);
     try {
-      const result = await onSubmit(formValues);
+      const result = await onSubmit({ ...formValues, recaptchaToken });
       setSubmitResult(result);
       
       if (result.success) {
@@ -729,6 +747,27 @@ const PublicFormRenderer: React.FC<PublicFormRendererProps> = ({ form, onSubmit 
                   )}
                 </div>
               ))}
+            </div>
+          )}
+
+          {/* reCAPTCHA */}
+          {form.settings.enableCaptcha && (
+            <div className="pt-6">
+              <div className="flex justify-center">
+                <MockRecaptcha
+                  onVerify={handleRecaptchaVerify}
+                  onExpire={handleRecaptchaExpire}
+                  theme={form.theme.backgroundColor === '#1f2937' ? 'dark' : 'light'}
+                  size="normal"
+                />
+              </div>
+              {showRecaptchaError && (
+                <div className="mt-2 text-center">
+                  <p className="text-sm text-red-600">
+                    Please complete the reCAPTCHA verification before submitting.
+                  </p>
+                </div>
+              )}
             </div>
           )}
 

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { FormData } from '~/routes/organizations.$orgId.forms.new';
 import { EyeIcon, ComputerDesktopIcon, DevicePhoneMobileIcon } from '@heroicons/react/24/outline';
 import MultiStageFormPreview from './MultiStageFormPreview';
+import MockRecaptcha from './MockRecaptcha';
 
 interface FormPreviewProps {
   formData: FormData;
@@ -12,6 +13,7 @@ type PreviewMode = 'desktop' | 'mobile';
 const FormPreview: React.FC<FormPreviewProps> = ({ formData }) => {
   const [previewMode, setPreviewMode] = useState<PreviewMode>('desktop');
   const [formValues, setFormValues] = useState<Record<string, any>>({});
+  const [recaptchaToken, setRecaptchaToken] = useState<string | null>(null);
 
   // Check if multi-stage is enabled
   const isMultiStage = formData.settings.enableMultiStage && formData.fields.length > 0;
@@ -20,8 +22,20 @@ const FormPreview: React.FC<FormPreviewProps> = ({ formData }) => {
     setFormValues(prev => ({ ...prev, [fieldId]: value }));
   };
 
+  const handleRecaptchaVerify = (token: string) => {
+    setRecaptchaToken(token);
+  };
+
+  const handleRecaptchaExpire = () => {
+    setRecaptchaToken(null);
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (formData.settings.enableCaptcha && !recaptchaToken) {
+      alert('Please complete the reCAPTCHA verification before submitting.');
+      return;
+    }
     alert('Form submitted! (This is just a preview)');
     console.log('Form values:', formValues);
   };
@@ -334,6 +348,18 @@ const FormPreview: React.FC<FormPreviewProps> = ({ formData }) => {
                       )}
                     </div>
                   ))}
+                </div>
+              )}
+
+              {/* reCAPTCHA */}
+              {formData.settings.enableCaptcha && (
+                <div className="pt-4 flex justify-center">
+                  <MockRecaptcha
+                    onVerify={handleRecaptchaVerify}
+                    onExpire={handleRecaptchaExpire}
+                    theme={formData.theme.backgroundColor === '#1f2937' ? 'dark' : 'light'}
+                    size="normal"
+                  />
                 </div>
               )}
 
