@@ -3,6 +3,7 @@ import { useParams } from "@remix-run/react";
 import { useState, useEffect } from "react";
 import PublicFormRenderer from "~/components/forms/PublicFormRenderer";
 import { formsApi, type Form } from "~/lib/api/forms";
+import { extractFormId } from "~/lib/jwt";
 import { 
   ExclamationTriangleIcon, 
   DocumentTextIcon,
@@ -38,13 +39,23 @@ export default function PublicForm() {
         setLoading(true);
         setError(null);
         
+        // Extract the actual form ID from URL parameter (could be direct ID or JWT token)
+        const actualFormId = extractFormId(formId);
+        
+        if (!actualFormId) {
+          setError("Invalid or expired form link");
+          setLoading(false);
+          return;
+        }
+        
         // Force sync data between storage mechanisms
         formsApi.syncData();
         
         // Debug: log current store state
         console.log('Public form - store state:', formsApi.getStoreState());
+        console.log('Original formId:', formId, 'Extracted formId:', actualFormId);
         
-        const formData = await formsApi.getPublicForm(formId);
+        const formData = await formsApi.getPublicForm(actualFormId);
         console.log('Public form - retrieved form:', formData);
         setForm(formData);
       } catch (err) {
@@ -65,10 +76,17 @@ export default function PublicForm() {
     }
 
     try {
+      // Extract the actual form ID from URL parameter (could be direct ID or JWT token)
+      const actualFormId = extractFormId(formId);
+      
+      if (!actualFormId) {
+        return { success: false, message: "Invalid or expired form link" };
+      }
+      
       // Extract recaptcha token from the data
       const { recaptchaToken, ...formData } = data;
       
-      const result = await formsApi.submitForm(formId, formData, recaptchaToken);
+      const result = await formsApi.submitForm(actualFormId, formData, recaptchaToken);
       setSubmitResult(result);
       return result;
     } catch (error) {

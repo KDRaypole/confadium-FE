@@ -14,6 +14,7 @@ import {
   ListBulletIcon
 } from "@heroicons/react/24/outline";
 import { useForms } from "~/hooks/useForms";
+import ShareFormButton from "~/components/forms/ShareFormButton";
 
 export const meta: MetaFunction = () => {
   return [
@@ -313,6 +314,7 @@ export default function FormsIndex() {
                         >
                           <PencilIcon className="h-4 w-4" />
                         </Link>
+                        <ShareFormButton formId={form.id} />
                       </div>
                       <button className="text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300">
                         <TrashIcon className="h-4 w-4" />
@@ -394,6 +396,7 @@ export default function FormsIndex() {
                             >
                               <PencilIcon className="h-4 w-4" />
                             </Link>
+                            <ShareFormButton formId={form.id} />
                             <button className="text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300">
                               <TrashIcon className="h-4 w-4" />
                             </button>

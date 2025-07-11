@@ -1,4 +1,5 @@
 import { db } from '~/lib/db';
+import { generateFormUrl } from '~/lib/jwt';
 
 // TypeScript declaration for global forms store
 declare global {
@@ -60,6 +61,8 @@ export interface FormSettings {
   previousButtonText: string;
   showStepIndicator: boolean;
   allowStepNavigation: boolean;
+  // Security settings
+  obfuscateFormId: boolean;
 }
 
 export interface Form {
@@ -183,7 +186,9 @@ const defaultSettings: FormSettings = {
   nextButtonText: "Next",
   previousButtonText: "Previous",
   showStepIndicator: true,
-  allowStepNavigation: false
+  allowStepNavigation: false,
+  // Security settings
+  obfuscateFormId: false
 };
 
 // Sync data between globalThis and localStorage
@@ -260,7 +265,8 @@ const initializeMockData = () => {
           nextButtonText: "Next",
           previousButtonText: "Previous", 
           showStepIndicator: true,
-          allowStepNavigation: false
+          allowStepNavigation: false,
+          obfuscateFormId: false
         },
         submissions: 142,
         status: "active",
@@ -314,7 +320,8 @@ const initializeMockData = () => {
           nextButtonText: "Next",
           previousButtonText: "Previous",
           showStepIndicator: true,
-          allowStepNavigation: false
+          allowStepNavigation: false,
+          obfuscateFormId: false
         },
         submissions: 89,
         status: "active",
@@ -370,7 +377,8 @@ const initializeMockData = () => {
           previousButtonText: "Go Back",
           showStepIndicator: true,
           allowStepNavigation: true,
-          notificationEmail: "events@company.com"
+          notificationEmail: "events@company.com",
+          obfuscateFormId: false
         },
         submissions: 234,
         status: "active",
@@ -417,7 +425,8 @@ const initializeMockData = () => {
           submitButtonText: "Complete Survey",
           successMessage: "Thank you! Your response has been recorded successfully.",
           redirectUrl: "https://example.com/thank-you",
-          notificationEmail: "demo@example.com"
+          notificationEmail: "demo@example.com",
+          obfuscateFormId: false
         },
         submissions: 12,
         status: "active",
@@ -701,5 +710,21 @@ export const formsApi = {
       localStorage: localData ? JSON.parse(localData) : null,
       globalThis: globalThis.__mockFormsStore || null
     };
+  },
+
+  // Get shareable URL for a form
+  getShareableUrl(formId: string): string {
+    try {
+      const form = this.getFormsStore().find(f => f.id === formId);
+      if (!form) {
+        throw new Error('Form not found');
+      }
+      
+      return generateFormUrl(formId, form.settings.obfuscateFormId);
+    } catch (error) {
+      console.error('Error generating shareable URL:', error);
+      // Fallback to direct URL
+      return generateFormUrl(formId, false);
+    }
   }
 };

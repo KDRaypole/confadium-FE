@@ -198,6 +198,26 @@ const FormSettingsEditor: React.FC<FormSettingsEditorProps> = ({ settings, onSet
             </label>
           </div>
 
+          <div className="flex items-center justify-between">
+            <div>
+              <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                Obfuscate Form ID
+              </label>
+              <p className="text-xs text-gray-500 dark:text-gray-400">
+                Use encrypted tokens instead of direct form IDs in sharing URLs for enhanced privacy
+              </p>
+            </div>
+            <label className="relative inline-flex items-center cursor-pointer">
+              <input
+                type="checkbox"
+                checked={settings.obfuscateFormId}
+                onChange={(e) => updateSettings({ obfuscateFormId: e.target.checked })}
+                className="sr-only peer"
+              />
+              <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-purple-300 dark:peer-focus:ring-purple-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-purple-600"></div>
+            </label>
+          </div>
+
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
               Submission Limit (per user)
@@ -471,6 +491,9 @@ const FormSettingsEditor: React.FC<FormSettingsEditorProps> = ({ settings, onSet
           <div className="space-y-1">
             <div className="text-blue-700 dark:text-blue-300">
               • CAPTCHA: {settings.enableCaptcha ? 'Enabled' : 'Disabled'}
+            </div>
+            <div className="text-blue-700 dark:text-blue-300">
+              • Form ID obfuscation: {settings.obfuscateFormId ? 'Enabled' : 'Disabled'}
             </div>
             <div className="text-blue-700 dark:text-blue-300">
               • Multiple submissions: {settings.allowMultipleSubmissions ? 'Allowed' : 'Not allowed'}
