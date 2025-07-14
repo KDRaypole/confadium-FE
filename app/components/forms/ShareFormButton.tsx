@@ -50,10 +50,17 @@ const ShareFormButton: React.FC<ShareFormButtonProps> = ({ formId, className = "
     <>
       <button
         onClick={handleShare}
-        className={`text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 ${className}`}
+        className={className || "text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"}
         title="Share form"
       >
-        <ShareIcon className="h-4 w-4" />
+        {className?.includes('inline-flex') ? (
+          <>
+            <ShareIcon className="h-4 w-4 mr-2" />
+            Share
+          </>
+        ) : (
+          <ShareIcon className="h-4 w-4" />
+        )}
       </button>
 
       {/* Modal */}

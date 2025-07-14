@@ -432,6 +432,52 @@ const initializeMockData = () => {
         status: "active",
         createdAt: "2024-01-05",
         updatedAt: "2024-01-20"
+      },
+      {
+        id: "5",
+        name: "Secure Feedback Form",
+        description: "Confidential feedback form with encrypted sharing",
+        fields: [
+          {
+            id: "field_1",
+            type: "text",
+            label: "Your Name (Optional)",
+            placeholder: "Enter your name",
+            required: false
+          },
+          {
+            id: "field_2",
+            type: "email",
+            label: "Email Address",
+            placeholder: "your@email.com",
+            required: true
+          },
+          {
+            id: "field_3",
+            type: "select",
+            label: "Feedback Category",
+            required: true,
+            options: ["General", "Bug Report", "Feature Request", "Complaint", "Compliment"]
+          },
+          {
+            id: "field_4",
+            type: "textarea",
+            label: "Your Feedback",
+            placeholder: "Please share your detailed feedback...",
+            required: true
+          }
+        ],
+        theme: { ...defaultTheme, primaryColor: "#1f2937", backgroundColor: "#f9fafb" },
+        settings: { 
+          ...defaultSettings,
+          enableCaptcha: true,
+          notificationEmail: "feedback@company.com",
+          obfuscateFormId: true // This form uses JWT obfuscation
+        },
+        submissions: 45,
+        status: "active",
+        createdAt: "2024-01-15",
+        updatedAt: "2024-01-20"
       }
     ];
     setFormsStore(initialForms);
