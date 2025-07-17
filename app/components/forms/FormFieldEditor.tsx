@@ -2,10 +2,12 @@ import React, { useState, useEffect } from 'react';
 import { Dialog, Transition } from '@headlessui/react';
 import { XMarkIcon, PlusIcon, TrashIcon } from '@heroicons/react/24/outline';
 import { FormField } from '~/routes/organizations.$orgId.forms.new';
+import ConditionalLogicEditor from './ConditionalLogicEditor';
 
 interface FormFieldEditorProps {
   isOpen: boolean;
   field: FormField;
+  allFields: FormField[];
   onClose: () => void;
   onSave: (updates: Partial<FormField>) => void;
 }
@@ -13,6 +15,7 @@ interface FormFieldEditorProps {
 const FormFieldEditor: React.FC<FormFieldEditorProps> = ({
   isOpen,
   field,
+  allFields,
   onClose,
   onSave
 }) => {
@@ -288,6 +291,15 @@ const FormFieldEditor: React.FC<FormFieldEditorProps> = ({
                         </div>
                       )}
                     </div>
+                  </div>
+
+                  {/* Conditional Logic */}
+                  <div className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
+                    <ConditionalLogicEditor
+                      field={formData}
+                      allFields={allFields}
+                      onUpdate={setFormData}
+                    />
                   </div>
                 </div>
 

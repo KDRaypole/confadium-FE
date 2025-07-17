@@ -21,6 +21,25 @@ export interface FormField {
     pattern?: string;
   };
   description?: string;
+  conditionalActions?: ConditionalAction[];
+}
+
+// Conditional logic interfaces
+export interface FormFieldCondition {
+  id: string;
+  fieldId: string; // The field this condition checks
+  operator: 'equals' | 'not_equals' | 'contains' | 'not_contains' | 'greater_than' | 'less_than' | 'is_empty' | 'not_empty';
+  value: string;
+}
+
+export interface ConditionalAction {
+  id: string;
+  triggerValue: string; // The answer value that triggers this action
+  type: 'remove_options' | 'add_options' | 'enable_options' | 'hide_question' | 'show_question' | 'end_form';
+  targetFieldId?: string; // Optional for end_form actions
+  options?: string[]; // For option-based actions
+  endMessage?: string; // For end_form actions
+  endTitle?: string; // Title for end form message
 }
 
 export interface FormTheme {

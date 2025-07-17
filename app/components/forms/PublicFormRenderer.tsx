@@ -7,6 +7,12 @@ import {
   ExclamationTriangleIcon
 } from '@heroicons/react/24/outline';
 import MockRecaptcha from './MockRecaptcha';
+import { 
+  evaluateConditionalLogic, 
+  shouldEndForm, 
+  getNextConditionalField, 
+  getPreviousConditionalField 
+} from '~/lib/conditionalLogic';
 
 interface PublicFormRendererProps {
   form: Form;
@@ -24,9 +30,14 @@ const PublicFormRenderer: React.FC<PublicFormRendererProps> = ({ form, onSubmit 
   const [recaptchaToken, setRecaptchaToken] = useState<string | null>(null);
   const [showRecaptchaError, setShowRecaptchaError] = useState(false);
 
+  // Evaluate conditional logic
+  const conditionalResult = evaluateConditionalLogic(form.fields, formValues);
+  const endCheck = shouldEndForm(form.fields, formValues);
+  const visibleFields = conditionalResult.visibleFields;
+  
   const isMultiStage = form.settings.enableMultiStage;
-  const totalSteps = form.fields.length;
-  const currentField = form.fields[currentStep];
+  const totalSteps = visibleFields.length;
+  const currentField = visibleFields[currentStep];
   
   // Debug current field access
   useEffect(() => {
@@ -127,10 +138,11 @@ const PublicFormRenderer: React.FC<PublicFormRendererProps> = ({ form, onSubmit 
 
   const validateCurrentStep = (): boolean => {
     if (!isMultiStage) {
-      // Validate all fields for single-page form
+      // Validate all visible fields for single-page form
       const newErrors: Record<string, string> = {};
-      form.fields.forEach(field => {
-        const error = validateField(field, formValues[field.id]);
+      visibleFields.forEach(field => {
+        const modifiedField = conditionalResult.modifiedFields.find(f => f.id === field.id) || field;
+        const error = validateField(modifiedField, formValues[field.id]);
         if (error) {
           newErrors[field.id] = error;
         }
@@ -139,7 +151,9 @@ const PublicFormRenderer: React.FC<PublicFormRendererProps> = ({ form, onSubmit 
       return Object.keys(newErrors).length === 0;
     } else {
       // Validate current field for multi-stage form
-      const error = validateField(currentField, formValues[currentField.id]);
+      if (!currentField) return true;
+      const modifiedField = conditionalResult.modifiedFields.find(f => f.id === currentField.id) || currentField;
+      const error = validateField(modifiedField, formValues[currentField.id]);
       if (error) {
         setErrors({ [currentField.id]: error });
         return false;
@@ -150,33 +164,43 @@ const PublicFormRenderer: React.FC<PublicFormRendererProps> = ({ form, onSubmit 
   };
 
   const handleNext = () => {
-    const actualFinalStep = form.fields.length - 1;
-    const canAdvance = currentStep < actualFinalStep;
-    
-    console.log('handleNext called:', {
-      currentStep,
-      totalSteps,
-      actualFinalStep,
-      canAdvance,
-      nextStep: currentStep + 1,
-      formFieldsLength: form.fields.length
-    });
-    
     if (!validateCurrentStep()) {
-      console.log('Validation failed, not advancing');
       return;
     }
     
-    if (canAdvance) {
-      console.log('Advancing to next step:', currentStep + 1);
+    if (currentField) {
+      const nextField = getNextConditionalField(currentField.id, form.fields, formValues);
+      if (nextField) {
+        const nextIndex = visibleFields.findIndex(f => f.id === nextField.id);
+        if (nextIndex !== -1) {
+          setDirection('next');
+          setCurrentStep(nextIndex);
+          return;
+        }
+      }
+    }
+    
+    // Fallback to simple increment
+    if (currentStep < totalSteps - 1) {
       setDirection('next');
       setCurrentStep(currentStep + 1);
-    } else {
-      console.log('Already on final step, cannot advance further');
     }
   };
 
   const handlePrevious = () => {
+    if (currentField) {
+      const prevField = getPreviousConditionalField(currentField.id, form.fields, formValues);
+      if (prevField) {
+        const prevIndex = visibleFields.findIndex(f => f.id === prevField.id);
+        if (prevIndex !== -1) {
+          setDirection('prev');
+          setCurrentStep(prevIndex);
+          return;
+        }
+      }
+    }
+    
+    // Fallback to simple decrement
     if (currentStep > 0) {
       setDirection('prev');
       setCurrentStep(currentStep - 1);
@@ -291,7 +315,9 @@ const PublicFormRenderer: React.FC<PublicFormRendererProps> = ({ form, onSubmit 
     }
   };
 
-  const renderField = (field: any) => {
+  const renderField = (field: any, useModified: boolean = true) => {
+    // Get the potentially modified field from conditional logic
+    const modifiedField = useModified && conditionalResult.modifiedFields.find(f => f.id === field.id) || field;
     const commonClasses = `w-full px-4 py-3 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-opacity-50 transition-colors`;
     const inputClasses = `${commonClasses} focus:ring-purple-500 focus:border-purple-500 ${
       errors[field.id] ? 'border-red-500' : 'border-gray-300'
@@ -384,13 +410,13 @@ const PublicFormRenderer: React.FC<PublicFormRendererProps> = ({ form, onSubmit 
               value={formValues[field.id] || ''}
               onChange={(e) => handleInputChange(field.id, e.target.value)}
               onKeyDown={handleKeyDown}
-              required={field.required}
+              required={modifiedField.required}
               className={inputClasses}
               style={fieldStyle}
               autoFocus={isMultiStage}
             >
               <option value="">Select an option...</option>
-              {field.options?.map((option: string, index: number) => (
+              {modifiedField.options?.map((option: string, index: number) => (
                 <option key={index} value={option}>
                   {option}
                 </option>
@@ -426,7 +452,7 @@ const PublicFormRenderer: React.FC<PublicFormRendererProps> = ({ form, onSubmit 
         case 'radio':
           return (
             <div className={`space-y-${isMultiStage ? '4' : '3'}`}>
-              {field.options?.map((option: string, index: number) => (
+              {modifiedField.options?.map((option: string, index: number) => (
                 <label key={index} className="flex items-center space-x-3 cursor-pointer">
                   <input
                     type="radio"
@@ -434,7 +460,7 @@ const PublicFormRenderer: React.FC<PublicFormRendererProps> = ({ form, onSubmit 
                     value={option}
                     checked={formValues[field.id] === option}
                     onChange={(e) => handleInputChange(field.id, e.target.value)}
-                    required={field.required}
+                    required={modifiedField.required}
                     className={`${isMultiStage ? 'w-6 h-6' : 'w-4 h-4'} border-gray-300 text-purple-600 shadow-sm focus:border-purple-300 focus:ring focus:ring-purple-200 focus:ring-opacity-50`}
                     style={{ accentColor: form.theme.primaryColor }}
                     autoFocus={isMultiStage && index === 0}
@@ -475,6 +501,46 @@ const PublicFormRenderer: React.FC<PublicFormRendererProps> = ({ form, onSubmit 
       </div>
     );
   };
+
+  // Show form end message if triggered by conditional logic
+  if (endCheck.shouldEnd) {
+    return (
+      <div 
+        className="min-h-screen flex items-center justify-center p-4"
+        style={{ 
+          backgroundColor: form.theme.backgroundColor,
+          fontFamily: form.theme.fontFamily 
+        }}
+      >
+        <div className="max-w-md mx-auto text-center">
+          <div 
+            className="w-16 h-16 mx-auto mb-6 rounded-full flex items-center justify-center"
+            style={{ backgroundColor: form.theme.primaryColor }}
+          >
+            <CheckIcon className="h-8 w-8 text-white" />
+          </div>
+          <h2 
+            className="text-2xl font-bold mb-4"
+            style={{ 
+              color: form.theme.textColor,
+              fontFamily: form.theme.fontFamily 
+            }}
+          >
+            {endCheck.endTitle || 'Form Complete'}
+          </h2>
+          <p 
+            className="text-lg"
+            style={{ 
+              color: form.theme.textColor,
+              fontFamily: form.theme.fontFamily 
+            }}
+          >
+            {endCheck.endMessage || 'Thank you for your responses!'}
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   // Show success message
   if (submitResult?.success) {
@@ -535,7 +601,7 @@ const PublicFormRenderer: React.FC<PublicFormRendererProps> = ({ form, onSubmit 
       ? (Object.keys(formValues).filter(key => {
           const value = formValues[key];
           return value !== null && value !== undefined && value !== '';
-        }).length / Math.max(form.fields.length, 1)) * 100
+        }).length / Math.max(visibleFields.length, 1)) * 100
       : 0;
 
   return (
@@ -590,7 +656,7 @@ const PublicFormRenderer: React.FC<PublicFormRendererProps> = ({ form, onSubmit 
         {isMultiStage && form.settings.showStepIndicator && (
           <div className="flex justify-center mb-8">
             <div className="flex space-x-3">
-              {form.fields.map((_, index) => (
+              {visibleFields.map((_, index) => (
                 <button
                   key={index}
                   onClick={() => handleStepClick(index)}
@@ -713,40 +779,45 @@ const PublicFormRenderer: React.FC<PublicFormRendererProps> = ({ form, onSubmit 
               </div>
             )
           ) : (
-            // Single page: show all fields
+            // Single page: show all visible fields
             <div className="space-y-6">
-              {form.fields.map((field) => (
-                <div key={field.id}>
-                  {field.type !== 'checkbox' && (
-                    <label 
-                      className="block font-medium mb-2"
-                      style={{
-                        fontSize: `${form.theme.fontSize + 2}px`,
-                        fontFamily: form.theme.fontFamily,
-                        color: form.theme.textColor
-                      }}
-                    >
-                      {field.label}
-                      {field.required && <span className="text-red-500 ml-1">*</span>}
-                    </label>
-                  )}
-                  
-                  {renderField(field)}
-                  
-                  {field.description && (
-                    <p 
-                      className="mt-1 text-sm opacity-75"
-                      style={{ 
-                        color: form.theme.textColor,
-                        fontSize: `${form.theme.fontSize - 2}px`,
-                        fontFamily: form.theme.fontFamily 
-                      }}
-                    >
-                      {field.description}
-                    </p>
-                  )}
-                </div>
-              ))}
+              {visibleFields.map((field) => {
+                // Get the potentially modified field from conditional logic
+                const modifiedField = conditionalResult.modifiedFields.find(f => f.id === field.id) || field;
+                
+                return (
+                  <div key={field.id}>
+                    {field.type !== 'checkbox' && (
+                      <label 
+                        className="block font-medium mb-2"
+                        style={{
+                          fontSize: `${form.theme.fontSize + 2}px`,
+                          fontFamily: form.theme.fontFamily,
+                          color: form.theme.textColor
+                        }}
+                      >
+                        {field.label}
+                        {modifiedField.required && <span className="text-red-500 ml-1">*</span>}
+                      </label>
+                    )}
+                    
+                    {renderField(field)}
+                    
+                    {field.description && (
+                      <p 
+                        className="mt-1 text-sm opacity-75"
+                        style={{ 
+                          color: form.theme.textColor,
+                          fontSize: `${form.theme.fontSize - 2}px`,
+                          fontFamily: form.theme.fontFamily 
+                        }}
+                      >
+                        {field.description}
+                      </p>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           )}
 

@@ -255,6 +255,7 @@ const DynamicFormEditor: React.FC<DynamicFormEditorProps> = ({
         <FormFieldEditor
           isOpen={isFieldModalOpen}
           field={selectedField}
+          allFields={formData.fields}
           onClose={handleFieldModalClose}
           onSave={(updates) => {
             updateField(selectedField.id, updates);

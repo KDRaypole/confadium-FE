@@ -3,6 +3,7 @@ import { FormData } from '~/routes/organizations.$orgId.forms.new';
 import { EyeIcon, ComputerDesktopIcon, DevicePhoneMobileIcon } from '@heroicons/react/24/outline';
 import MultiStageFormPreview from './MultiStageFormPreview';
 import MockRecaptcha from './MockRecaptcha';
+import { evaluateConditionalLogic, shouldEndForm } from '~/lib/conditionalLogic';
 
 interface FormPreviewProps {
   formData: FormData;
@@ -30,6 +31,13 @@ const FormPreview: React.FC<FormPreviewProps> = ({ formData }) => {
     setRecaptchaToken(null);
   };
 
+  // Evaluate conditional logic
+  const conditionalResult = evaluateConditionalLogic(formData.fields, formValues);
+  const endCheck = shouldEndForm(formData.fields, formValues);
+  
+  // Use visible fields from conditional logic
+  const fieldsToRender = conditionalResult.visibleFields;
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (formData.settings.enableCaptcha && !recaptchaToken) {
@@ -39,6 +47,63 @@ const FormPreview: React.FC<FormPreviewProps> = ({ formData }) => {
     alert('Form submitted! (This is just a preview)');
     console.log('Form values:', formValues);
   };
+
+  // Show end message if form should end
+  if (endCheck.shouldEnd) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">
+            Form Preview
+          </h3>
+          <p className="text-sm text-gray-600 dark:text-gray-400">
+            See how your form will look to users
+          </p>
+        </div>
+
+        <div className="flex justify-center">
+          <div className="border border-gray-300 dark:border-gray-600 rounded-lg overflow-hidden shadow-lg max-w-2xl w-full">
+            <div className="bg-gray-100 dark:bg-gray-700 px-4 py-2 border-b border-gray-300 dark:border-gray-600">
+              <div className="flex items-center space-x-2">
+                <div className="w-3 h-3 bg-red-500 rounded-full"></div>
+                <div className="w-3 h-3 bg-yellow-500 rounded-full"></div>
+                <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+                <div className="ml-4 text-xs text-gray-600 dark:text-gray-400">Form Ended</div>
+              </div>
+            </div>
+            <div 
+              className="min-h-96 flex items-center justify-center p-8"
+              style={{ 
+                backgroundColor: formData.theme.backgroundColor,
+                fontFamily: formData.theme.fontFamily 
+              }}
+            >
+              <div className="text-center">
+                <h2 
+                  className="text-2xl font-bold mb-4"
+                  style={{ 
+                    color: formData.theme.textColor,
+                    fontFamily: formData.theme.fontFamily 
+                  }}
+                >
+                  {endCheck.endTitle || 'Form Complete'}
+                </h2>
+                <p 
+                  className="text-lg"
+                  style={{ 
+                    color: formData.theme.textColor,
+                    fontFamily: formData.theme.fontFamily 
+                  }}
+                >
+                  {endCheck.endMessage || 'Thank you for your responses!'}
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   // If multi-stage is enabled, use the MultiStageFormPreview component
   if (isMultiStage) {
@@ -318,36 +383,49 @@ const FormPreview: React.FC<FormPreviewProps> = ({ formData }) => {
                     Add some fields to see the form preview
                   </p>
                 </div>
+              ) : fieldsToRender.length === 0 ? (
+                <div className="text-center py-12">
+                  <EyeIcon className="mx-auto h-12 w-12 text-gray-400" />
+                  <h3 className="mt-2 text-sm font-medium text-gray-900">No visible fields</h3>
+                  <p className="mt-1 text-sm text-gray-500">
+                    All fields are currently hidden by conditional logic
+                  </p>
+                </div>
               ) : (
                 <div style={{ gap: `${formData.theme.spacing * 1.5}px` }} className="flex flex-col">
-                  {formData.fields.map((field) => (
-                    <div key={field.id}>
-                      {field.type !== 'checkbox' && (
-                        <label 
-                          className="block font-medium mb-1"
-                          style={labelStyle}
-                        >
-                          {field.label}
-                          {field.required && <span className="text-red-500 ml-1">*</span>}
-                        </label>
-                      )}
-                      
-                      {renderField(field)}
-                      
-                      {field.description && (
-                        <p 
-                          className="mt-1 text-xs opacity-75"
-                          style={{ 
-                            color: formData.theme.textColor,
-                            fontSize: `${formData.theme.fontSize - 2}px`,
-                            fontFamily: formData.theme.fontFamily 
-                          }}
-                        >
-                          {field.description}
-                        </p>
-                      )}
-                    </div>
-                  ))}
+                  {fieldsToRender.map((field) => {
+                    // Get the potentially modified field from conditional result
+                    const modifiedField = conditionalResult.modifiedFields.find(f => f.id === field.id) || field;
+                    
+                    return (
+                      <div key={field.id}>
+                        {field.type !== 'checkbox' && (
+                          <label 
+                            className="block font-medium mb-1"
+                            style={labelStyle}
+                          >
+                            {field.label}
+                            {field.required && <span className="text-red-500 ml-1">*</span>}
+                          </label>
+                        )}
+                        
+                        {renderField(modifiedField)}
+                        
+                        {field.description && (
+                          <p 
+                            className="mt-1 text-xs opacity-75"
+                            style={{ 
+                              color: formData.theme.textColor,
+                              fontSize: `${formData.theme.fontSize - 2}px`,
+                              fontFamily: formData.theme.fontFamily 
+                            }}
+                          >
+                            {field.description}
+                          </p>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
               )}
 
@@ -394,21 +472,21 @@ const FormPreview: React.FC<FormPreviewProps> = ({ formData }) => {
               </span>
             </div>
             <div>
-              <span className="text-gray-500 dark:text-gray-400">Required:</span>
+              <span className="text-gray-500 dark:text-gray-400">Visible:</span>
               <span className="ml-1 font-medium text-gray-900 dark:text-gray-100">
-                {formData.fields.filter(f => f.required).length}
+                {fieldsToRender.length}
               </span>
             </div>
             <div>
-              <span className="text-gray-500 dark:text-gray-400">Optional:</span>
+              <span className="text-gray-500 dark:text-gray-400">Required:</span>
               <span className="ml-1 font-medium text-gray-900 dark:text-gray-100">
-                {formData.fields.filter(f => !f.required).length}
+                {fieldsToRender.filter(f => f.required).length}
               </span>
             </div>
             <div>
               <span className="text-gray-500 dark:text-gray-400">Est. Time:</span>
               <span className="ml-1 font-medium text-gray-900 dark:text-gray-100">
-                {Math.max(1, Math.ceil(formData.fields.length / 3))} min
+                {Math.max(1, Math.ceil(fieldsToRender.length / 3))} min
               </span>
             </div>
           </div>

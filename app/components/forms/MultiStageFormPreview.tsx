@@ -1,12 +1,16 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { FormData } from '~/routes/organizations.$orgId.forms.new';
 import { 
-  ArrowLeftIcon, 
-  ArrowRightIcon,
   ChevronLeftIcon,
   ChevronRightIcon
 } from '@heroicons/react/24/outline';
 import MockRecaptcha from './MockRecaptcha';
+import { 
+  evaluateConditionalLogic, 
+  shouldEndForm, 
+  getNextConditionalField, 
+  getPreviousConditionalField 
+} from '~/lib/conditionalLogic';
 
 interface MultiStageFormPreviewProps {
   formData: FormData;
@@ -18,14 +22,32 @@ const MultiStageFormPreview: React.FC<MultiStageFormPreviewProps> = ({ formData 
   const [direction, setDirection] = useState<'next' | 'prev'>('next');
   const [recaptchaToken, setRecaptchaToken] = useState<string | null>(null);
 
-  const totalSteps = formData.fields.length;
-  const currentField = formData.fields[currentStep];
+  // Evaluate conditional logic
+  const conditionalResult = evaluateConditionalLogic(formData.fields, formValues);
+  const endCheck = shouldEndForm(formData.fields, formValues);
+  const visibleFields = conditionalResult.visibleFields;
+  
+  const totalSteps = visibleFields.length;
+  const currentField = visibleFields[currentStep];
 
   const handleInputChange = (fieldId: string, value: any) => {
     setFormValues(prev => ({ ...prev, [fieldId]: value }));
   };
 
   const handleNext = () => {
+    if (currentField) {
+      const nextField = getNextConditionalField(currentField.id, formData.fields, formValues);
+      if (nextField) {
+        const nextIndex = visibleFields.findIndex(f => f.id === nextField.id);
+        if (nextIndex !== -1) {
+          setDirection('next');
+          setCurrentStep(nextIndex);
+          return;
+        }
+      }
+    }
+    
+    // Fallback to simple increment
     if (currentStep < totalSteps - 1) {
       setDirection('next');
       setCurrentStep(currentStep + 1);
@@ -33,6 +55,19 @@ const MultiStageFormPreview: React.FC<MultiStageFormPreviewProps> = ({ formData 
   };
 
   const handlePrevious = () => {
+    if (currentField) {
+      const prevField = getPreviousConditionalField(currentField.id, formData.fields, formValues);
+      if (prevField) {
+        const prevIndex = visibleFields.findIndex(f => f.id === prevField.id);
+        if (prevIndex !== -1) {
+          setDirection('prev');
+          setCurrentStep(prevIndex);
+          return;
+        }
+      }
+    }
+    
+    // Fallback to simple decrement
     if (currentStep > 0) {
       setDirection('prev');
       setCurrentStep(currentStep - 1);
@@ -63,6 +98,64 @@ const MultiStageFormPreview: React.FC<MultiStageFormPreviewProps> = ({ formData 
     alert('Form submitted! (This is just a preview)');
     console.log('Form values:', formValues);
   };
+
+  // Show end message if form should end
+  if (endCheck.shouldEnd) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">
+            Multi-Stage Form Preview
+          </h3>
+          <p className="text-sm text-gray-600 dark:text-gray-400">
+            Experience the step-by-step form flow
+          </p>
+        </div>
+
+        <div className="border border-gray-300 dark:border-gray-600 rounded-lg overflow-hidden shadow-lg max-w-2xl mx-auto">
+          <div className="bg-gray-100 dark:bg-gray-700 px-4 py-2 border-b border-gray-300 dark:border-gray-600">
+            <div className="flex items-center space-x-2">
+              <div className="w-3 h-3 bg-red-500 rounded-full"></div>
+              <div className="w-3 h-3 bg-yellow-500 rounded-full"></div>
+              <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+              <div className="ml-4 text-xs text-gray-600 dark:text-gray-400">Form Ended</div>
+            </div>
+          </div>
+          <div 
+            className="min-h-96 flex items-center justify-center p-8"
+            style={{
+              backgroundColor: formData.theme.backgroundColor,
+              fontFamily: formData.theme.fontFamily,
+              padding: `${formData.theme.spacing * 2}px`
+            }}
+          >
+            <div className="text-center">
+              <h2 
+                className="font-bold mb-6"
+                style={{
+                  color: formData.theme.textColor,
+                  fontSize: `${formData.theme.fontSize + 12}px`,
+                  fontFamily: formData.theme.fontFamily
+                }}
+              >
+                {endCheck.endTitle || 'Form Complete'}
+              </h2>
+              <p 
+                className="text-center"
+                style={{ 
+                  color: formData.theme.textColor,
+                  fontSize: `${formData.theme.fontSize + 2}px`,
+                  fontFamily: formData.theme.fontFamily 
+                }}
+              >
+                {endCheck.endMessage || 'Thank you for your responses!'}
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   const renderField = (field: any) => {
     const commonClasses = `w-full px-4 py-3 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-opacity-50 text-lg`;
@@ -308,7 +401,7 @@ const MultiStageFormPreview: React.FC<MultiStageFormPreviewProps> = ({ formData 
           {formData.settings.showStepIndicator && (
             <div className="flex justify-center mb-8">
               <div className="flex space-x-3">
-                {formData.fields.map((_, index) => (
+                {visibleFields.map((_, index) => (
                   <button
                     key={index}
                     onClick={() => handleStepClick(index)}
@@ -346,47 +439,52 @@ const MultiStageFormPreview: React.FC<MultiStageFormPreviewProps> = ({ formData 
             )}
 
             {/* Current Field */}
-            {currentField && (
-              <div 
-                key={currentField.id}
-                className={`transition-all duration-300 ease-in-out transform ${
-                  direction === 'next' ? 'animate-slide-in-right' : 'animate-slide-in-left'
-                }`}
-              >
-                <div className="text-center mb-8">
-                  {currentField.type !== 'checkbox' && (
-                    <label 
-                      className="block font-medium mb-6 text-center"
-                      style={{
-                        fontSize: `${formData.theme.fontSize + 8}px`,
-                        fontFamily: formData.theme.fontFamily,
-                        color: formData.theme.textColor
-                      }}
-                    >
-                      {currentField.label}
-                      {currentField.required && <span className="text-red-500 ml-1">*</span>}
-                    </label>
-                  )}
+            {currentField && (() => {
+              // Get the potentially modified field from conditional result
+              const modifiedField = conditionalResult.modifiedFields.find(f => f.id === currentField.id) || currentField;
+              
+              return (
+                <div 
+                  key={currentField.id}
+                  className={`transition-all duration-300 ease-in-out transform ${
+                    direction === 'next' ? 'animate-slide-in-right' : 'animate-slide-in-left'
+                  }`}
+                >
+                  <div className="text-center mb-8">
+                    {currentField.type !== 'checkbox' && (
+                      <label 
+                        className="block font-medium mb-6 text-center"
+                        style={{
+                          fontSize: `${formData.theme.fontSize + 8}px`,
+                          fontFamily: formData.theme.fontFamily,
+                          color: formData.theme.textColor
+                        }}
+                      >
+                        {currentField.label}
+                        {currentField.required && <span className="text-red-500 ml-1">*</span>}
+                      </label>
+                    )}
+                    
+                    <div className="max-w-md mx-auto">
+                      {renderField(modifiedField)}
+                    </div>
                   
-                  <div className="max-w-md mx-auto">
-                    {renderField(currentField)}
+                    {currentField.description && (
+                      <p 
+                        className="mt-4 text-center opacity-75"
+                        style={{ 
+                          color: formData.theme.textColor,
+                          fontSize: `${formData.theme.fontSize}px`,
+                          fontFamily: formData.theme.fontFamily 
+                        }}
+                      >
+                        {currentField.description}
+                      </p>
+                    )}
                   </div>
-                  
-                  {currentField.description && (
-                    <p 
-                      className="mt-4 text-center opacity-75"
-                      style={{ 
-                        color: formData.theme.textColor,
-                        fontSize: `${formData.theme.fontSize}px`,
-                        fontFamily: formData.theme.fontFamily 
-                      }}
-                    >
-                      {currentField.description}
-                    </p>
-                  )}
                 </div>
-              </div>
-            )}
+              );
+            })()}
 
             {/* reCAPTCHA - only show on final step */}
             {formData.settings.enableCaptcha && currentStep === totalSteps - 1 && (
@@ -490,7 +588,7 @@ const MultiStageFormPreview: React.FC<MultiStageFormPreviewProps> = ({ formData 
         </div>
       </div>
 
-      <style jsx>{`
+      <style>{`
         @keyframes slide-in-right {
           from {
             opacity: 0;
