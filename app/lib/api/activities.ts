@@ -11,14 +11,18 @@ export const activitiesAPI = {
   },
 
   async getActivityById(id: string): Promise<ResourceDocument<ActivityAttributes>> {
-    return api.get<ResourceDocument<ActivityAttributes>>(`/activities/${id}`, { included: 'contact,deal' });
+    return api.get<ResourceDocument<ActivityAttributes>>(`/activities/${id}`, { included: 'contact,deal,actor' });
   },
 
-  async createActivity(orgId: string, attrs: Partial<ActivityAttributes>): Promise<ResourceDocument<ActivityAttributes>> {
+  async createActivity(orgId: string, attrs: Partial<ActivityAttributes> & { contact_id?: string; deal_id?: string }): Promise<ResourceDocument<ActivityAttributes>> {
     return api.post<ResourceDocument<ActivityAttributes>>(basePath(orgId), buildResource('activity', attrs));
   },
 
   async updateActivity(id: string, attrs: Partial<ActivityAttributes>): Promise<ResourceDocument<ActivityAttributes>> {
     return api.patch<ResourceDocument<ActivityAttributes>>(`/activities/${id}`, buildResource('activity', attrs, id));
+  },
+
+  async deleteActivity(id: string): Promise<void> {
+    return api.delete(`/activities/${id}`);
   },
 };

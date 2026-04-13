@@ -1,5 +1,5 @@
 import type { MetaFunction } from "@remix-run/node";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useParams } from "@remix-run/react";
 import Layout from "~/components/layout/Layout";
 import CalendarView from "~/components/calendar/CalendarView";
@@ -7,7 +7,6 @@ import EventModal from "~/components/calendar/EventModal";
 import {
   PlusIcon,
   Cog6ToothIcon,
-  CloudArrowDownIcon,
   CloudArrowUpIcon,
   LinkIcon
 } from "@heroicons/react/24/outline";
@@ -26,7 +25,7 @@ export default function SchedulingIndex() {
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [calendarView, setCalendarView] = useState<'month' | 'week' | 'day'>('month');
   const [isEventModalOpen, setIsEventModalOpen] = useState(false);
-  const [selectedEvent, setSelectedEvent] = useState<ReturnType<typeof useCalendarEvents>['events'][number] | null>(null);
+  const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
   const [eventModalDate, setEventModalDate] = useState<Date | null>(null);
   const [eventModalHour, setEventModalHour] = useState<number | undefined>(undefined);
   const [isCreateCalendarModalOpen, setIsCreateCalendarModalOpen] = useState(false);
@@ -42,10 +41,30 @@ export default function SchedulingIndex() {
   // Hooks
   const { calendars, loading: calendarsLoading, createCalendar } = useCalendar();
   const defaultCalendar = calendars.find(cal => cal.attributes?.is_default) || calendars[0];
-  const { events, loading: eventsLoading, createEvent, updateEvent, deleteEvent } = useCalendarEvents(defaultCalendar?.id || '');
+  const { events: rawEvents, loading: eventsLoading, createEvent, updateEvent, deleteEvent } = useCalendarEvents(defaultCalendar?.id || '');
 
-  const handleEventClick = (event: typeof events[number]) => {
-    setSelectedEvent(event);
+  // Map JSON:API resources to the flat shape CalendarView/EventModal expect
+  const mappedEvents = useMemo(() =>
+    rawEvents.map(e => ({
+      id: e.id,
+      type: e.type,
+      title: e.attributes?.title || '',
+      description: e.attributes?.description || '',
+      start: e.attributes?.start_at || '',
+      end: e.attributes?.end_at || '',
+      allDay: e.attributes?.all_day || false,
+      location: e.attributes?.location || '',
+      attendees: e.attributes?.attendees || [],
+      status: e.attributes?.status || null,
+      visibility: e.attributes?.visibility || null,
+    })),
+    [rawEvents]
+  );
+
+  const selectedEvent = selectedEventId ? mappedEvents.find(e => e.id === selectedEventId) || null : null;
+
+  const handleEventClick = (event: typeof mappedEvents[number]) => {
+    setSelectedEventId(event.id);
     setEventModalDate(null);
     setEventModalHour(undefined);
     setIsEventModalOpen(true);
@@ -58,11 +77,22 @@ export default function SchedulingIndex() {
     setIsEventModalOpen(true);
   };
 
-  const handleEventSave = async (eventData: Partial<CalendarEventAttributes> & { id?: string }) => {
+  const handleEventSave = async (eventData: Record<string, unknown> & { id?: string }) => {
+    const attrs: Partial<CalendarEventAttributes> = {
+      title: eventData.title as string,
+      description: (eventData.description as string) || undefined,
+      location: (eventData.location as string) || undefined,
+      all_day: eventData.allDay as boolean | undefined,
+      start_at: eventData.start as string,
+      end_at: eventData.end as string,
+      attendees: eventData.attendees as CalendarEventAttributes['attendees'],
+      visibility: (eventData.visibility as string) || undefined,
+    };
+
     if (eventData.id) {
-      await updateEvent({ id: eventData.id, attrs: eventData });
+      await updateEvent({ id: eventData.id, attrs });
     } else {
-      await createEvent(eventData);
+      await createEvent(attrs);
     }
     setIsEventModalOpen(false);
   };
@@ -224,7 +254,7 @@ export default function SchedulingIndex() {
                         Total Events
                       </dt>
                       <dd className="text-lg font-medium text-gray-900 dark:text-gray-100">
-                        {events.length}
+                        {mappedEvents.length}
                       </dd>
                     </dl>
                   </div>
@@ -275,7 +305,7 @@ export default function SchedulingIndex() {
 
           {/* Calendar View */}
           <CalendarView
-            events={events}
+            events={mappedEvents as any}
             selectedDate={selectedDate}
             onDateSelect={setSelectedDate}
             onEventClick={handleEventClick}
@@ -291,7 +321,7 @@ export default function SchedulingIndex() {
             onClose={() => setIsEventModalOpen(false)}
             onSave={handleEventSave}
             onDelete={handleEventDelete}
-            event={selectedEvent}
+            event={selectedEvent as any}
             defaultDate={eventModalDate || selectedDate}
             defaultHour={eventModalHour}
             calendarId={defaultCalendar?.id || ''}
