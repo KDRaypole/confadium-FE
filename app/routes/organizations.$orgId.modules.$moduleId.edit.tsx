@@ -243,12 +243,12 @@ export default function ModuleEdit() {
   React.useEffect(() => {
     if (existingConfig) {
       setConfiguration({
-        name: existingConfig.name,
-        description: existingConfig.description,
-        trigger: existingConfig.trigger || { entityType: "", action: "", attributeFilter: undefined },
-        conditions: existingConfig.conditions,
-        actions: existingConfig.actions,
-        status: existingConfig.status
+        name: existingConfig.attributes?.name || '',
+        description: existingConfig.attributes?.description || '',
+        trigger: existingConfig.attributes?.trigger || { entityType: "", action: "", attributeFilter: undefined },
+        conditions: existingConfig.attributes?.conditions || [],
+        actions: existingConfig.attributes?.actions || [],
+        status: existingConfig.attributes?.state?.action || 'draft'
       });
     }
   }, [existingConfig]);
@@ -449,7 +449,7 @@ export default function ModuleEdit() {
     if (trigger.entityType === 'form' && trigger.formId) {
       const selectedForm = availableForms.find(f => f.id === trigger.formId);
       if (selectedForm) {
-        display = `Form "${selectedForm.name}" Submitted`;
+        display = `Form "${selectedForm.attributes?.name || ''}" Submitted`;
       }
     }
     
@@ -854,7 +854,7 @@ export default function ModuleEdit() {
                         { value: "", label: "Select a form..." },
                         ...availableForms.map(form => ({
                           value: form.id,
-                          label: form.name
+                          label: form.attributes?.name || ''
                         }))
                       ]}
                       value={configuration.trigger.formId || ""}
@@ -871,15 +871,13 @@ export default function ModuleEdit() {
                       return selectedForm ? (
                         <div className="mt-2 p-3 bg-gray-50 dark:bg-gray-700 rounded-md">
                           <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                            {selectedForm.name}
+                            {selectedForm.attributes?.name || ''}
                           </p>
                           <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
-                            {selectedForm.description}
+                            {selectedForm.attributes?.description || ''}
                           </p>
                           <div className="flex items-center space-x-3 mt-2 text-xs text-gray-500 dark:text-gray-400">
-                            <span>Fields: {selectedForm.fields}</span>
-                            <span>•</span>
-                            <span>Submissions: {selectedForm.submissions}</span>
+                            <span>Status: {selectedForm.attributes?.state?.action || ''}</span>
                           </div>
                         </div>
                       ) : null;
@@ -1004,7 +1002,7 @@ export default function ModuleEdit() {
                                     { value: "", label: "Select tag..." },
                                     ...availableTags.map(tag => ({
                                       value: tag.id,
-                                      label: tag.name
+                                      label: tag.attributes?.name || ''
                                     }))
                                   ]}
                                   value={condition.value}
@@ -1016,8 +1014,8 @@ export default function ModuleEdit() {
                                   return selectedTag ? (
                                     <div className="flex items-center space-x-2">
                                       <span className="text-xs text-gray-500 dark:text-gray-400">Selected:</span>
-                                      <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getTagColorClass(selectedTag.color)}`}>
-                                        {selectedTag.name}
+                                      <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getTagColorClass(selectedTag.attributes?.color || '')}`}>
+                                        {selectedTag.attributes?.name || ''}
                                       </span>
                                     </div>
                                   ) : null;
@@ -1156,24 +1154,24 @@ export default function ModuleEdit() {
                                             <div>
                                               <div className="flex items-center justify-between mb-2">
                                                 <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                                                  {template.name}
+                                                  {template.attributes?.name || ''}
                                                 </span>
                                                 <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
-                                                  {template.category}
+                                                  {template.attributes?.category || ''}
                                                 </span>
                                               </div>
                                               <p className="text-xs text-gray-600 dark:text-gray-400 mb-2">
-                                                {template.description}
+                                                {template.attributes?.description || ''}
                                               </p>
                                               <div className="text-xs text-gray-500 dark:text-gray-400">
-                                                <strong>Subject:</strong> {template.subject}
+                                                <strong>Name:</strong> {template.attributes?.name || ''}
                                               </div>
-                                              {template.variables.length > 0 && (
+                                              {(template.attributes?.variables || []).length > 0 && (
                                                 <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                                                  <strong>Variables:</strong> {template.variables.join(", ")}
+                                                  <strong>Variables:</strong> {(template.attributes?.variables || []).join(", ")}
                                                   {action.parameters?.variableAssignments && action.parameters.variableAssignments.length > 0 && (
                                                     <div className="mt-1">
-                                                      <strong>Assignments:</strong> {action.parameters.variableAssignments.length}/{template.variables.length} configured
+                                                      <strong>Assignments:</strong> {action.parameters.variableAssignments.length}/{(template.attributes?.variables || []).length} configured
                                                     </div>
                                                   )}
                                                 </div>
@@ -1258,7 +1256,7 @@ export default function ModuleEdit() {
                                         { value: "", label: "Select a tag..." },
                                         ...availableTags.map(tag => ({
                                           value: tag.id,
-                                          label: tag.name
+                                          label: tag.attributes?.name || ''
                                         }))
                                       ]}
                                       value={action.parameters?.tagId || ""}
@@ -1273,8 +1271,8 @@ export default function ModuleEdit() {
                                         {(() => {
                                           const selectedTag = availableTags.find(t => t.id === action.parameters?.tagId);
                                           return selectedTag ? (
-                                            <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getTagColorClass(selectedTag.color)}`}>
-                                              {selectedTag.name}
+                                            <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getTagColorClass(selectedTag.attributes?.color || '')}`}>
+                                              {selectedTag.attributes?.name || ''}
                                             </span>
                                           ) : null;
                                         })()}

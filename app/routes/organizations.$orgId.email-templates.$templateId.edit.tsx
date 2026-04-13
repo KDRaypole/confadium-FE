@@ -81,14 +81,14 @@ export default function EditEmailTemplate() {
   useEffect(() => {
     if (template) {
       setTemplateData({
-        name: template.name,
-        category: template.category,
-        subject: template.subject,
-        htmlContent: template.htmlContent,
-        textContent: template.textContent,
-        variables: template.variables,
-        description: template.description,
-        previewText: template.previewText
+        name: template.attributes?.name || '',
+        category: template.attributes?.category || 'welcome',
+        subject: template.attributes?.subject || '',
+        htmlContent: template.attributes?.html_content || '',
+        textContent: template.attributes?.text_content || '',
+        variables: template.attributes?.variables || [],
+        description: template.attributes?.description || '',
+        previewText: template.attributes?.preview_text || ''
       });
     }
   }, [template]);

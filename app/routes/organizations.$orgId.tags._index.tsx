@@ -4,9 +4,9 @@ import { useState } from "react";
 import Layout from "~/components/layout/Layout";
 import { getTagColorClass, getTagPriorityClass } from "~/components/tags/TagsData";
 import { useTags } from "~/hooks/useTags";
-import { 
-  PlusIcon, 
-  MagnifyingGlassIcon, 
+import {
+  PlusIcon,
+  MagnifyingGlassIcon,
   TagIcon,
   FunnelIcon,
   ChartBarIcon,
@@ -33,7 +33,7 @@ export default function TagsIndex() {
 
   // Get categories from current tags
   const tagsByCategory = tags.reduce((acc, tag) => {
-    const category = tag.category || 'Other';
+    const category = tag.attributes.category || 'Other';
     if (!acc[category]) acc[category] = [];
     acc[category].push(tag);
     return acc;
@@ -41,11 +41,11 @@ export default function TagsIndex() {
   const categories = Object.keys(tagsByCategory);
 
   const filteredTags = tags.filter(tag => {
-    const matchesSearch = tag.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         tag.description?.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesCategory = selectedCategory === "all" || tag.category === selectedCategory;
-    const matchesPriority = selectedPriority === "all" || tag.priority === selectedPriority;
-    
+    const matchesSearch = (tag.attributes.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         (tag.attributes.description || '').toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesCategory = selectedCategory === "all" || tag.attributes.category === selectedCategory;
+    const matchesPriority = selectedPriority === "all" || tag.attributes.priority === selectedPriority;
+
     return matchesSearch && matchesCategory && matchesPriority;
   });
 
@@ -56,10 +56,7 @@ export default function TagsIndex() {
 
     setDeletingTagId(tagId);
     try {
-      const success = await deleteTag(tagId);
-      if (!success) {
-        alert('Failed to delete tag. Please try again.');
-      }
+      await deleteTag(tagId);
     } catch (error) {
       console.error('Error deleting tag:', error);
       alert('Failed to delete tag. Please try again.');
@@ -70,11 +67,10 @@ export default function TagsIndex() {
 
   const getUsageStats = () => {
     const totalTags = tags.length;
-    const totalUsage = tags.reduce((sum, tag) => sum + tag.usageCount, 0);
-    const avgUsage = totalTags > 0 ? Math.round(totalUsage / totalTags) : 0;
-    const mostUsed = tags.length > 0 ? tags.reduce((max, tag) => tag.usageCount > max.usageCount ? tag : max, tags[0]) : null;
-    
-    return { totalTags, totalUsage, avgUsage, mostUsed };
+    const mostUsed = tags.length > 0 ? tags.reduce((max, tag) =>
+      (tag.attributes.name || '').length > (max.attributes.name || '').length ? tag : max, tags[0]) : null;
+
+    return { totalTags, mostUsed };
   };
 
   const stats = getUsageStats();
@@ -140,7 +136,7 @@ export default function TagsIndex() {
           </div>
 
           {/* Stats Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
             <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded shadow-sm p-4">
               <div className="flex items-center">
                 <TagIcon className="h-8 w-8 text-blue-600" />
@@ -152,19 +148,10 @@ export default function TagsIndex() {
             </div>
             <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded shadow-sm p-4">
               <div className="flex items-center">
-                <UsersIcon className="h-8 w-8 text-green-600" />
-                <div className="ml-3">
-                  <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Total Usage</p>
-                  <p className="text-2xl font-semibold text-gray-900 dark:text-gray-100">{stats.totalUsage}</p>
-                </div>
-              </div>
-            </div>
-            <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded shadow-sm p-4">
-              <div className="flex items-center">
                 <ChartBarIcon className="h-8 w-8 text-purple-600" />
                 <div className="ml-3">
-                  <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Avg Usage</p>
-                  <p className="text-2xl font-semibold text-gray-900 dark:text-gray-100">{stats.avgUsage}</p>
+                  <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Categories</p>
+                  <p className="text-2xl font-semibold text-gray-900 dark:text-gray-100">{categories.length}</p>
                 </div>
               </div>
             </div>
@@ -173,7 +160,7 @@ export default function TagsIndex() {
                 <TagIcon className="h-8 w-8 text-orange-600" />
                 <div className="ml-3">
                   <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Most Used</p>
-                  <p className="text-lg font-semibold text-gray-900 dark:text-gray-100">{stats.mostUsed?.name || 'None'}</p>
+                  <p className="text-lg font-semibold text-gray-900 dark:text-gray-100">{stats.mostUsed?.attributes.name || 'None'}</p>
                 </div>
               </div>
             </div>
@@ -204,7 +191,7 @@ export default function TagsIndex() {
                   </div>
                 </div>
                 <div>
-                  <select 
+                  <select
                     value={selectedCategory}
                     onChange={(e) => setSelectedCategory(e.target.value)}
                     className="block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded shadow-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
@@ -216,7 +203,7 @@ export default function TagsIndex() {
                   </select>
                 </div>
                 <div>
-                  <select 
+                  <select
                     value={selectedPriority}
                     onChange={(e) => setSelectedPriority(e.target.value)}
                     className="block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded shadow-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
@@ -263,8 +250,8 @@ export default function TagsIndex() {
                 <div key={tag.id} className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded shadow-sm hover:shadow-md transition-shadow">
                   <div className="p-4">
                     <div className="flex items-center justify-between mb-3">
-                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-sm font-medium ${getTagColorClass(tag.color)}`}>
-                        {tag.name}
+                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-sm font-medium ${getTagColorClass(tag.attributes.color)}`}>
+                        {tag.attributes.name}
                       </span>
                       <div className="flex items-center space-x-1">
                         <Link
@@ -273,7 +260,7 @@ export default function TagsIndex() {
                         >
                           <PencilIcon className="h-4 w-4" />
                         </Link>
-                        <button 
+                        <button
                           onClick={() => handleDeleteTag(tag.id)}
                           disabled={deletingTagId === tag.id}
                           className="p-1 text-gray-400 hover:text-red-600 dark:hover:text-red-400 disabled:opacity-50"
@@ -286,36 +273,35 @@ export default function TagsIndex() {
                         </button>
                       </div>
                     </div>
-                    
+
                     <div className="space-y-2">
-                      <div className="flex items-center justify-between text-sm">
-                        <span className="text-gray-500 dark:text-gray-400">Priority:</span>
-                        <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${getTagPriorityClass(tag.priority)}`}>
-                          {tag.priority}
-                        </span>
-                      </div>
-                      
-                      <div className="flex items-center justify-between text-sm">
-                        <span className="text-gray-500 dark:text-gray-400">Level:</span>
-                        <span className="text-gray-900 dark:text-gray-100">{tag.level}/5</span>
-                      </div>
-                      
-                      <div className="flex items-center justify-between text-sm">
-                        <span className="text-gray-500 dark:text-gray-400">Usage:</span>
-                        <span className="text-gray-900 dark:text-gray-100">{tag.usageCount}</span>
-                      </div>
-                      
-                      {tag.category && (
+                      {tag.attributes.priority && (
+                        <div className="flex items-center justify-between text-sm">
+                          <span className="text-gray-500 dark:text-gray-400">Priority:</span>
+                          <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${getTagPriorityClass(tag.attributes.priority)}`}>
+                            {tag.attributes.priority}
+                          </span>
+                        </div>
+                      )}
+
+                      {tag.attributes.level != null && (
+                        <div className="flex items-center justify-between text-sm">
+                          <span className="text-gray-500 dark:text-gray-400">Level:</span>
+                          <span className="text-gray-900 dark:text-gray-100">{tag.attributes.level}/5</span>
+                        </div>
+                      )}
+
+                      {tag.attributes.category && (
                         <div className="flex items-center justify-between text-sm">
                           <span className="text-gray-500 dark:text-gray-400">Category:</span>
-                          <span className="text-gray-900 dark:text-gray-100">{tag.category}</span>
+                          <span className="text-gray-900 dark:text-gray-100">{tag.attributes.category}</span>
                         </div>
                       )}
                     </div>
-                    
-                    {tag.description && (
+
+                    {tag.attributes.description && (
                       <p className="mt-3 text-sm text-gray-600 dark:text-gray-400 line-clamp-2">
-                        {tag.description}
+                        {tag.attributes.description}
                       </p>
                     )}
                   </div>
@@ -339,9 +325,6 @@ export default function TagsIndex() {
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                       Level
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                      Usage
-                    </th>
                     <th className="relative px-6 py-3">
                       <span className="sr-only">Actions</span>
                     </th>
@@ -352,29 +335,28 @@ export default function TagsIndex() {
                     <tr key={tag.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center">
-                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-sm font-medium ${getTagColorClass(tag.color)}`}>
-                            {tag.name}
+                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-sm font-medium ${getTagColorClass(tag.attributes.color)}`}>
+                            {tag.attributes.name}
                           </span>
                         </div>
-                        {tag.description && (
+                        {tag.attributes.description && (
                           <div className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                            {tag.description}
+                            {tag.attributes.description}
                           </div>
                         )}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">
-                        {tag.category || "—"}
+                        {tag.attributes.category || "—"}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${getTagPriorityClass(tag.priority)}`}>
-                          {tag.priority}
-                        </span>
+                        {tag.attributes.priority && (
+                          <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${getTagPriorityClass(tag.attributes.priority)}`}>
+                            {tag.attributes.priority}
+                          </span>
+                        )}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">
-                        {tag.level}/5
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">
-                        {tag.usageCount}
+                        {tag.attributes.level != null ? `${tag.attributes.level}/5` : '—'}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                         <div className="flex items-center space-x-2">
@@ -385,7 +367,7 @@ export default function TagsIndex() {
                             Edit
                           </Link>
                           <span className="text-gray-300 dark:text-gray-600">|</span>
-                          <button 
+                          <button
                             onClick={() => handleDeleteTag(tag.id)}
                             disabled={deletingTagId === tag.id}
                             className="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300 disabled:opacity-50"

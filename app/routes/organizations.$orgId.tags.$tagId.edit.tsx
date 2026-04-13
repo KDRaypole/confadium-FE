@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import Layout from "~/components/layout/Layout";
 import { tagColors, tagPriorities, getTagColorClass, getTagPriorityClass } from "~/components/tags/TagsData";
 import SimpleSelect from "~/components/ui/SimpleSelect";
-import { useTag, type TagUpdateData } from "~/hooks/useTags";
+import { useTag } from "~/hooks/useTags";
 import { 
   ArrowLeftIcon,
   CheckIcon,
@@ -23,20 +23,20 @@ export const meta: MetaFunction = () => {
   ];
 };
 
-type EditableTag = TagUpdateData & {
+interface EditableTag {
   name: string;
   color: string;
   priority: "low" | "medium" | "high" | "critical";
   level: number;
   description: string;
   category: string;
-};
+}
 
 export default function EditTag() {
   const params = useParams();
   const navigate = useNavigate();
   const { orgId, tagId } = params;
-  const { tag: originalTag, loading, error: tagError, updateTag: updateTagAPI } = useTag(tagId);
+  const { tag: originalTag, loading, error: tagError, updateTag: updateTagAPI } = useTag(tagId!);
   
   const [tagData, setTagData] = useState<EditableTag>({
     name: "",
@@ -67,12 +67,12 @@ export default function EditTag() {
   useEffect(() => {
     if (originalTag) {
       setTagData({
-        name: originalTag.name,
-        color: originalTag.color,
-        priority: originalTag.priority,
-        level: originalTag.level,
-        description: originalTag.description || "",
-        category: originalTag.category || ""
+        name: originalTag.attributes.name,
+        color: originalTag.attributes.color || "blue",
+        priority: (originalTag.attributes.priority as EditableTag["priority"]) || "medium",
+        level: originalTag.attributes.level || 3,
+        description: originalTag.attributes.description || "",
+        category: originalTag.attributes.category || ""
       });
     }
   }, [originalTag]);
@@ -229,7 +229,7 @@ export default function EditTag() {
                 Tags
               </Link>
               <span>/</span>
-              <span>Edit "{originalTag.name}"</span>
+              <span>Edit "{originalTag.attributes.name}"</span>
             </nav>
             
             <div className="flex items-center justify-between">
@@ -476,13 +476,7 @@ export default function EditTag() {
                     <div className="flex justify-between text-sm">
                       <dt className="text-gray-500 dark:text-gray-400">Created:</dt>
                       <dd className="text-gray-900 dark:text-gray-100">
-                        {new Date(originalTag.createdDate).toLocaleDateString()}
-                      </dd>
-                    </div>
-                    <div className="flex justify-between text-sm">
-                      <dt className="text-gray-500 dark:text-gray-400">Usage Count:</dt>
-                      <dd className="text-gray-900 dark:text-gray-100">
-                        {originalTag.usageCount} times
+                        {new Date(originalTag.attributes.created_at).toLocaleDateString()}
                       </dd>
                     </div>
                     <div className="flex justify-between text-sm">
@@ -551,8 +545,8 @@ export default function EditTag() {
                       <div className="space-y-3">
                         <div>
                           <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Before:</p>
-                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-sm font-medium ${getTagColorClass(originalTag.color)}`}>
-                            {originalTag.name}
+                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-sm font-medium ${getTagColorClass(originalTag.attributes.color)}`}>
+                            {originalTag.attributes.name}
                           </span>
                         </div>
                         <div>

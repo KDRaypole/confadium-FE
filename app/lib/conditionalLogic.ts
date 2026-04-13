@@ -33,7 +33,7 @@ export function evaluateConditionalLogic(
 
   // Initialize modified options with original field options
   fields.forEach(field => {
-    if (field.options) {
+    if (Array.isArray(field.options)) {
       state.modifiedOptions[field.id] = [...field.options];
     }
   });
@@ -66,7 +66,7 @@ export function evaluateConditionalLogic(
     if (isHidden || hasModifiedOptions) {
       return {
         ...field,
-        options: hasModifiedOptions || field.options,
+        options: hasModifiedOptions || (Array.isArray(field.options) ? field.options : []),
         // Mark hidden fields (they won't be rendered but structure is preserved)
         _hidden: isHidden
       } as FormField & { _hidden?: boolean };

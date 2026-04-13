@@ -158,7 +158,7 @@ export default function Login() {
           {/* Demo Credentials */}
           <div className="bg-blue-50 dark:bg-blue-900 border border-blue-200 dark:border-blue-700 rounded-md p-3">
             <p className="text-xs text-blue-600 dark:text-blue-400 font-medium mb-1">Demo Credentials:</p>
-            <p className="text-xs text-blue-600 dark:text-blue-400">Email: kobe@example.com</p>
+            <p className="text-xs text-blue-600 dark:text-blue-400">Email: koberaypole42@gmail.com</p>
             <p className="text-xs text-blue-600 dark:text-blue-400">Password: password</p>
           </div>
 

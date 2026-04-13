@@ -84,19 +84,20 @@ export default function EmailTemplates() {
 
   // Filter templates based on search and category
   const filteredTemplates = templates.filter(template => {
-    const matchesSearch = template.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         template.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         template.subject.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesCategory = selectedCategory === "all" || template.category === selectedCategory;
+    const matchesSearch = (template.attributes?.name || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+                         (template.attributes?.description || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+                         (template.attributes?.name || '').toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesCategory = selectedCategory === "all" || template.attributes?.category === selectedCategory;
     return matchesSearch && matchesCategory;
   });
 
   // Group filtered templates by category
   const templatesByCategory = filteredTemplates.reduce((acc, template) => {
-    if (!acc[template.category]) {
-      acc[template.category] = [];
+    const category = template.attributes?.category || 'uncategorized';
+    if (!acc[category]) {
+      acc[category] = [];
     }
-    acc[template.category].push(template);
+    acc[category].push(template);
     return acc;
   }, {} as Record<string, typeof templates>);
 
@@ -300,14 +301,14 @@ export default function EmailTemplates() {
                         <div className="flex-1">
                           <div className="flex items-center space-x-2 mb-2">
                             <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 line-clamp-1">
-                              {template.name}
+                              {template.attributes?.name || ''}
                             </h3>
-                            <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getCategoryColor(template.category)}`}>
-                              {template.category?.replace('_', ' ') || 'uncategorized'}
+                            <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getCategoryColor(template.attributes?.category || '')}`}>
+                              {template.attributes?.category?.replace('_', ' ') || 'uncategorized'}
                             </span>
                           </div>
                           <p className="text-sm text-gray-600 dark:text-gray-400 line-clamp-2 mb-3">
-                            {template.description}
+                            {template.attributes?.description || ''}
                           </p>
                         </div>
                       </div>
@@ -315,12 +316,12 @@ export default function EmailTemplates() {
                       {/* Template Details */}
                       <div className="space-y-2 mb-4">
                         <div className="text-xs text-gray-500 dark:text-gray-400">
-                          <strong>Subject:</strong> {template.subject.length > 50 ? `${template.subject.substring(0, 50)}...` : template.subject}
+                          <strong>Name:</strong> {(template.attributes?.name || '').length > 50 ? `${(template.attributes?.name || '').substring(0, 50)}...` : (template.attributes?.name || '')}
                         </div>
-                        {template.variables.length > 0 && (
+                        {(template.attributes?.variables || []).length > 0 && (
                           <div className="text-xs text-gray-500 dark:text-gray-400">
-                            <strong>Variables:</strong> {template.variables.slice(0, 3).join(", ")}
-                            {template.variables.length > 3 && ` +${template.variables.length - 3} more`}
+                            <strong>Variables:</strong> {(template.attributes?.variables || []).slice(0, 3).join(", ")}
+                            {(template.attributes?.variables || []).length > 3 && ` +${(template.attributes?.variables || []).length - 3} more`}
                           </div>
                         )}
                       </div>
@@ -328,7 +329,7 @@ export default function EmailTemplates() {
                       {/* Preview Text */}
                       <div className="mb-4 p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
                         <p className="text-xs text-gray-600 dark:text-gray-400 line-clamp-3">
-                          {template.previewText}
+                          {template.attributes?.preview_text || ''}
                         </p>
                       </div>
 
@@ -362,7 +363,7 @@ export default function EmailTemplates() {
                           </button>
                         </div>
                         <div className="text-xs text-gray-400 dark:text-gray-500">
-                          {template.variables.length} variable{template.variables.length !== 1 ? 's' : ''}
+                          {(template.attributes?.variables || []).length} variable{(template.attributes?.variables || []).length !== 1 ? 's' : ''}
                         </div>
                       </div>
                     </div>

@@ -161,10 +161,10 @@ export default function ModuleDetail() {
     );
   }
 
-  const activeConfigurations = configurations.filter(c => c.status === "active").length;
-  const totalRuns = configurations.reduce((sum, c) => sum + (c as any).runCount || 0, 0);
-  const avgSuccessRate = configurations.length > 0 
-    ? configurations.reduce((sum, c) => sum + ((c as any).successRate || 0), 0) / configurations.length 
+  const activeConfigurations = configurations.filter(c => c.attributes?.state?.action === "active").length;
+  const totalRuns = configurations.reduce((sum, c) => sum + ((c as any).attributes?.run_count || 0), 0);
+  const avgSuccessRate = configurations.length > 0
+    ? configurations.reduce((sum, c) => sum + ((c as any).attributes?.success_rate || 0), 0) / configurations.length
     : 0;
 
   return (
@@ -178,7 +178,7 @@ export default function ModuleDetail() {
                 Modules
               </Link>
               <span>/</span>
-              <span>{module.name}</span>
+              <span>{module.attributes?.name || ''}</span>
             </nav>
             
             <div className="flex items-center">
@@ -199,12 +199,12 @@ export default function ModuleDetail() {
                 <div className="flex items-center space-x-4">
                   <div className="p-3 bg-blue-100 dark:bg-blue-900 rounded-lg">
                     <div className="text-blue-600 dark:text-blue-400">
-                      {getIcon(module.icon)}
+                      {getIcon(module.attributes?.icon || '')}
                     </div>
                   </div>
                   <div>
-                    <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">{module.name}</h1>
-                    <p className="text-gray-600 dark:text-gray-400 mt-1">{module.description}</p>
+                    <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">{module.attributes?.name || ''}</h1>
+                    <p className="text-gray-600 dark:text-gray-400 mt-1">{module.attributes?.description || ''}</p>
                   </div>
                 </div>
                 <div className="flex items-center space-x-3">
@@ -384,15 +384,15 @@ export default function ModuleDetail() {
                     <div className="flex-1">
                       <div className="flex items-center space-x-3 mb-2">
                         <h4 className="text-lg font-medium text-gray-900 dark:text-gray-100">
-                          {config.name}
+                          {config.attributes?.name || ''}
                         </h4>
-                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(config.status)}`}>
-                          {config.status}
+                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(config.attributes?.state?.action)}`}>
+                          {config.attributes?.state?.action || ''}
                         </span>
                       </div>
                       
                       <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
-                        {config.description}
+                        {config.attributes?.description || ''}
                       </p>
 
                       {/* Flow Preview */}
@@ -401,9 +401,9 @@ export default function ModuleDetail() {
                         <div className="mt-2">
                           <CompactFlowPreview
                             configuration={{
-                              trigger: config.trigger,
-                              conditions: config.conditions,
-                              actions: config.actions
+                              trigger: config.attributes?.trigger,
+                              conditions: config.attributes?.conditions || [],
+                              actions: config.attributes?.actions || []
                             }}
                           />
                         </div>
@@ -411,9 +411,9 @@ export default function ModuleDetail() {
 
                       {/* Stats */}
                       <div className="flex items-center space-x-6 text-sm text-gray-500 dark:text-gray-400">
-                        <span>Status: {config.status}</span>
-                        <span>Created: {new Date(config.createdDate).toLocaleDateString()}</span>
-                        <span>Updated: {new Date(config.updatedDate).toLocaleDateString()}</span>
+                        <span>Status: {config.attributes?.state?.action || ''}</span>
+                        <span>Created: {new Date(config.attributes?.created_at || '').toLocaleDateString()}</span>
+                        <span>Updated: {new Date(config.attributes?.updated_at || '').toLocaleDateString()}</span>
                       </div>
                     </div>
 
@@ -433,7 +433,7 @@ export default function ModuleDetail() {
                       >
                         <PencilIcon className="h-4 w-4" />
                       </Link>
-                      {config.status === "active" ? (
+                      {config.attributes?.state?.action === "active" ? (
                         <button 
                           className="p-2 text-gray-400 hover:text-yellow-600 dark:hover:text-yellow-400"
                           title="Pause automation"
@@ -468,9 +468,9 @@ export default function ModuleDetail() {
                       </div>
                       <ConfigurationFlowOverview
                         configuration={{
-                          trigger: config.trigger,
-                          conditions: config.conditions,
-                          actions: config.actions
+                          trigger: config.attributes?.trigger,
+                          conditions: config.attributes?.conditions || [],
+                          actions: config.attributes?.actions || []
                         }}
                         height="300px"
                         showControls={false}

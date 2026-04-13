@@ -1,14 +1,15 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { useClientSideMount } from '~/hooks/useClientSideMount';
 
+const API_BASE = 'http://localhost:3000/api/v1';
+
 interface User {
   id: string;
   email: string;
   name: string;
   initials: string;
-  avatar?: string;
   role: string;
-  organizationId: string;
+  token: string;
 }
 
 interface AuthContextType {
@@ -26,15 +27,16 @@ interface AuthProviderProps {
   children: ReactNode;
 }
 
-// Mock user for demo purposes
-const mockUser: User = {
-  id: "1",
-  email: "kobe@example.com",
-  name: "Kobe Raypole",
-  initials: "KR",
-  role: "Admin",
-  organizationId: "org1"
-};
+const STORAGE_KEY = 'crm-auth';
+
+function parseStoredAuth(): User | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    const stored = localStorage.getItem(STORAGE_KEY);
+    if (stored) return JSON.parse(stored);
+  } catch {}
+  return null;
+}
 
 export function AuthProvider({ children }: AuthProviderProps) {
   const [user, setUser] = useState<User | null>(null);
@@ -43,69 +45,111 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   useEffect(() => {
     if (!hasMounted) return;
-    
-    // Check if user is logged in (check localStorage)
-    const storedUser = localStorage.getItem('crm-user');
-    if (storedUser) {
-      try {
-        setUser(JSON.parse(storedUser));
-      } catch (error) {
-        console.error('Error parsing stored user:', error);
-        localStorage.removeItem('crm-user');
-      }
-    }
+    setUser(parseStoredAuth());
     setIsLoading(false);
   }, [hasMounted]);
 
   const login = async (email: string, password: string): Promise<{ success: boolean; error?: string }> => {
     setIsLoading(true);
-    
-    // Simulate API call delay
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    // Mock authentication - in real app, this would be an API call
-    if (email === "kobe@example.com" && password === "password") {
-      setUser(mockUser);
-      if (typeof window !== 'undefined') {
-        localStorage.setItem('crm-user', JSON.stringify(mockUser));
+
+    try {
+      const res = await fetch(`${API_BASE}/authentications`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/vnd.api+json',
+          'Accept': 'application/vnd.api+json',
+        },
+        body: JSON.stringify({
+          data: {
+            type: 'authentication',
+            attributes: { email, password },
+          },
+        }),
+      });
+
+      if (!res.ok) {
+        const body = await res.json().catch(() => null);
+        setIsLoading(false);
+        return {
+          success: false,
+          error: body?.errors?.[0]?.detail || body?.errors?.[0]?.title || 'Invalid email or password',
+        };
       }
+
+      const body = await res.json();
+      const auth = body.data;
+      const token = auth.attributes.token;
+
+      // Fetch current actor profile using the token
+      const meRes = await fetch(`${API_BASE}/me`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Accept': 'application/vnd.api+json',
+        },
+      });
+
+      let name = email;
+      let role = 'Member';
+      let actorId = auth.id;
+
+      if (meRes.ok) {
+        const meBody = await meRes.json();
+        const actor = meBody.data;
+        const firstName = actor.attributes.first_name || '';
+        const lastName = actor.attributes.last_name || '';
+        name = `${firstName} ${lastName}`.trim();
+        role = actor.attributes.type || 'Member';
+        actorId = actor.id;
+      }
+
+      const initials = name
+        .split(' ')
+        .map((n: string) => n[0])
+        .join('')
+        .toUpperCase()
+        .slice(0, 2);
+
+      const userData: User = {
+        id: actorId,
+        email,
+        name,
+        initials,
+        role,
+        token,
+      };
+
+      setUser(userData);
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(userData));
       setIsLoading(false);
       return { success: true };
+    } catch (err) {
+      setIsLoading(false);
+      return { success: false, error: 'Unable to connect to the server' };
     }
-    
-    setIsLoading(false);
-    return { success: false, error: "Invalid email or password" };
   };
 
   const signup = async (email: string, password: string, name: string): Promise<{ success: boolean; error?: string }> => {
-    setIsLoading(true);
-    
-    // Simulate API call delay
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    // Mock signup - in real app, this would be an API call
-    const newUser: User = {
-      id: Math.random().toString(36).substr(2, 9),
-      email,
-      name,
-      initials: name.split(' ').map(n => n[0]).join('').toUpperCase(),
-      role: "User",
-      organizationId: "org1"
-    };
-    
-    setUser(newUser);
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('crm-user', JSON.stringify(newUser));
-    }
+    // Signup is not yet implemented on the API — fall back to login after creation
     setIsLoading(false);
-    return { success: true };
+    return { success: false, error: 'Signup is not yet available. Please contact an administrator.' };
   };
 
-  const logout = () => {
-    setUser(null);
-    if (typeof window !== 'undefined') {
-      localStorage.removeItem('crm-user');
+  const logout = async () => {
+    if (user?.token) {
+      try {
+        await fetch(`${API_BASE}/authentications`, {
+          method: 'DELETE',
+          headers: {
+            'Authorization': `Bearer ${user.token}`,
+            'Accept': 'application/vnd.api+json',
+          },
+        });
+      } catch {
+        // Best-effort revocation
+      }
     }
+    setUser(null);
+    localStorage.removeItem(STORAGE_KEY);
   };
 
   const value: AuthContextType = {
@@ -114,7 +158,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     isLoading,
     login,
     signup,
-    logout
+    logout,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

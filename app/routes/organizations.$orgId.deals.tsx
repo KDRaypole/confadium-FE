@@ -9,62 +9,79 @@ export const meta: MetaFunction = () => {
   ];
 };
 
-interface Deal {
-  id: string;
+interface DealAttributes {
   title: string;
   company: string;
   contact: string;
   value: number;
   stage: "prospect" | "qualified" | "proposal" | "negotiation" | "closed-won" | "closed-lost";
   probability: number;
-  closeDate: string;
+  close_date: string;
+}
+
+interface Deal {
+  id: string;
+  type: string;
+  attributes: DealAttributes;
 }
 
 const mockDeals: Deal[] = [
   {
     id: "1",
-    title: "Enterprise Software License",
-    company: "TechCorp Inc.",
-    contact: "John Smith",
-    value: 250000,
-    stage: "negotiation",
-    probability: 80,
-    closeDate: "2024-02-15"
+    type: "deal",
+    attributes: {
+      title: "Enterprise Software License",
+      company: "TechCorp Inc.",
+      contact: "John Smith",
+      value: 250000,
+      stage: "negotiation",
+      probability: 80,
+      close_date: "2024-02-15"
+    }
   },
   {
     id: "2",
-    title: "Cloud Migration Project",
-    company: "Innovation Labs",
-    contact: "Sarah Johnson",
-    value: 150000,
-    stage: "proposal",
-    probability: 60,
-    closeDate: "2024-02-28"
+    type: "deal",
+    attributes: {
+      title: "Cloud Migration Project",
+      company: "Innovation Labs",
+      contact: "Sarah Johnson",
+      value: 150000,
+      stage: "proposal",
+      probability: 60,
+      close_date: "2024-02-28"
+    }
   },
   {
     id: "3",
-    title: "Consulting Services",
-    company: "StartupXYZ",
-    contact: "Michael Brown",
-    value: 75000,
-    stage: "qualified",
-    probability: 40,
-    closeDate: "2024-03-15"
+    type: "deal",
+    attributes: {
+      title: "Consulting Services",
+      company: "StartupXYZ",
+      contact: "Michael Brown",
+      value: 75000,
+      stage: "qualified",
+      probability: 40,
+      close_date: "2024-03-15"
+    }
   },
   {
     id: "4",
-    title: "Annual Support Contract",
-    company: "BigCorp Enterprise",
-    contact: "Emily Davis",
-    value: 120000,
-    stage: "closed-won",
-    probability: 100,
-    closeDate: "2024-01-10"
+    type: "deal",
+    attributes: {
+      title: "Annual Support Contract",
+      company: "BigCorp Enterprise",
+      contact: "Emily Davis",
+      value: 120000,
+      stage: "closed-won",
+      probability: 100,
+      close_date: "2024-01-10"
+    }
   }
 ];
 
 export default function Deals() {
-  const getStageColor = (stage: Deal["stage"]) => {
+  const getStageColor = (stage: DealAttributes["stage"]) => {
     switch (stage) {
       case "prospect":
         return "bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200";
@@ -91,8 +108,8 @@ export default function Deals() {
   };
 
   const totalPipeline = mockDeals
-    .filter(deal => !['closed-won', 'closed-lost'].includes(deal.stage))
-    .reduce((sum, deal) => sum + (deal.value * deal.probability / 100), 0);
+    .filter(deal => !['closed-won', 'closed-lost'].includes(deal.attributes.stage))
+    .reduce((sum, deal) => sum + (deal.attributes.value * deal.attributes.probability / 100), 0);
 
   return (
     <Layout>
@@ -177,7 +194,7 @@ export default function Deals() {
                         Open Deals
                       </dt>
                       <dd className="text-lg font-medium text-gray-900 dark:text-gray-100">
-                        {mockDeals.filter(deal => !['closed-won', 'closed-lost'].includes(deal.stage)).length}
+                        {mockDeals.filter(deal => !['closed-won', 'closed-lost'].includes(deal.attributes.stage)).length}
                       </dd>
                     </dl>
                   </div>
@@ -247,40 +264,40 @@ export default function Deals() {
                     <tr key={deal.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                          {deal.title}
+                          {deal.attributes.title || ''}
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div>
                           <div className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                            {deal.company}
+                            {deal.attributes.company || ''}
                           </div>
                           <div className="text-sm text-gray-500 dark:text-gray-400">
-                            {deal.contact}
+                            {deal.attributes.contact || ''}
                           </div>
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-gray-100">
-                        {formatCurrency(deal.value)}
+                        {formatCurrency(deal.attributes.value)}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStageColor(deal.stage)}`}>
-                          {deal.stage.replace('-', ' ')}
+                        <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStageColor(deal.attributes.stage)}`}>
+                          {deal.attributes.stage.replace('-', ' ')}
                         </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center">
                           <div className="w-16 bg-gray-200 dark:bg-gray-600 rounded-full h-2">
-                            <div 
-                              className="bg-blue-600 dark:bg-blue-500 h-2 rounded-full" 
-                              style={{ width: `${deal.probability}%` }}
+                            <div
+                              className="bg-blue-600 dark:bg-blue-500 h-2 rounded-full"
+                              style={{ width: `${deal.attributes.probability}%` }}
                             ></div>
                           </div>
-                          <span className="ml-2 text-sm text-gray-900 dark:text-gray-100">{deal.probability}%</span>
+                          <span className="ml-2 text-sm text-gray-900 dark:text-gray-100">{deal.attributes.probability}%</span>
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                        {new Date(deal.closeDate).toLocaleDateString()}
+                        {new Date(deal.attributes.close_date).toLocaleDateString()}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                         <button className="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300 mr-4">

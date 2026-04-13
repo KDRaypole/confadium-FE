@@ -163,7 +163,7 @@ export default function PublicForm() {
   }
 
   // Check if form requires authentication
-  if (form.settings.requireAuth) {
+  if (form.attributes?.settings?.requireAuth) {
     return (
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center p-4">
         <div className="max-w-md mx-auto text-center">
@@ -188,46 +188,49 @@ export default function PublicForm() {
   }
 
   // Check submission limits
-  if (form.settings.submissionLimit && form.submissions >= form.settings.submissionLimit) {
+  const formSettings = form.attributes?.settings;
+  const formTheme = form.attributes?.theme;
+
+  if (formSettings?.submissionLimit && (form.attributes as any)?.submissions >= formSettings.submissionLimit) {
     return (
-      <div 
+      <div
         className="min-h-screen flex items-center justify-center p-4"
-        style={{ 
-          backgroundColor: form.theme.backgroundColor,
-          fontFamily: form.theme.fontFamily 
+        style={{
+          backgroundColor: formTheme?.backgroundColor,
+          fontFamily: formTheme?.fontFamily
         }}
       >
         <div className="max-w-md mx-auto text-center">
           <div className="mb-6">
-            <ExclamationTriangleIcon 
+            <ExclamationTriangleIcon
               className="mx-auto h-16 w-16"
-              style={{ color: form.theme.primaryColor }}
+              style={{ color: formTheme?.primaryColor }}
             />
           </div>
-          
-          <h1 
+
+          <h1
             className="text-2xl font-bold mb-4"
-            style={{ 
-              color: form.theme.textColor,
-              fontFamily: form.theme.fontFamily 
+            style={{
+              color: formTheme?.textColor,
+              fontFamily: formTheme?.fontFamily
             }}
           >
             Form No Longer Available
           </h1>
-          
-          <div 
+
+          <div
             className="p-6 rounded-lg border"
-            style={{ 
-              backgroundColor: form.theme.backgroundColor,
-              borderColor: form.theme.borderColor,
-              borderRadius: `${form.theme.borderRadius}px`
+            style={{
+              backgroundColor: formTheme?.backgroundColor,
+              borderColor: formTheme?.borderColor,
+              borderRadius: `${formTheme?.borderRadius || 0}px`
             }}
           >
-            <p 
+            <p
               className="text-lg"
-              style={{ 
-                color: form.theme.textColor,
-                fontFamily: form.theme.fontFamily 
+              style={{
+                color: formTheme?.textColor,
+                fontFamily: formTheme?.fontFamily
               }}
             >
               This form has reached its submission limit and is no longer accepting responses.
@@ -240,8 +243,8 @@ export default function PublicForm() {
 
   // Check if form is within availability window
   const now = new Date();
-  const startDate = form.settings.startDate ? new Date(form.settings.startDate) : null;
-  const endDate = form.settings.endDate ? new Date(form.settings.endDate) : null;
+  const startDate = formSettings?.startDate ? new Date(formSettings.startDate) : null;
+  const endDate = formSettings?.endDate ? new Date(formSettings.endDate) : null;
 
   const isOutsideAvailabilityWindow = 
     (startDate && now < startDate) || 
@@ -249,58 +252,58 @@ export default function PublicForm() {
 
   if (isOutsideAvailabilityWindow) {
     return (
-      <div 
+      <div
         className="min-h-screen flex items-center justify-center p-4"
-        style={{ 
-          backgroundColor: form.theme.backgroundColor,
-          fontFamily: form.theme.fontFamily 
+        style={{
+          backgroundColor: formTheme?.backgroundColor,
+          fontFamily: formTheme?.fontFamily
         }}
       >
         <div className="max-w-md mx-auto text-center">
           <div className="mb-6">
-            <ClockIcon 
+            <ClockIcon
               className="mx-auto h-16 w-16"
-              style={{ color: form.theme.primaryColor }}
+              style={{ color: formTheme?.primaryColor }}
             />
           </div>
-          
-          <h1 
+
+          <h1
             className="text-2xl font-bold mb-4"
-            style={{ 
-              color: form.theme.textColor,
-              fontFamily: form.theme.fontFamily 
+            style={{
+              color: formTheme?.textColor,
+              fontFamily: formTheme?.fontFamily
             }}
           >
             Form Currently Unavailable
           </h1>
-          
-          <div 
+
+          <div
             className="p-6 rounded-lg border"
-            style={{ 
-              backgroundColor: form.theme.backgroundColor,
-              borderColor: form.theme.borderColor,
-              borderRadius: `${form.theme.borderRadius}px`
+            style={{
+              backgroundColor: formTheme?.backgroundColor,
+              borderColor: formTheme?.borderColor,
+              borderRadius: `${formTheme?.borderRadius || 0}px`
             }}
           >
-            <p 
+            <p
               className="text-lg"
-              style={{ 
-                color: form.theme.textColor,
-                fontFamily: form.theme.fontFamily 
+              style={{
+                color: formTheme?.textColor,
+                fontFamily: formTheme?.fontFamily
               }}
             >
-              {form.settings.closedMessage}
+              {formSettings?.closedMessage || ''}
             </p>
-            
+
             {(startDate || endDate) && (
               <div className="mt-4 text-sm opacity-75">
                 {startDate && now < startDate && (
-                  <p style={{ color: form.theme.textColor }}>
+                  <p style={{ color: formTheme?.textColor }}>
                     Available from: {startDate.toLocaleDateString()}
                   </p>
                 )}
                 {endDate && now > endDate && (
-                  <p style={{ color: form.theme.textColor }}>
+                  <p style={{ color: formTheme?.textColor }}>
                     Was available until: {endDate.toLocaleDateString()}
                   </p>
                 )}

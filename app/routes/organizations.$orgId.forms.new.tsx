@@ -84,12 +84,12 @@ export default function NewForm() {
         status: isDraft ? 'draft' : 'active'
       });
 
-      if (result) {
+      if (result?.data) {
         // Navigate to the newly created form
         if (isDraft) {
-          navigate(`/organizations/${orgId}/forms/${result.id}/edit`);
+          navigate(`/organizations/${orgId}/forms/${result.data.id}/edit`);
         } else {
-          navigate(`/organizations/${orgId}/forms/${result.id}`);
+          navigate(`/organizations/${orgId}/forms/${result.data.id}`);
         }
       }
     } catch (err) {

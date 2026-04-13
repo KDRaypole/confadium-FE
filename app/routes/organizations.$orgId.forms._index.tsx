@@ -2,8 +2,8 @@ import type { MetaFunction } from "@remix-run/node";
 import { Link, useParams } from "@remix-run/react";
 import { useState } from "react";
 import Layout from "~/components/layout/Layout";
-import { 
-  PlusIcon, 
+import {
+  PlusIcon,
   DocumentTextIcon,
   EyeIcon,
   PencilIcon,
@@ -23,10 +23,8 @@ export const meta: MetaFunction = () => {
   ];
 };
 
-// Removed mock data - now using forms hook
-
 type ViewMode = 'grid' | 'list';
-type StatusFilter = 'all' | 'active' | 'draft' | 'archived';
+type StatusFilter = 'all' | 'published' | 'draft' | 'archived';
 
 export default function FormsIndex() {
   const { orgId } = useParams();
@@ -34,19 +32,22 @@ export default function FormsIndex() {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [viewMode, setViewMode] = useState<ViewMode>("grid");
   const { forms, loading, error } = useForms();
-  
-  // Filter forms based on search and status
+
   const filteredForms = forms.filter(form => {
-    const matchesSearch = form.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         form.description.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesStatus = statusFilter === "all" || form.status === statusFilter;
+    const name = form.attributes.name || '';
+    const description = form.attributes.description || '';
+    const stateAction = form.attributes.state?.action || '';
+    const matchesSearch = name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                         description.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesStatus = statusFilter === "all" || stateAction === statusFilter;
     return matchesSearch && matchesStatus;
   });
 
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case 'active':
-        return <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">Active</span>;
+  const getStatusBadge = (state: { action: string; name: string } | null) => {
+    const action = state?.action;
+    switch (action) {
+      case 'published':
+        return <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">Published</span>;
       case 'draft':
         return <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200">Draft</span>;
       case 'archived':
@@ -80,7 +81,7 @@ export default function FormsIndex() {
           </div>
 
           {/* Stats Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
             <div className="bg-white dark:bg-gray-800 overflow-hidden shadow rounded-lg border border-gray-200 dark:border-gray-700">
               <div className="p-5">
                 <div className="flex items-center">
@@ -89,12 +90,8 @@ export default function FormsIndex() {
                   </div>
                   <div className="ml-5 w-0 flex-1">
                     <dl>
-                      <dt className="text-sm font-medium text-gray-500 dark:text-gray-400 truncate">
-                        Total Forms
-                      </dt>
-                      <dd className="text-lg font-medium text-gray-900 dark:text-gray-100">
-                        {forms.length}
-                      </dd>
+                      <dt className="text-sm font-medium text-gray-500 dark:text-gray-400 truncate">Total Forms</dt>
+                      <dd className="text-lg font-medium text-gray-900 dark:text-gray-100">{forms.length}</dd>
                     </dl>
                   </div>
                 </div>
@@ -109,31 +106,9 @@ export default function FormsIndex() {
                   </div>
                   <div className="ml-5 w-0 flex-1">
                     <dl>
-                      <dt className="text-sm font-medium text-gray-500 dark:text-gray-400 truncate">
-                        Active Forms
-                      </dt>
+                      <dt className="text-sm font-medium text-gray-500 dark:text-gray-400 truncate">Published</dt>
                       <dd className="text-lg font-medium text-gray-900 dark:text-gray-100">
-                        {forms.filter(f => f.status === 'active').length}
-                      </dd>
-                    </dl>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-white dark:bg-gray-800 overflow-hidden shadow rounded-lg border border-gray-200 dark:border-gray-700">
-              <div className="p-5">
-                <div className="flex items-center">
-                  <div className="flex-shrink-0">
-                    <DocumentTextIcon className="h-6 w-6 text-blue-600" />
-                  </div>
-                  <div className="ml-5 w-0 flex-1">
-                    <dl>
-                      <dt className="text-sm font-medium text-gray-500 dark:text-gray-400 truncate">
-                        Total Submissions
-                      </dt>
-                      <dd className="text-lg font-medium text-gray-900 dark:text-gray-100">
-                        {forms.reduce((sum, form) => sum + form.submissions, 0)}
+                        {forms.filter(f => f.attributes.state?.action === 'published').length}
                       </dd>
                     </dl>
                   </div>
@@ -149,11 +124,9 @@ export default function FormsIndex() {
                   </div>
                   <div className="ml-5 w-0 flex-1">
                     <dl>
-                      <dt className="text-sm font-medium text-gray-500 dark:text-gray-400 truncate">
-                        Draft Forms
-                      </dt>
+                      <dt className="text-sm font-medium text-gray-500 dark:text-gray-400 truncate">Drafts</dt>
                       <dd className="text-lg font-medium text-gray-900 dark:text-gray-100">
-                        {forms.filter(f => f.status === 'draft').length}
+                        {forms.filter(f => f.attributes.state?.action === 'draft').length}
                       </dd>
                     </dl>
                   </div>
@@ -166,7 +139,6 @@ export default function FormsIndex() {
           <div className="bg-white dark:bg-gray-800 shadow rounded-lg border border-gray-200 dark:border-gray-700 mb-8">
             <div className="p-6">
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-4 sm:space-y-0 sm:space-x-4">
-                {/* Search */}
                 <div className="flex-1 max-w-lg">
                   <div className="relative">
                     <MagnifyingGlassIcon className="absolute inset-y-0 left-0 pl-3 h-5 w-5 text-gray-400 pointer-events-none" />
@@ -181,7 +153,6 @@ export default function FormsIndex() {
                 </div>
 
                 <div className="flex items-center space-x-4">
-                  {/* Status Filter */}
                   <div className="flex items-center space-x-2">
                     <FunnelIcon className="h-5 w-5 text-gray-400" />
                     <select
@@ -190,18 +161,17 @@ export default function FormsIndex() {
                       className="block w-full pl-3 pr-10 py-2 text-base border border-gray-300 dark:border-gray-600 focus:outline-none focus:ring-purple-500 focus:border-purple-500 sm:text-sm rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
                     >
                       <option value="all">All Status</option>
-                      <option value="active">Active</option>
+                      <option value="published">Published</option>
                       <option value="draft">Draft</option>
                       <option value="archived">Archived</option>
                     </select>
                   </div>
 
-                  {/* View Mode Toggle */}
                   <div className="flex border border-gray-300 dark:border-gray-600 rounded-md">
                     <button
                       onClick={() => setViewMode('grid')}
-                      className={`p-2 ${viewMode === 'grid' 
-                        ? 'bg-purple-100 dark:bg-purple-900 text-purple-600 dark:text-purple-400' 
+                      className={`p-2 ${viewMode === 'grid'
+                        ? 'bg-purple-100 dark:bg-purple-900 text-purple-600 dark:text-purple-400'
                         : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300'
                       } rounded-l-md`}
                     >
@@ -209,8 +179,8 @@ export default function FormsIndex() {
                     </button>
                     <button
                       onClick={() => setViewMode('list')}
-                      className={`p-2 ${viewMode === 'list' 
-                        ? 'bg-purple-100 dark:bg-purple-900 text-purple-600 dark:text-purple-400' 
+                      className={`p-2 ${viewMode === 'list'
+                        ? 'bg-purple-100 dark:bg-purple-900 text-purple-600 dark:text-purple-400'
                         : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300'
                       } rounded-r-md border-l border-gray-300 dark:border-gray-600`}
                     >
@@ -244,7 +214,7 @@ export default function FormsIndex() {
                 <DocumentTextIcon className="mx-auto h-12 w-12 text-gray-400" />
                 <h3 className="mt-2 text-sm font-medium text-gray-900 dark:text-gray-100">No forms found</h3>
                 <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                  {searchQuery || statusFilter !== 'all' 
+                  {searchQuery || statusFilter !== 'all'
                     ? 'Try adjusting your search or filters'
                     : 'Get started by creating your first form'
                   }
@@ -263,43 +233,33 @@ export default function FormsIndex() {
               </div>
             </div>
           ) : viewMode === 'grid' ? (
-            /* Grid View */
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {filteredForms.map((form) => (
                 <div key={form.id} className="bg-white dark:bg-gray-800 shadow rounded-lg border border-gray-200 dark:border-gray-700 hover:shadow-md transition-shadow">
                   <div className="p-6">
                     <div className="flex items-center justify-between mb-4">
                       <div className="flex items-center space-x-3">
-                        <div 
+                        <div
                           className="w-3 h-3 rounded-full"
-                          style={{ backgroundColor: form.theme.primaryColor }}
+                          style={{ backgroundColor: form.attributes.theme?.primaryColor || '#7c3aed' }}
                         />
                         <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 truncate">
-                          {form.name}
+                          {form.attributes.name}
                         </h3>
                       </div>
-                      {getStatusBadge(form.status)}
+                      {getStatusBadge(form.attributes.state)}
                     </div>
-                    
-                    <p className="text-sm text-gray-600 dark:text-gray-400 mb-4 line-clamp-2">
-                      {form.description}
-                    </p>
-                    
-                    <div className="grid grid-cols-2 gap-4 mb-4 text-sm">
-                      <div>
-                        <span className="text-gray-500 dark:text-gray-400">Fields:</span>
-                        <span className="ml-1 font-medium text-gray-900 dark:text-gray-100">{form.fields}</span>
-                      </div>
-                      <div>
-                        <span className="text-gray-500 dark:text-gray-400">Submissions:</span>
-                        <span className="ml-1 font-medium text-gray-900 dark:text-gray-100">{form.submissions}</span>
-                      </div>
-                    </div>
-                    
+
+                    {form.attributes.description && (
+                      <p className="text-sm text-gray-600 dark:text-gray-400 mb-4 line-clamp-2">
+                        {form.attributes.description}
+                      </p>
+                    )}
+
                     <div className="text-xs text-gray-500 dark:text-gray-400 mb-4">
-                      Updated {new Date(form.updatedAt).toLocaleDateString()}
+                      Updated {new Date(form.attributes.updated_at).toLocaleDateString()}
                     </div>
-                    
+
                     <div className="flex justify-between items-center">
                       <div className="flex space-x-2">
                         <Link
@@ -325,30 +285,15 @@ export default function FormsIndex() {
               ))}
             </div>
           ) : (
-            /* List View */
             <div className="bg-white dark:bg-gray-800 shadow rounded-lg border border-gray-200 dark:border-gray-700">
               <div className="overflow-hidden">
                 <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
                   <thead className="bg-gray-50 dark:bg-gray-900">
                     <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                        Form
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                        Status
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                        Fields
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                        Submissions
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                        Updated
-                      </th>
-                      <th className="relative px-6 py-3">
-                        <span className="sr-only">Actions</span>
-                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Form</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Status</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Updated</th>
+                      <th className="relative px-6 py-3"><span className="sr-only">Actions</span></th>
                     </tr>
                   </thead>
                   <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
@@ -356,31 +301,27 @@ export default function FormsIndex() {
                       <tr key={form.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div className="flex items-center">
-                            <div 
+                            <div
                               className="w-3 h-3 rounded-full mr-3"
-                              style={{ backgroundColor: form.theme.primaryColor }}
+                              style={{ backgroundColor: form.attributes.theme?.primaryColor || '#7c3aed' }}
                             />
                             <div>
                               <div className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                                {form.name}
+                                {form.attributes.name}
                               </div>
-                              <div className="text-sm text-gray-500 dark:text-gray-400">
-                                {form.description}
-                              </div>
+                              {form.attributes.description && (
+                                <div className="text-sm text-gray-500 dark:text-gray-400">
+                                  {form.attributes.description}
+                                </div>
+                              )}
                             </div>
                           </div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
-                          {getStatusBadge(form.status)}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">
-                          {form.fields}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">
-                          {form.submissions}
+                          {getStatusBadge(form.attributes.state)}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                          {new Date(form.updatedAt).toLocaleDateString()}
+                          {new Date(form.attributes.updated_at).toLocaleDateString()}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                           <div className="flex justify-end space-x-2">

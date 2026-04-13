@@ -1,252 +1,168 @@
+import { useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { 
-  emailTemplatesAPI, 
-  type EmailTemplate, 
-  type EmailTemplateCreateData, 
-  type EmailTemplateUpdateData 
-} from '~/lib/api/emailTemplates';
+import { useParams } from '@remix-run/react';
+import { emailTemplatesAPI } from '~/lib/api/emailTemplates';
+import type { EmailTemplateAttributes, EmailTemplateCategory } from '~/lib/api/types';
+import type { Resource } from '~/lib/api/client';
 
-// Query keys for React Query
+export type EmailTemplate = Resource<EmailTemplateAttributes>;
+
 export const EMAIL_TEMPLATES_QUERY_KEYS = {
   all: ['emailTemplates'] as const,
-  lists: () => [...EMAIL_TEMPLATES_QUERY_KEYS.all, 'list'] as const,
-  list: (filters: Record<string, any>) => [...EMAIL_TEMPLATES_QUERY_KEYS.lists(), { filters }] as const,
-  details: () => [...EMAIL_TEMPLATES_QUERY_KEYS.all, 'detail'] as const,
-  detail: (id: string) => [...EMAIL_TEMPLATES_QUERY_KEYS.details(), id] as const,
-  search: (query: string) => [...EMAIL_TEMPLATES_QUERY_KEYS.all, 'search', query] as const,
-  stats: () => [...EMAIL_TEMPLATES_QUERY_KEYS.all, 'stats'] as const,
-  byCategory: (category: string) => [...EMAIL_TEMPLATES_QUERY_KEYS.all, 'category', category] as const,
-} as const;
+  list: (orgId: string) => [...EMAIL_TEMPLATES_QUERY_KEYS.all, 'list', orgId] as const,
+  detail: (id: string) => [...EMAIL_TEMPLATES_QUERY_KEYS.all, 'detail', id] as const,
+  byCategory: (orgId: string, category: string) =>
+    [...EMAIL_TEMPLATES_QUERY_KEYS.all, 'category', orgId, category] as const,
+  search: (orgId: string, query: string) =>
+    [...EMAIL_TEMPLATES_QUERY_KEYS.all, 'search', orgId, query] as const,
+};
 
-// Hook for fetching all email templates
-export function useEmailTemplates() {
+const errorMessage = (err: unknown): string | null =>
+  err instanceof Error ? err.message : err ? String(err) : null;
+
+/**
+ * Bundled list + mutations hook. Consumers destructure
+ * `{ templates, loading, error, createTemplate, updateTemplate,
+ *    deleteTemplate, duplicateTemplate, isCreating, isUpdating,
+ *    isDeleting, isDuplicating }`.
+ */
+export const useEmailTemplates = () => {
+  const { orgId = '' } = useParams();
   const queryClient = useQueryClient();
 
-  const query = useQuery({
-    queryKey: EMAIL_TEMPLATES_QUERY_KEYS.lists(),
-    queryFn: () => emailTemplatesAPI.getTemplates(),
-    staleTime: 5 * 60 * 1000, // 5 minutes
-    gcTime: 10 * 60 * 1000, // 10 minutes
+  const listQuery = useQuery({
+    queryKey: EMAIL_TEMPLATES_QUERY_KEYS.list(orgId),
+    queryFn: () => emailTemplatesAPI.getTemplates(orgId),
+    select: (data) => data.data,
+    enabled: !!orgId,
   });
 
+  const invalidate = () =>
+    queryClient.invalidateQueries({ queryKey: EMAIL_TEMPLATES_QUERY_KEYS.all });
+
   const createMutation = useMutation({
-    mutationFn: (data: EmailTemplateCreateData) => emailTemplatesAPI.createTemplate(data),
-    onSuccess: (newTemplate) => {
-      // Add to the templates list cache
-      queryClient.setQueryData<EmailTemplate[]>(
-        EMAIL_TEMPLATES_QUERY_KEYS.lists(),
-        (old) => old ? [...old, newTemplate] : [newTemplate]
-      );
-      // Add to individual template cache
-      queryClient.setQueryData(EMAIL_TEMPLATES_QUERY_KEYS.detail(newTemplate.id), newTemplate);
-      // Invalidate stats
-      queryClient.invalidateQueries({ queryKey: EMAIL_TEMPLATES_QUERY_KEYS.stats() });
-    },
+    mutationFn: (attrs: Partial<EmailTemplateAttributes>) =>
+      emailTemplatesAPI.createTemplate(orgId, attrs),
+    onSuccess: invalidate,
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: ({ id, attrs }: { id: string; attrs: Partial<EmailTemplateAttributes> }) =>
+      emailTemplatesAPI.updateTemplate(id, attrs),
+    onSuccess: invalidate,
   });
 
   const deleteMutation = useMutation({
     mutationFn: (id: string) => emailTemplatesAPI.deleteTemplate(id),
-    onMutate: async (deletedId) => {
-      // Cancel outgoing refetches
-      await queryClient.cancelQueries({ queryKey: EMAIL_TEMPLATES_QUERY_KEYS.lists() });
-      
-      // Snapshot the previous value
-      const previousTemplates = queryClient.getQueryData<EmailTemplate[]>(EMAIL_TEMPLATES_QUERY_KEYS.lists());
-      
-      // Optimistically update to the new value
-      if (previousTemplates) {
-        queryClient.setQueryData<EmailTemplate[]>(
-          EMAIL_TEMPLATES_QUERY_KEYS.lists(),
-          previousTemplates.filter((template) => template.id !== deletedId)
-        );
-      }
-      
-      return { previousTemplates };
-    },
-    onError: (err, deletedId, context) => {
-      // Rollback on error
-      if (context?.previousTemplates) {
-        queryClient.setQueryData(EMAIL_TEMPLATES_QUERY_KEYS.lists(), context.previousTemplates);
-      }
-    },
-    onSuccess: (_, deletedId) => {
-      // Remove individual template cache
-      queryClient.removeQueries({ queryKey: EMAIL_TEMPLATES_QUERY_KEYS.detail(deletedId) });
-      // Invalidate stats
-      queryClient.invalidateQueries({ queryKey: EMAIL_TEMPLATES_QUERY_KEYS.stats() });
-    },
+    onSuccess: invalidate,
   });
 
   const duplicateMutation = useMutation({
-    mutationFn: (id: string) => emailTemplatesAPI.duplicateTemplate(id),
-    onSuccess: (duplicatedTemplate) => {
-      // Add to the templates list cache
-      queryClient.setQueryData<EmailTemplate[]>(
-        EMAIL_TEMPLATES_QUERY_KEYS.lists(),
-        (old) => old ? [...old, duplicatedTemplate] : [duplicatedTemplate]
-      );
-      // Add to individual template cache
-      queryClient.setQueryData(EMAIL_TEMPLATES_QUERY_KEYS.detail(duplicatedTemplate.id), duplicatedTemplate);
-      // Invalidate stats
-      queryClient.invalidateQueries({ queryKey: EMAIL_TEMPLATES_QUERY_KEYS.stats() });
+    mutationFn: async (id: string) => {
+      const source = await emailTemplatesAPI.getTemplateById(id);
+      const src = source.data.attributes;
+      const copyAttrs: Partial<EmailTemplateAttributes> = {
+        ...src,
+        name: `${src.name} (copy)`,
+      };
+      return emailTemplatesAPI.createTemplate(orgId, copyAttrs);
     },
+    onSuccess: invalidate,
   });
 
   return {
-    // Data
-    templates: query.data ?? [],
-    
-    // Loading states
-    loading: query.isLoading,
-    isLoading: query.isLoading,
-    isFetching: query.isFetching,
-    isError: query.isError,
-    error: query.error?.message || null,
-    
-    // Mutation states
+    templates: listQuery.data ?? [],
+    loading: listQuery.isLoading,
+    error: errorMessage(listQuery.error),
+    createTemplate: createMutation.mutateAsync,
+    updateTemplate: updateMutation.mutateAsync,
+    deleteTemplate: deleteMutation.mutateAsync,
+    duplicateTemplate: duplicateMutation.mutateAsync,
     isCreating: createMutation.isPending,
+    isUpdating: updateMutation.isPending,
     isDeleting: deleteMutation.isPending,
     isDuplicating: duplicateMutation.isPending,
-    
-    // Actions
-    createTemplate: createMutation.mutate,
-    deleteTemplate: deleteMutation.mutate,
-    duplicateTemplate: duplicateMutation.mutate,
-    
-    // Utility
-    refetch: query.refetch,
   };
-}
+};
 
-// Hook for fetching a single email template
-export function useEmailTemplate(id: string | undefined) {
+/**
+ * Bundled detail + update hook. Consumers destructure
+ * `{ template, loading, error, updateTemplate, isUpdating }`.
+ * `updateTemplate(attrs)` is bound to the supplied id.
+ */
+export const useEmailTemplate = (id?: string) => {
   const queryClient = useQueryClient();
 
-  const query = useQuery({
-    queryKey: EMAIL_TEMPLATES_QUERY_KEYS.detail(id || ''),
-    queryFn: () => emailTemplatesAPI.getTemplateById(id!),
+  const detailQuery = useQuery({
+    queryKey: EMAIL_TEMPLATES_QUERY_KEYS.detail(id ?? ''),
+    queryFn: () => emailTemplatesAPI.getTemplateById(id as string),
+    select: (data) => data.data,
     enabled: !!id,
-    staleTime: 5 * 60 * 1000,
-    gcTime: 10 * 60 * 1000,
   });
 
   const updateMutation = useMutation({
-    mutationFn: (data: EmailTemplateUpdateData) => emailTemplatesAPI.updateTemplate(id!, data),
-    onSuccess: (updatedTemplate) => {
-      if (updatedTemplate && id) {
-        // Update individual template cache
-        queryClient.setQueryData(EMAIL_TEMPLATES_QUERY_KEYS.detail(id), updatedTemplate);
-        // Update templates list cache
-        queryClient.setQueryData<EmailTemplate[]>(
-          EMAIL_TEMPLATES_QUERY_KEYS.lists(), 
-          (old) => {
-            return old
-              ? old.map((template) => (template.id === updatedTemplate.id ? updatedTemplate : template))
-              : [updatedTemplate];
-          }
-        );
-        // Invalidate stats
-        queryClient.invalidateQueries({ queryKey: EMAIL_TEMPLATES_QUERY_KEYS.stats() });
-      }
-    },
+    mutationFn: (attrs: Partial<EmailTemplateAttributes>) =>
+      emailTemplatesAPI.updateTemplate(id as string, attrs),
+    onSuccess: () =>
+      queryClient.invalidateQueries({ queryKey: EMAIL_TEMPLATES_QUERY_KEYS.all }),
   });
 
   return {
-    // Data
-    template: query.data || null,
-    
-    // Loading states
-    loading: query.isLoading,
-    isLoading: query.isLoading,
-    isFetching: query.isFetching,
-    isError: query.isError,
-    error: query.error?.message || null,
-    
-    // Mutation states
+    template: detailQuery.data,
+    loading: detailQuery.isLoading,
+    error: errorMessage(detailQuery.error),
+    updateTemplate: updateMutation.mutateAsync,
     isUpdating: updateMutation.isPending,
-    
-    // Actions
-    updateTemplate: updateMutation.mutate,
-    
-    // Utility
-    refetch: query.refetch,
   };
-}
+};
 
-// Hook for fetching templates by category
-export function useEmailTemplatesByCategory(category: EmailTemplate["category"]) {
-  return useQuery({
-    queryKey: EMAIL_TEMPLATES_QUERY_KEYS.byCategory(category),
-    queryFn: () => emailTemplatesAPI.getTemplatesByCategory(category),
-    staleTime: 5 * 60 * 1000,
-    gcTime: 10 * 60 * 1000,
-  });
-}
+/**
+ * Aggregate stats derived from the list query. Returns
+ * `{ data: { total, byCategory } | undefined, loading, error }`.
+ */
+export const useEmailTemplateStats = () => {
+  const { orgId = '' } = useParams();
 
-// Hook for searching email templates
-export function useEmailTemplatesSearch(query: string, enabled = true) {
-  return useQuery({
-    queryKey: EMAIL_TEMPLATES_QUERY_KEYS.search(query),
-    queryFn: () => emailTemplatesAPI.searchTemplates(query),
-    enabled: enabled && query.length > 0,
-    staleTime: 2 * 60 * 1000, // 2 minutes for search results
-    gcTime: 5 * 60 * 1000,
-  });
-}
-
-// Hook for template statistics
-export function useEmailTemplateStats() {
-  return useQuery({
-    queryKey: EMAIL_TEMPLATES_QUERY_KEYS.stats(),
-    queryFn: () => emailTemplatesAPI.getTemplateStats(),
-    staleTime: 10 * 60 * 1000, // 10 minutes
-    gcTime: 15 * 60 * 1000,
-  });
-}
-
-// Hook for template import/export operations
-export function useEmailTemplateOperations() {
-  const queryClient = useQueryClient();
-
-  const resetMutation = useMutation({
-    mutationFn: () => emailTemplatesAPI.resetToDefaults(),
-    onSuccess: (templates) => {
-      // Update all caches
-      queryClient.setQueryData(EMAIL_TEMPLATES_QUERY_KEYS.lists(), templates);
-      queryClient.invalidateQueries({ queryKey: EMAIL_TEMPLATES_QUERY_KEYS.all });
-    },
+  const listQuery = useQuery({
+    queryKey: EMAIL_TEMPLATES_QUERY_KEYS.list(orgId),
+    queryFn: () => emailTemplatesAPI.getTemplates(orgId),
+    select: (data) => data.data,
+    enabled: !!orgId,
   });
 
-  const exportMutation = useMutation({
-    mutationFn: () => emailTemplatesAPI.exportTemplates(),
-  });
-
-  const importMutation = useMutation({
-    mutationFn: (jsonData: string) => emailTemplatesAPI.importTemplates(jsonData),
-    onSuccess: (templates) => {
-      // Update all caches
-      queryClient.setQueryData(EMAIL_TEMPLATES_QUERY_KEYS.lists(), templates);
-      queryClient.invalidateQueries({ queryKey: EMAIL_TEMPLATES_QUERY_KEYS.all });
-    },
-  });
+  const data = useMemo(() => {
+    if (!listQuery.data) return undefined;
+    const byCategory: Record<string, number> = {};
+    for (const template of listQuery.data) {
+      const category = template.attributes?.category ?? 'uncategorized';
+      byCategory[category] = (byCategory[category] ?? 0) + 1;
+    }
+    return { total: listQuery.data.length, byCategory };
+  }, [listQuery.data]);
 
   return {
-    // Reset
-    resetToDefaults: resetMutation.mutate,
-    isResetting: resetMutation.isPending,
-    
-    // Export
-    exportTemplates: exportMutation.mutate,
-    isExporting: exportMutation.isPending,
-    exportData: exportMutation.data,
-    
-    // Import
-    importTemplates: importMutation.mutate,
-    isImporting: importMutation.isPending,
-    
-    // Error states
-    resetError: resetMutation.error?.message,
-    exportError: exportMutation.error?.message,
-    importError: importMutation.error?.message,
+    data,
+    loading: listQuery.isLoading,
+    error: errorMessage(listQuery.error),
   };
-}
+};
+
+export const useEmailTemplatesByCategory = (category: EmailTemplateCategory) => {
+  const { orgId = '' } = useParams();
+  return useQuery({
+    queryKey: EMAIL_TEMPLATES_QUERY_KEYS.byCategory(orgId, category),
+    queryFn: () => emailTemplatesAPI.getTemplatesByCategory(orgId, category),
+    select: (data) => data.data,
+    enabled: !!orgId,
+  });
+};
+
+export const useEmailTemplatesSearch = (query: string) => {
+  const { orgId = '' } = useParams();
+  return useQuery({
+    queryKey: EMAIL_TEMPLATES_QUERY_KEYS.search(orgId, query),
+    queryFn: () => emailTemplatesAPI.searchTemplates(orgId, query),
+    select: (data) => data.data,
+    enabled: !!orgId && query.length > 0,
+  });
+};

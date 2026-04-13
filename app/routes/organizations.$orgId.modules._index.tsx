@@ -1,5 +1,5 @@
 import type { MetaFunction } from "@remix-run/node";
-import { Link, useParams } from "@remix-run/react";
+import { Link, useParams, useNavigate } from "@remix-run/react";
 import Layout from "~/components/layout/Layout";
 import { useModules, type Module } from "~/hooks/useModules";
 import { 
@@ -25,6 +25,7 @@ export const meta: MetaFunction = () => {
 export default function ModulesIndex() {
   const params = useParams();
   const orgId = params.orgId;
+  const navigate = useNavigate();
   const { modules, loading, error, isDeleting, deleteModule } = useModules();
 
   const getIcon = (iconType: string) => {
@@ -91,8 +92,8 @@ export default function ModulesIndex() {
     }
   };
 
-  const activeModules = modules.filter(m => m.status === "active").length;
-  const totalConfigurations = modules.reduce((sum, m) => sum + m.configurationsCount, 0);
+  const activeModules = modules.filter(m => m.attributes?.state?.action === "active").length;
+  const totalConfigurations = modules.reduce((sum, m) => sum + (m.attributes?.configurations_count || 0), 0);
 
   const handleDeleteModule = async (moduleId: string) => {
     if (!confirm('Are you sure you want to delete this module? This action will also delete all its configurations.')) {
@@ -152,6 +153,7 @@ export default function ModulesIndex() {
               </button>
               <button
                 type="button"
+                onClick={() => navigate(`/organizations/${orgId}/modules/new`)}
                 className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
               >
                 <CogIcon className="-ml-1 mr-2 h-5 w-5" aria-hidden="true" />
@@ -224,15 +226,15 @@ export default function ModulesIndex() {
                 <div>
                   {/* Module Icon and Status */}
                   <div className="flex items-start justify-between">
-                    <div className={`inline-flex p-3 rounded-lg ${getCategoryColor(module.category)} bg-opacity-10`}>
+                    <div className={`inline-flex p-3 rounded-lg ${getCategoryColor(module.attributes?.category)} bg-opacity-10`}>
                       <div className="text-gray-600 dark:text-gray-300">
-                        {getIcon(module.icon)}
+                        {getIcon(module.attributes?.icon || '')}
                       </div>
                     </div>
                     <div className="flex items-center space-x-2">
-                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(module.status)}`}>
-                        <span className="mr-1">{getStatusIcon(module.status)}</span>
-                        {module.status}
+                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(module.attributes?.state?.action)}`}>
+                        <span className="mr-1">{getStatusIcon(module.attributes?.state?.action)}</span>
+                        {module.attributes?.state?.action || ''}
                       </span>
                     </div>
                   </div>
@@ -240,40 +242,40 @@ export default function ModulesIndex() {
                   {/* Module Info */}
                   <div className="mt-4">
                     <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 group-hover:text-blue-600 dark:group-hover:text-blue-400">
-                      {module.name}
+                      {module.attributes?.name || ''}
                     </h3>
                     <p className="mt-2 text-sm text-gray-500 dark:text-gray-400 line-clamp-2">
-                      {module.description}
+                      {module.attributes?.description || ''}
                     </p>
                   </div>
 
                   {/* Module Category */}
                   <div className="mt-4">
-                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getCategoryColor(module.category)}`}>
-                      {module.category}
+                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getCategoryColor(module.attributes?.category)}`}>
+                      {module.attributes?.category || ''}
                     </span>
                   </div>
 
                   {/* Configuration Count and Triggers */}
                   <div className="mt-4 space-y-2">
                     <div className="flex items-center justify-between text-sm text-gray-500 dark:text-gray-400">
-                      <span>Configurations: {module.configurationsCount}</span>
-                      <span>Modified: {new Date(module.lastModified).toLocaleDateString()}</span>
+                      <span>Configurations: {module.attributes?.configurations_count || 0}</span>
+                      <span>Modified: {new Date(module.attributes?.updated_at || '').toLocaleDateString()}</span>
                     </div>
                     
                     {/* Trigger Types Preview */}
                     <div className="flex flex-wrap gap-1">
-                      {module.triggerTypes.slice(0, 2).map((trigger, index) => (
-                        <span 
+                      {(module.attributes?.trigger_types || []).slice(0, 2).map((trigger: string, index: number) => (
+                        <span
                           key={index}
                           className="inline-flex items-center px-2 py-1 rounded text-xs bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300"
                         >
                           {trigger}
                         </span>
                       ))}
-                      {module.triggerTypes.length > 2 && (
+                      {(module.attributes?.trigger_types || []).length > 2 && (
                         <span className="inline-flex items-center px-2 py-1 rounded text-xs bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300">
-                          +{module.triggerTypes.length - 2} more
+                          +{(module.attributes?.trigger_types || []).length - 2} more
                         </span>
                       )}
                     </div>

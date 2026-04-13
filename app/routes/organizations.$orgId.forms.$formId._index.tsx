@@ -85,11 +85,11 @@ export default function ViewForm() {
 
   // Convert API form to preview format
   const formData = {
-    name: form.name,
-    description: form.description,
-    fields: form.fields,
-    theme: form.theme,
-    settings: form.settings
+    name: form.attributes?.name || '',
+    description: form.attributes?.description || '',
+    fields: form.attributes?.fields || [],
+    theme: form.attributes?.theme || {},
+    settings: form.attributes?.settings || {}
   };
 
   return (
@@ -109,10 +109,10 @@ export default function ViewForm() {
                 </Link>
                 <div>
                   <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-                    {form.name}
+                    {form.attributes?.name || ''}
                   </h1>
                   <p className="text-sm text-gray-600 dark:text-gray-400">
-                    {form.description}
+                    {form.attributes?.description || ''}
                   </p>
                 </div>
               </div>
@@ -144,24 +144,21 @@ export default function ViewForm() {
             <div className="mt-4 flex items-center justify-between">
               <div className="flex items-center space-x-4">
                 <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                  form.status === 'active' 
+                  form.attributes?.state?.action === 'active'
                     ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
-                    : form.status === 'draft'
+                    : form.attributes?.state?.action === 'draft'
                     ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200'
                     : 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200'
                 }`}>
-                  {form.status === 'active' ? '🟢' : form.status === 'draft' ? '🟡' : '⭕'} {form.status.toUpperCase()}
+                  {form.attributes?.state?.action === 'active' ? '🟢' : form.attributes?.state?.action === 'draft' ? '🟡' : '⭕'} {(form.attributes?.state?.action || '').toUpperCase()}
                 </span>
-                
+
                 <div className="flex items-center space-x-6 text-sm text-gray-500 dark:text-gray-400">
                   <span>
-                    <strong className="text-gray-900 dark:text-gray-100">{form.fields.length}</strong> fields
+                    <strong className="text-gray-900 dark:text-gray-100">{(form.attributes?.fields || []).length}</strong> fields
                   </span>
                   <span>
-                    <strong className="text-gray-900 dark:text-gray-100">{form.submissions}</strong> submissions
-                  </span>
-                  <span>
-                    Created {new Date(form.createdAt).toLocaleDateString()}
+                    Created {new Date(form.attributes?.created_at || '').toLocaleDateString()}
                   </span>
                 </div>
               </div>
@@ -260,36 +257,36 @@ export default function ViewForm() {
                   <div className="text-sm">
                     <span className="text-gray-500 dark:text-gray-400">Submit Button:</span>
                     <span className="ml-2 font-medium text-gray-900 dark:text-gray-100">
-                      "{form.settings.submitButtonText}"
+                      "{form.attributes?.settings?.submitButtonText || ''}"
                     </span>
                   </div>
                   
                   <div className="text-sm">
                     <span className="text-gray-500 dark:text-gray-400">Authentication:</span>
                     <span className="ml-2 font-medium text-gray-900 dark:text-gray-100">
-                      {form.settings.requireAuth ? 'Required' : 'Not required'}
+                      {form.attributes?.settings?.requireAuth ? 'Required' : 'Not required'}
                     </span>
                   </div>
                   
                   <div className="text-sm">
                     <span className="text-gray-500 dark:text-gray-400">Multiple Submissions:</span>
                     <span className="ml-2 font-medium text-gray-900 dark:text-gray-100">
-                      {form.settings.allowMultipleSubmissions ? 'Allowed' : 'Not allowed'}
+                      {form.attributes?.settings?.allowMultipleSubmissions ? 'Allowed' : 'Not allowed'}
                     </span>
                   </div>
                   
                   <div className="text-sm">
                     <span className="text-gray-500 dark:text-gray-400">Data Storage:</span>
                     <span className="ml-2 font-medium text-gray-900 dark:text-gray-100">
-                      {form.settings.storeSubmissions ? 'Enabled' : 'Disabled'}
+                      {form.attributes?.settings?.storeSubmissions ? 'Enabled' : 'Disabled'}
                     </span>
                   </div>
                   
-                  {form.settings.notificationEmail && (
+                  {form.attributes?.settings?.notificationEmail && (
                     <div className="text-sm">
                       <span className="text-gray-500 dark:text-gray-400">Notifications:</span>
                       <span className="ml-2 font-medium text-gray-900 dark:text-gray-100">
-                        {form.settings.notificationEmail}
+                        {form.attributes?.settings?.notificationEmail}
                       </span>
                     </div>
                   )}
@@ -309,10 +306,10 @@ export default function ViewForm() {
                     <div className="flex items-center space-x-2">
                       <div 
                         className="w-6 h-6 rounded-full border border-gray-300 dark:border-gray-600"
-                        style={{ backgroundColor: form.theme.primaryColor }}
+                        style={{ backgroundColor: form.attributes?.theme?.primaryColor || '' }}
                       />
                       <span className="text-xs font-mono text-gray-900 dark:text-gray-100">
-                        {form.theme.primaryColor}
+                        {form.attributes?.theme?.primaryColor || ''}
                       </span>
                     </div>
                   </div>
@@ -322,10 +319,10 @@ export default function ViewForm() {
                     <div className="flex items-center space-x-2">
                       <div 
                         className="w-6 h-6 rounded-full border border-gray-300 dark:border-gray-600"
-                        style={{ backgroundColor: form.theme.backgroundColor }}
+                        style={{ backgroundColor: form.attributes?.theme?.backgroundColor || '' }}
                       />
                       <span className="text-xs font-mono text-gray-900 dark:text-gray-100">
-                        {form.theme.backgroundColor}
+                        {form.attributes?.theme?.backgroundColor || ''}
                       </span>
                     </div>
                   </div>
@@ -335,10 +332,10 @@ export default function ViewForm() {
                     <div className="flex items-center space-x-2">
                       <div 
                         className="w-6 h-6 rounded-full border border-gray-300 dark:border-gray-600"
-                        style={{ backgroundColor: form.theme.textColor }}
+                        style={{ backgroundColor: form.attributes?.theme?.textColor || '' }}
                       />
                       <span className="text-xs font-mono text-gray-900 dark:text-gray-100">
-                        {form.theme.textColor}
+                        {form.attributes?.theme?.textColor || ''}
                       </span>
                     </div>
                   </div>

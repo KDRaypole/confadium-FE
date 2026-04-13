@@ -15,12 +15,14 @@ const FormPreview: React.FC<FormPreviewProps> = ({ formData }) => {
   const [previewMode, setPreviewMode] = useState<PreviewMode>('desktop');
   const [formValues, setFormValues] = useState<Record<string, any>>({});
   const [recaptchaToken, setRecaptchaToken] = useState<string | null>(null);
+  const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
 
   // Check if multi-stage is enabled
   const isMultiStage = formData.settings.enableMultiStage && formData.fields.length > 0;
 
   const handleInputChange = (fieldId: string, value: any) => {
     setFormValues(prev => ({ ...prev, [fieldId]: value }));
+    setValidationErrors(prev => { const next = { ...prev }; delete next[fieldId]; return next; });
   };
 
   const handleRecaptchaVerify = (token: string) => {
@@ -40,6 +42,21 @@ const FormPreview: React.FC<FormPreviewProps> = ({ formData }) => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    const errors: Record<string, string> = {};
+    for (const field of fieldsToRender) {
+      if (field.required) {
+        const value = formValues[field.id];
+        if (value === undefined || value === null || value === '') {
+          errors[field.id] = `"${field.label}" is required`;
+        } else if (field.type === 'checkbox' && value === false) {
+          errors[field.id] = `"${field.label}" is required`;
+        }
+      }
+    }
+    if (Object.keys(errors).length > 0) {
+      setValidationErrors(errors);
+      return;
+    }
     if (formData.settings.enableCaptcha && !recaptchaToken) {
       alert('Please complete the reCAPTCHA verification before submitting.');
       return;
@@ -412,15 +429,21 @@ const FormPreview: React.FC<FormPreviewProps> = ({ formData }) => {
                         {renderField(modifiedField)}
                         
                         {field.description && (
-                          <p 
+                          <p
                             className="mt-1 text-xs opacity-75"
-                            style={{ 
+                            style={{
                               color: formData.theme.textColor,
                               fontSize: `${formData.theme.fontSize - 2}px`,
-                              fontFamily: formData.theme.fontFamily 
+                              fontFamily: formData.theme.fontFamily
                             }}
                           >
                             {field.description}
+                          </p>
+                        )}
+
+                        {validationErrors[field.id] && (
+                          <p className="mt-1 text-sm text-red-500 font-medium">
+                            {validationErrors[field.id]}
                           </p>
                         )}
                       </div>

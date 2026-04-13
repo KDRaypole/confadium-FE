@@ -25,11 +25,11 @@ export default function EditForm() {
   useEffect(() => {
     if (form) {
       setFormData({
-        name: form.name,
-        description: form.description,
-        fields: form.fields,
-        theme: form.theme,
-        settings: form.settings
+        name: form.attributes?.name || '',
+        description: form.attributes?.description || '',
+        fields: form.attributes?.fields || [],
+        theme: form.attributes?.theme || {},
+        settings: form.attributes?.settings || {}
       });
     }
   }, [form]);
@@ -164,7 +164,7 @@ export default function EditForm() {
                   className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-purple-600 hover:bg-purple-700 disabled:opacity-50"
                 >
                   <CheckIcon className="h-4 w-4 mr-2" />
-                  {form.status === 'active' ? 'Update & Publish' : 'Publish'}
+                  {form.attributes?.state?.action === 'active' ? 'Update & Publish' : 'Publish'}
                 </button>
               </div>
             </div>
@@ -172,16 +172,16 @@ export default function EditForm() {
             {/* Form Status */}
             <div className="mt-4">
               <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                form.status === 'active' 
+                form.attributes?.state?.action === 'active'
                   ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
-                  : form.status === 'draft'
+                  : form.attributes?.state?.action === 'draft'
                   ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200'
                   : 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200'
               }`}>
-                {form.status === 'active' ? '🟢' : form.status === 'draft' ? '🟡' : '⭕'} {form.status.toUpperCase()}
+                {form.attributes?.state?.action === 'active' ? '🟢' : form.attributes?.state?.action === 'draft' ? '🟡' : '⭕'} {(form.attributes?.state?.action || '').toUpperCase()}
               </span>
               <span className="ml-3 text-sm text-gray-500 dark:text-gray-400">
-                Last updated {new Date(form.updatedAt).toLocaleDateString()}
+                Last updated {new Date(form.attributes?.updated_at || '').toLocaleDateString()}
               </span>
             </div>
           </div>
@@ -201,13 +201,13 @@ export default function EditForm() {
               <div>
                 <span className="text-gray-500 dark:text-gray-400">Created:</span>
                 <span className="ml-1 font-medium text-gray-900 dark:text-gray-100">
-                  {new Date(form.createdAt).toLocaleDateString()}
+                  {new Date(form.attributes?.created_at || '').toLocaleDateString()}
                 </span>
               </div>
               <div>
                 <span className="text-gray-500 dark:text-gray-400">Submissions:</span>
                 <span className="ml-1 font-medium text-gray-900 dark:text-gray-100">
-                  {form.submissions}
+                  N/A
                 </span>
               </div>
               <div>

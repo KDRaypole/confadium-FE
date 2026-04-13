@@ -1,0 +1,311 @@
+/**
+ * JSON:API Resource Attribute Types
+ *
+ * These types represent the `attributes` object inside each JSON:API resource.
+ * The full resource shape is Resource<T> from ./client.ts.
+ */
+
+// ── Timestamps (mixed into every resource) ──────────────────
+
+export interface Timestamps {
+  created_at: string;
+  updated_at: string;
+}
+
+// ── Organization ────────────────────────────────────────────
+
+export interface OrganizationAttributes extends Timestamps {
+  name: string;
+  slug: string;
+}
+
+// ── Contact ─────────────────────────────────────────────────
+
+export type ContactStatus = 'lead' | 'prospect' | 'customer' | 'churned';
+
+export interface ContactAttributes extends Timestamps {
+  first_name: string;
+  last_name: string;
+  email: string;
+  phone: string | null;
+  company: string | null;
+  title: string | null;
+  status: ContactStatus | null;
+  source: string | null;
+  notes: string | null;
+  alerted: boolean;
+}
+
+// ── Deal ────────────────────────────────────────────────────
+
+export type DealStage = 'qualification' | 'proposal' | 'negotiation' | 'closed_won' | 'closed_lost';
+
+export interface DealAttributes extends Timestamps {
+  name: string;
+  value: number | null;
+  stage: DealStage | null;
+  probability: number | null;
+  expected_close_date: string | null;
+  notes: string | null;
+  alerted: boolean;
+}
+
+// ── Activity ────────────────────────────────────────────────
+
+export type ActivityKind = 'call' | 'email' | 'meeting' | 'task' | 'note';
+
+export interface ActivityAttributes extends Timestamps {
+  kind: ActivityKind;
+  subject: string;
+  body: string | null;
+  due_at: string | null;
+  completed_at: string | null;
+}
+
+// ── Call ─────────────────────────────────────────────────────
+
+export type CallDirection = 'inbound' | 'outbound';
+export type CallStatus = 'completed' | 'missed' | 'voicemail' | 'in_progress';
+
+export interface CallAttributes extends Timestamps {
+  direction: CallDirection;
+  status: CallStatus;
+  duration: number | null;
+  recording_url: string | null;
+  notes: string | null;
+}
+
+// ── Form ────────────────────────────────────────────────────
+
+export interface FormTheme {
+  primaryColor?: string;
+  backgroundColor?: string;
+  textColor?: string;
+  borderColor?: string;
+  borderRadius?: string;
+  fontSize?: string;
+  fontFamily?: string;
+  spacing?: string;
+  headerImage?: string;
+  headerImageHeight?: string;
+  headerImageFit?: string;
+  headerImageOpacity?: number;
+}
+
+export interface FormSettings {
+  submitButtonText?: string;
+  successMessage?: string;
+  errorMessage?: string;
+  notificationEmail?: string;
+  redirectUrl?: string;
+  storeSubmissions?: boolean;
+  requireAuth?: boolean;
+  enableCaptcha?: boolean;
+  submissionLimit?: number;
+  submissionLimitPeriod?: string;
+  startDate?: string;
+  endDate?: string;
+  closedMessage?: string;
+  allowMultipleSubmissions?: boolean;
+  showProgressBar?: boolean;
+  autoSaveDraft?: boolean;
+  enableMultiStage?: boolean;
+  nextButtonText?: string;
+  previousButtonText?: string;
+  showStepIndicator?: boolean;
+  allowStepNavigation?: boolean;
+  obfuscateFormId?: boolean;
+}
+
+export interface ConditionalAction {
+  id: string;
+  triggerValue: string;
+  type: 'remove_options' | 'add_options' | 'enable_options' | 'hide_question' | 'show_question' | 'end_form';
+  targetFieldId?: string;
+  options?: string[];
+  endMessage?: string;
+  endTitle?: string;
+}
+
+export interface FormFieldValidation {
+  min?: number;
+  max?: number;
+  pattern?: string;
+  message?: string;
+}
+
+export interface StatefulAttributes {
+  state: { action: string; name: string } | null;
+  transitioning: { action: string; name: string } | null;
+  transitions: { action: string; name: string }[];
+  state_changed_at: string | null;
+}
+
+export interface FormAttributes extends Timestamps, StatefulAttributes {
+  name: string;
+  description: string | null;
+  theme: FormTheme;
+  settings: FormSettings;
+  alerted: boolean;
+}
+
+export type FormFieldType = 'text' | 'email' | 'number' | 'select' | 'textarea' | 'checkbox' | 'radio' | 'date' | 'url' | 'phone';
+
+export interface FormFieldAttributes extends Timestamps {
+  label: string;
+  field_type: FormFieldType;
+  position: number;
+  required: boolean;
+  options: Record<string, unknown>;
+  placeholder: string | null;
+  description: string | null;
+  conditional_actions: ConditionalAction[];
+  validation: FormFieldValidation;
+}
+
+export interface FormSubmissionAttributes extends Timestamps {
+  data: Record<string, unknown>;
+  submitted_at: string | null;
+}
+
+// ── Email Template ──────────────────────────────────────────
+
+export type EmailTemplateCategory = 'welcome' | 'follow_up' | 'nurturing' | 'promotion' | 'notification' | 'reminder';
+
+export interface EmailTemplateAttributes extends Timestamps {
+  name: string;
+  category: EmailTemplateCategory | null;
+  subject: string | null;
+  html_content: string;
+  text_content: string | null;
+  description: string | null;
+  preview_text: string | null;
+  variables: string[];
+}
+
+// ── Automation Module ───────────────────────────────────────
+
+export type ModuleCategory = 'automation' | 'integration' | 'notification' | 'workflow';
+export type ModuleStatus = 'active' | 'inactive' | 'configured';
+
+export interface AutomationModuleAttributes extends Timestamps {
+  name: string;
+  description: string | null;
+  category: ModuleCategory;
+  status: ModuleStatus | null;
+  icon: string | null;
+  trigger_types: string[];
+}
+
+export type ConfigurationStatus = 'active' | 'inactive' | 'draft';
+
+export interface TriggerConfig {
+  entityType?: string;
+  action?: string;
+  attributeFilter?: string;
+}
+
+export interface ConditionConfig {
+  id: string;
+  field: string;
+  operator: string;
+  value: string;
+  logicOperator?: 'AND' | 'OR';
+}
+
+export interface ActionConfig {
+  id: string;
+  type: string;
+  target?: string;
+  parameters?: Record<string, unknown>;
+}
+
+export interface ModuleConfigurationAttributes extends Timestamps {
+  name: string;
+  description: string | null;
+  trigger: TriggerConfig;
+  conditions: ConditionConfig[];
+  actions: ActionConfig[];
+  status: ConfigurationStatus | null;
+}
+
+// ── Tag ─────────────────────────────────────────────────────
+
+export type TagPriority = 'low' | 'medium' | 'high' | 'critical';
+
+export interface TagAttributes extends Timestamps {
+  name: string;
+  color: string | null;
+  priority: TagPriority | null;
+  level: number | null;
+  description: string | null;
+  category: string | null;
+}
+
+// ── Calendar ────────────────────────────────────────────────
+
+export type CalendarVisibility = 'public' | 'private' | 'shared';
+
+export interface CalendarAttributes extends Timestamps {
+  name: string;
+  description: string | null;
+  color: string | null;
+  is_default: boolean;
+  visibility: CalendarVisibility | null;
+  sync_enabled: boolean;
+  last_sync_at: string | null;
+}
+
+// ── Calendar Event ──────────────────────────────────────────
+
+export interface Attendee {
+  email: string;
+  name?: string;
+  role: 'required' | 'optional' | 'chair';
+  status: 'needsAction' | 'accepted' | 'declined' | 'tentative';
+}
+
+export interface RecurrenceRule {
+  frequency?: string;
+  interval?: number;
+  until?: string;
+  count?: number;
+  byWeekDay?: string[];
+  byMonth?: number[];
+  byMonthDay?: number[];
+}
+
+export type EventStatus = 'confirmed' | 'tentative' | 'cancelled';
+
+export interface CalendarEventAttributes extends Timestamps {
+  title: string;
+  description: string | null;
+  start_at: string;
+  end_at: string;
+  all_day: boolean;
+  location: string | null;
+  attendees: Attendee[];
+  recurrence: RecurrenceRule;
+  status: EventStatus | null;
+  visibility: CalendarVisibility | null;
+}
+
+// ── Time Slot ───────────────────────────────────────────────
+
+export interface TimeSlotAttributes extends Timestamps {
+  title: string | null;
+  start_at: string;
+  end_at: string;
+  is_available: boolean;
+}
+
+// ── Calendar Integration ────────────────────────────────────
+
+export type IntegrationProvider = 'google' | 'outlook' | 'apple' | 'caldav';
+
+export interface CalendarIntegrationAttributes extends Timestamps {
+  provider: IntegrationProvider;
+  external_id: string | null;
+  sync_enabled: boolean;
+  last_sync_at: string | null;
+}

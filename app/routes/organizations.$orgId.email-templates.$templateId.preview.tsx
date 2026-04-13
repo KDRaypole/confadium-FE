@@ -28,9 +28,9 @@ export default function PreviewEmailTemplate() {
 
   // Initialize sample variables when template loads
   useEffect(() => {
-    if (template?.variables) {
+    if (template?.attributes?.variables) {
       const initialVars: Record<string, string> = {};
-      template.variables.forEach((variable) => {
+      (template.attributes.variables as string[]).forEach((variable) => {
         // Provide default sample values
         switch (variable) {
           case "contact_name":
@@ -206,14 +206,14 @@ export default function PreviewEmailTemplate() {
                 </Link>
                 <div>
                   <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-                    {template.name}
+                    {template.attributes?.name || ''}
                   </h1>
                   <div className="flex items-center space-x-2 mt-1">
-                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getCategoryColor(template.category)}`}>
-                      {template.category?.replace('_', ' ') || 'uncategorized'}
+                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getCategoryColor(template.attributes?.category || '')}`}>
+                      {template.attributes?.category?.replace('_', ' ') || 'uncategorized'}
                     </span>
                     <span className="text-sm text-gray-600 dark:text-gray-400">
-                      {template.variables.length} variable{template.variables.length !== 1 ? 's' : ''}
+                      {(template.attributes?.variables || []).length} variable{(template.attributes?.variables || []).length !== 1 ? 's' : ''}
                     </span>
                   </div>
                 </div>
@@ -240,16 +240,16 @@ export default function PreviewEmailTemplate() {
                   <dl className="space-y-2">
                     <div>
                       <dt className="text-sm font-medium text-gray-500 dark:text-gray-400">Description</dt>
-                      <dd className="text-sm text-gray-900 dark:text-gray-100">{template.description}</dd>
+                      <dd className="text-sm text-gray-900 dark:text-gray-100">{template.attributes?.description || ''}</dd>
                     </div>
                     <div>
                       <dt className="text-sm font-medium text-gray-500 dark:text-gray-400">Category</dt>
-                      <dd className="text-sm text-gray-900 dark:text-gray-100">{template.category}</dd>
+                      <dd className="text-sm text-gray-900 dark:text-gray-100">{template.attributes?.category || ''}</dd>
                     </div>
                     <div>
                       <dt className="text-sm font-medium text-gray-500 dark:text-gray-400">Variables</dt>
                       <dd className="text-sm text-gray-900 dark:text-gray-100">
-                        {template.variables.length > 0 ? template.variables.join(", ") : "None"}
+                        {(template.attributes?.variables || []).length > 0 ? (template.attributes?.variables || []).join(", ") : "None"}
                       </dd>
                     </div>
                   </dl>
@@ -260,13 +260,13 @@ export default function PreviewEmailTemplate() {
                     <div>
                       <dt className="text-sm font-medium text-gray-500 dark:text-gray-400">Subject Line</dt>
                       <dd className="text-sm text-gray-900 dark:text-gray-100 font-mono bg-gray-50 dark:bg-gray-700 px-2 py-1 rounded">
-                        {generatePreview(template.subject)}
+                        {generatePreview(template.attributes?.subject || '')}
                       </dd>
                     </div>
                     <div>
                       <dt className="text-sm font-medium text-gray-500 dark:text-gray-400">Preview Text</dt>
                       <dd className="text-sm text-gray-600 dark:text-gray-400 bg-gray-50 dark:bg-gray-700 px-2 py-1 rounded">
-                        {generatePreview(template.previewText)}
+                        {generatePreview(template.attributes?.preview_text || '')}
                       </dd>
                     </div>
                   </dl>
@@ -303,9 +303,9 @@ export default function PreviewEmailTemplate() {
                   </button>
                   <button
                     onClick={() => copyToClipboard(
-                      previewMode === "html" 
-                        ? generatePreview(template.htmlContent)
-                        : generatePreview(template.textContent)
+                      previewMode === "html"
+                        ? generatePreview(template.attributes?.html_content || '')
+                        : generatePreview(template.attributes?.text_content || '')
                     )}
                     className="inline-flex items-center px-3 py-1 text-xs bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 rounded hover:bg-gray-200 dark:hover:bg-gray-600"
                   >
@@ -318,16 +318,16 @@ export default function PreviewEmailTemplate() {
 
             <div className="p-6">
               {previewMode === "html" ? (
-                <div 
+                <div
                   className="border border-gray-200 dark:border-gray-600 rounded-lg bg-white p-6 min-h-[500px] overflow-auto"
-                  dangerouslySetInnerHTML={{ 
-                    __html: generatePreview(template.htmlContent)
+                  dangerouslySetInnerHTML={{
+                    __html: generatePreview(template.attributes?.html_content || '')
                   }}
                 />
               ) : (
                 <div className="border border-gray-200 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-900 p-6 min-h-[500px]">
                   <pre className="whitespace-pre-wrap text-sm text-gray-700 dark:text-gray-300 font-mono">
-                    {generatePreview(template.textContent)}
+                    {generatePreview(template.attributes?.text_content || '')}
                   </pre>
                 </div>
               )}

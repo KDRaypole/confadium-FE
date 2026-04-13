@@ -22,13 +22,18 @@ export const meta: MetaFunction = () => {
   ];
 };
 
-interface ReportData {
-  id: string;
+interface ReportDataAttributes {
   name: string;
   description: string;
   category: "sales" | "contacts" | "calls" | "activities";
-  lastGenerated: string;
+  last_generated: string;
   icon: string;
+}
+
+interface ReportData {
+  id: string;
+  type: string;
+  attributes: ReportDataAttributes;
 }
 
 interface EntityData {
@@ -51,27 +56,36 @@ interface EntityData {
 const mockReports: Record<string, ReportData> = {
   "1": {
     id: "1",
-    name: "Sales Performance",
-    description: "Monthly sales performance and revenue trends",
-    category: "sales",
-    lastGenerated: "2024-01-15",
-    icon: "chart"
+    type: "report",
+    attributes: {
+      name: "Sales Performance",
+      description: "Monthly sales performance and revenue trends",
+      category: "sales",
+      last_generated: "2024-01-15",
+      icon: "chart"
+    }
   },
   "2": {
     id: "2",
-    name: "Contact Activity Summary",
-    description: "Contact engagement and interaction summary",
-    category: "contacts",
-    lastGenerated: "2024-01-14",
-    icon: "users"
+    type: "report",
+    attributes: {
+      name: "Contact Activity Summary",
+      description: "Contact engagement and interaction summary",
+      category: "contacts",
+      last_generated: "2024-01-14",
+      icon: "users"
+    }
   },
   "3": {
     id: "3",
-    name: "Call Log Analysis",
-    description: "Call volume, duration, and success rate analysis",
-    category: "calls",
-    lastGenerated: "2024-01-13",
-    icon: "phone"
+    type: "report",
+    attributes: {
+      name: "Call Log Analysis",
+      description: "Call volume, duration, and success rate analysis",
+      category: "calls",
+      last_generated: "2024-01-13",
+      icon: "phone"
+    }
   }
 };
 
@@ -134,7 +148,7 @@ export default function ReportShow() {
   // Generate mock data on mount
   useEffect(() => {
     if (report) {
-      const mockData = generateMockData(report.category);
+      const mockData = generateMockData(report.attributes.category);
       setData(mockData);
       setFilteredData(mockData);
     }
@@ -208,9 +222,9 @@ export default function ReportShow() {
                 Reports
               </Link>
               <span>/</span>
-              <span>{report.name}</span>
+              <span>{report.attributes.name}</span>
             </nav>
-            
+
             <div className="flex items-center justify-between">
               <div className="flex items-center">
                 <Link
@@ -221,8 +235,8 @@ export default function ReportShow() {
                   Back to Reports
                 </Link>
                 <div>
-                  <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">{report.name}</h1>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">{report.description}</p>
+                  <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">{report.attributes.name}</h1>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">{report.attributes.description}</p>
                 </div>
               </div>
               
@@ -290,15 +304,15 @@ export default function ReportShow() {
                       {availableTags.slice(0, 6).map((tag) => (
                         <button
                           key={tag.id}
-                          onClick={() => toggleTag(tag.name)}
+                          onClick={() => toggleTag(tag.attributes?.name || '')}
                           className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium transition-colors ${
-                            selectedTags.includes(tag.name)
-                              ? getTagColorClass(tag.color)
+                            selectedTags.includes(tag.attributes?.name || '')
+                              ? getTagColorClass(tag.attributes?.color || '')
                               : 'bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600'
                           }`}
                         >
-                          {tag.name}
-                          {selectedTags.includes(tag.name) && (
+                          {tag.attributes?.name || ''}
+                          {selectedTags.includes(tag.attributes?.name || '') && (
                             <XMarkIcon className="ml-1 h-3 w-3" />
                           )}
                         </button>
@@ -380,7 +394,7 @@ export default function ReportShow() {
           </div>
 
           {/* Additional Visualization - Scatter Plot for Sales/Revenue data */}
-          {report?.category === 'sales' && (
+          {report?.attributes.category === 'sales' && (
             <div className="bg-white dark:bg-gray-800 shadow rounded-lg border border-gray-200 dark:border-gray-700">
               <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
                 <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">

@@ -21,6 +21,7 @@ const MultiStageFormPreview: React.FC<MultiStageFormPreviewProps> = ({ formData 
   const [formValues, setFormValues] = useState<Record<string, any>>({});
   const [direction, setDirection] = useState<'next' | 'prev'>('next');
   const [recaptchaToken, setRecaptchaToken] = useState<string | null>(null);
+  const [validationError, setValidationError] = useState<string | null>(null);
 
   // Evaluate conditional logic
   const conditionalResult = evaluateConditionalLogic(formData.fields, formValues);
@@ -32,9 +33,24 @@ const MultiStageFormPreview: React.FC<MultiStageFormPreviewProps> = ({ formData 
 
   const handleInputChange = (fieldId: string, value: any) => {
     setFormValues(prev => ({ ...prev, [fieldId]: value }));
+    setValidationError(null);
+  };
+
+  const isFieldValid = (field: any): boolean => {
+    if (!field.required) return true;
+    const value = formValues[field.id];
+    if (value === undefined || value === null || value === '') return false;
+    if (field.type === 'checkbox' && value === false) return false;
+    return true;
   };
 
   const handleNext = () => {
+    if (currentField && !isFieldValid(currentField)) {
+      setValidationError(`"${currentField.label}" is required`);
+      return;
+    }
+    setValidationError(null);
+
     if (currentField) {
       const nextField = getNextConditionalField(currentField.id, formData.fields, formValues);
       if (nextField) {
@@ -46,7 +62,7 @@ const MultiStageFormPreview: React.FC<MultiStageFormPreviewProps> = ({ formData 
         }
       }
     }
-    
+
     // Fallback to simple increment
     if (currentStep < totalSteps - 1) {
       setDirection('next');
@@ -89,8 +105,13 @@ const MultiStageFormPreview: React.FC<MultiStageFormPreviewProps> = ({ formData 
     setRecaptchaToken(null);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = (e?: React.FormEvent | React.MouseEvent) => {
+    e?.preventDefault?.();
+    if (currentField && !isFieldValid(currentField)) {
+      setValidationError(`"${currentField.label}" is required`);
+      return;
+    }
+    setValidationError(null);
     if (formData.settings.enableCaptcha && !recaptchaToken) {
       alert('Please complete the reCAPTCHA verification before submitting.');
       return;
@@ -423,7 +444,12 @@ const MultiStageFormPreview: React.FC<MultiStageFormPreviewProps> = ({ formData 
           )}
 
           {/* Form */}
-          <form onSubmit={handleSubmit}>
+          <form onSubmit={handleSubmit} onKeyDown={(e) => {
+              if (e.key === 'Enter' && currentStep < totalSteps - 1) {
+                e.preventDefault();
+                handleNext();
+              }
+            }}>
             {/* Form Title */}
             {formData.name && (
               <h1 
@@ -470,15 +496,21 @@ const MultiStageFormPreview: React.FC<MultiStageFormPreviewProps> = ({ formData 
                     </div>
                   
                     {currentField.description && (
-                      <p 
+                      <p
                         className="mt-4 text-center opacity-75"
-                        style={{ 
+                        style={{
                           color: formData.theme.textColor,
                           fontSize: `${formData.theme.fontSize}px`,
-                          fontFamily: formData.theme.fontFamily 
+                          fontFamily: formData.theme.fontFamily
                         }}
                       >
                         {currentField.description}
+                      </p>
+                    )}
+
+                    {validationError && (
+                      <p className="mt-3 text-center text-sm text-red-500 font-medium">
+                        {validationError}
                       </p>
                     )}
                   </div>
@@ -521,35 +553,26 @@ const MultiStageFormPreview: React.FC<MultiStageFormPreviewProps> = ({ formData 
                 {formData.settings.previousButtonText}
               </button>
 
-              {currentStep === totalSteps - 1 ? (
-                <button
-                  type="submit"
-                  className="inline-flex items-center px-8 py-3 text-white font-medium rounded-md transition-all hover:opacity-90"
-                  style={{
-                    backgroundColor: formData.theme.primaryColor,
-                    borderRadius: `${formData.theme.borderRadius}px`,
-                    fontSize: `${formData.theme.fontSize}px`,
-                    fontFamily: formData.theme.fontFamily
-                  }}
-                >
-                  {formData.settings.submitButtonText}
-                </button>
-              ) : (
-                <button
-                  type="button"
-                  onClick={handleNext}
-                  className="inline-flex items-center px-6 py-3 text-white font-medium rounded-md transition-all hover:opacity-90"
-                  style={{
-                    backgroundColor: formData.theme.primaryColor,
-                    borderRadius: `${formData.theme.borderRadius}px`,
-                    fontSize: `${formData.theme.fontSize}px`,
-                    fontFamily: formData.theme.fontFamily
-                  }}
-                >
-                  {formData.settings.nextButtonText}
-                  <ChevronRightIcon className="h-5 w-5 ml-2" />
-                </button>
-              )}
+              <button
+                type="button"
+                onClick={currentStep === totalSteps - 1 ? handleSubmit : handleNext}
+                className="inline-flex items-center px-8 py-3 text-white font-medium rounded-md transition-all hover:opacity-90"
+                style={{
+                  backgroundColor: formData.theme.primaryColor,
+                  borderRadius: `${formData.theme.borderRadius}px`,
+                  fontSize: `${formData.theme.fontSize}px`,
+                  fontFamily: formData.theme.fontFamily
+                }}
+              >
+                {currentStep === totalSteps - 1 ? (
+                  formData.settings.submitButtonText
+                ) : (
+                  <>
+                    {formData.settings.nextButtonText}
+                    <ChevronRightIcon className="h-5 w-5 ml-2" />
+                  </>
+                )}
+              </button>
             </div>
           </form>
         </div>

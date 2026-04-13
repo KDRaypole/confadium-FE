@@ -9,55 +9,75 @@ export const meta: MetaFunction = () => {
   ];
 };
 
-interface Report {
-  id: string;
+interface ReportAttributes {
   name: string;
   description: string;
   category: "sales" | "contacts" | "calls" | "activities";
-  lastGenerated: string;
+  last_generated: string;
   icon: string;
+}
+
+interface Report {
+  id: string;
+  type: string;
+  attributes: ReportAttributes;
 }
 
 const mockReports: Report[] = [
   {
     id: "1",
-    name: "Sales Performance",
-    description: "Monthly sales performance and revenue trends",
-    category: "sales",
-    lastGenerated: "2024-01-15",
-    icon: "chart"
+    type: "report",
+    attributes: {
+      name: "Sales Performance",
+      description: "Monthly sales performance and revenue trends",
+      category: "sales",
+      last_generated: "2024-01-15",
+      icon: "chart"
+    }
   },
   {
     id: "2",
-    name: "Contact Activity Summary",
-    description: "Contact engagement and interaction summary",
-    category: "contacts",
-    lastGenerated: "2024-01-14",
-    icon: "users"
+    type: "report",
+    attributes: {
+      name: "Contact Activity Summary",
+      description: "Contact engagement and interaction summary",
+      category: "contacts",
+      last_generated: "2024-01-14",
+      icon: "users"
+    }
   },
   {
     id: "3",
-    name: "Call Log Analysis",
-    description: "Call volume, duration, and success rate analysis",
-    category: "calls",
-    lastGenerated: "2024-01-13",
-    icon: "phone"
+    type: "report",
+    attributes: {
+      name: "Call Log Analysis",
+      description: "Call volume, duration, and success rate analysis",
+      category: "calls",
+      last_generated: "2024-01-13",
+      icon: "phone"
+    }
   },
   {
     id: "4",
-    name: "Deal Pipeline Report",
-    description: "Current deals status and pipeline health",
-    category: "sales",
-    lastGenerated: "2024-01-12",
-    icon: "currency"
+    type: "report",
+    attributes: {
+      name: "Deal Pipeline Report",
+      description: "Current deals status and pipeline health",
+      category: "sales",
+      last_generated: "2024-01-12",
+      icon: "currency"
+    }
   },
   {
     id: "5",
-    name: "Activity Timeline",
-    description: "Timeline of all customer interactions and activities",
-    category: "activities",
-    lastGenerated: "2024-01-11",
-    icon: "calendar"
+    type: "report",
+    attributes: {
+      name: "Activity Timeline",
+      description: "Timeline of all customer interactions and activities",
+      category: "activities",
+      last_generated: "2024-01-11",
+      icon: "calendar"
+    }
   }
 ];
 
@@ -65,7 +85,7 @@ export default function ReportsIndex() {
   const params = useParams();
   const orgId = params.orgId;
   
-  const getCategoryColor = (category: Report["category"]) => {
+  const getCategoryColor = (category: ReportAttributes["category"]) => {
     switch (category) {
       case "sales":
         return "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200";
@@ -199,22 +219,22 @@ export default function ReportsIndex() {
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-4">
                   <div className="flex-shrink-0 text-gray-400 dark:text-gray-500">
-                    {getIcon(report.icon)}
+                    {getIcon(report.attributes.icon)}
                   </div>
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center space-x-3">
                       <h4 className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                        {report.name}
+                        {report.attributes.name}
                       </h4>
-                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getCategoryColor(report.category)}`}>
-                        {report.category}
+                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getCategoryColor(report.attributes.category)}`}>
+                        {report.attributes.category}
                       </span>
                     </div>
                     <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                      {report.description}
+                      {report.attributes.description}
                     </p>
                     <p className="mt-1 text-xs text-gray-400 dark:text-gray-500">
-                      Last generated: {new Date(report.lastGenerated).toLocaleDateString()}
+                      Last generated: {new Date(report.attributes.last_generated).toLocaleDateString()}
                     </p>
                   </div>
                 </div>
