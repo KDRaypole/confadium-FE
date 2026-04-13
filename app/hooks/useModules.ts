@@ -6,6 +6,8 @@ import type { Resource } from '~/lib/api/client';
 
 export type AutomationModule = Resource<AutomationModuleAttributes>;
 export type ModuleConfiguration = Resource<ModuleConfigurationAttributes>;
+export type Configuration = ModuleConfiguration;
+export type ConfigurationCreateData = Partial<ModuleConfigurationAttributes>;
 
 export const MODULES_QUERY_KEYS = {
   all: ['modules'] as const,
@@ -57,29 +59,36 @@ export const useModules = () => {
   };
 };
 
-export const useModule = (moduleId: string) => {
-  return useQuery({
-    queryKey: MODULES_QUERY_KEYS.detail(moduleId),
-    queryFn: () => modulesAPI.getModuleById(moduleId),
+export const useModule = (moduleId?: string) => {
+  const query = useQuery({
+    queryKey: MODULES_QUERY_KEYS.detail(moduleId || ''),
+    queryFn: () => modulesAPI.getModuleById(moduleId!),
     select: (data) => data.data,
     enabled: !!moduleId,
   });
+
+  return {
+    module: query.data || null,
+    loading: query.isLoading,
+    error: query.error?.message || null,
+  };
 };
 
 export const useModuleConfigurations = (moduleId: string) => {
+  const { orgId = '' } = useParams();
   const queryClient = useQueryClient();
 
   const query = useQuery({
     queryKey: MODULES_QUERY_KEYS.configs(moduleId),
-    queryFn: () => modulesAPI.getConfigurations(moduleId),
+    queryFn: () => modulesAPI.getConfigurations(orgId, moduleId),
     select: (data) => data.data,
-    enabled: !!moduleId,
+    enabled: !!orgId && !!moduleId,
   });
 
   const invalidate = () => queryClient.invalidateQueries({ queryKey: MODULES_QUERY_KEYS.all });
 
   const createMutation = useMutation({
-    mutationFn: (attrs: Partial<ModuleConfigurationAttributes>) => modulesAPI.createConfiguration(moduleId, attrs),
+    mutationFn: (attrs: Partial<ModuleConfigurationAttributes>) => modulesAPI.createConfiguration(orgId, moduleId, attrs),
     onSuccess: invalidate,
   });
 
@@ -101,16 +110,34 @@ export const useModuleConfigurations = (moduleId: string) => {
     createConfiguration: createMutation.mutateAsync,
     updateConfiguration: updateMutation.mutateAsync,
     deleteConfiguration: deleteMutation.mutateAsync,
+    isCreating: createMutation.isPending,
+    isDeleting: deleteMutation.isPending,
   };
 };
 
-export const useConfiguration = (configId: string) => {
-  return useQuery({
-    queryKey: MODULES_QUERY_KEYS.configDetail(configId),
-    queryFn: () => modulesAPI.getConfigurationById(configId),
+export const useConfiguration = (configId?: string) => {
+  const queryClient = useQueryClient();
+
+  const query = useQuery({
+    queryKey: MODULES_QUERY_KEYS.configDetail(configId || ''),
+    queryFn: () => modulesAPI.getConfigurationById(configId!),
     select: (data) => data.data,
     enabled: !!configId,
   });
+
+  const updateMutation = useMutation({
+    mutationFn: (attrs: Partial<ModuleConfigurationAttributes>) =>
+      modulesAPI.updateConfiguration(configId!, attrs),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: MODULES_QUERY_KEYS.all }),
+  });
+
+  return {
+    configuration: query.data || null,
+    loading: query.isLoading,
+    error: query.error?.message || null,
+    updateConfiguration: updateMutation.mutateAsync,
+    isUpdating: updateMutation.isPending,
+  };
 };
 
 export const useModulesSearch = (query: string) => {

@@ -301,11 +301,18 @@ export default function ModuleDetail() {
               <div className="p-6">
                 <ConfigurationFlowOverview
                   configuration={{
-                    trigger: undefined, // Will be handled specially for multiple configs
+                    trigger: undefined,
                     conditions: [],
                     actions: []
                   }}
-                  allConfigurations={configurations}
+                  allConfigurations={configurations.map(c => ({
+                    id: c.id,
+                    name: c.attributes?.name || '',
+                    status: c.attributes?.status || '',
+                    trigger: c.attributes?.trigger || { entityType: '', action: '' },
+                    conditions: c.attributes?.conditions || [],
+                    actions: c.attributes?.actions || [],
+                  }))}
                   height="500px"
                   showControls={true}
                   showBackground={true}

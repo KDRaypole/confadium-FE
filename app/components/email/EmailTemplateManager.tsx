@@ -58,10 +58,11 @@ export default function EmailTemplateManager({
   ];
 
   const filteredTemplates = templates.filter(template => {
-    const matchesSearch = template.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         template.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         template.subject.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesCategory = selectedCategory === "all" || template.category === selectedCategory;
+    const attrs = template.attributes;
+    const matchesSearch = (attrs?.name || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+                         (attrs?.description || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+                         (attrs?.subject || '').toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesCategory = selectedCategory === "all" || attrs?.category === selectedCategory;
     return matchesSearch && matchesCategory;
   });
 
@@ -92,7 +93,7 @@ export default function EmailTemplateManager({
     }
   };
 
-  const getCategoryColor = (category: EmailTemplate["category"]) => {
+  const getCategoryColor = (category: string | null | undefined) => {
     if (!category) return "bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200";
     
     const colors = {
@@ -103,7 +104,7 @@ export default function EmailTemplateManager({
       notification: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200",
       reminder: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200"
     };
-    return colors[category] || "bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200";
+    return colors[category as keyof typeof colors] || "bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200";
   };
 
   if (!isOpen) return null;
@@ -235,28 +236,28 @@ export default function EmailTemplateManager({
                     <div className="flex items-start justify-between mb-3">
                       <div className="flex-1 min-w-0">
                         <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 truncate">
-                          {template.name}
+                          {template.attributes?.name}
                         </h3>
                         <p className="text-sm text-gray-600 dark:text-gray-400 mt-1 line-clamp-2">
-                          {template.description}
+                          {template.attributes?.description}
                         </p>
                       </div>
                     </div>
 
                     <div className="flex items-center justify-between mb-3">
-                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getCategoryColor(template.category)}`}>
-                        {template.category?.replace('_', ' ') || 'uncategorized'}
+                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getCategoryColor(template.attributes?.category)}`}>
+                        {template.attributes?.category?.replace('_', ' ') || 'uncategorized'}
                       </span>
                     </div>
 
                     <div className="mb-3">
                       <p className="text-sm text-gray-600 dark:text-gray-400 font-medium">Subject:</p>
-                      <p className="text-sm text-gray-900 dark:text-gray-100 truncate">{template.subject}</p>
+                      <p className="text-sm text-gray-900 dark:text-gray-100 truncate">{template.attributes?.subject}</p>
                     </div>
 
                     <div className="flex items-center justify-between">
                       <span className="text-xs text-gray-500 dark:text-gray-400">
-                        {template.variables.length} variables
+                        {template.attributes?.variables?.length || 0} variables
                       </span>
 
                       <div className="flex items-center space-x-1">
@@ -348,7 +349,7 @@ export default function EmailTemplateManager({
             <div className="bg-white dark:bg-gray-800 rounded-lg w-full max-w-4xl max-h-[80vh] overflow-hidden">
               <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
                 <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">
-                  Preview: {previewTemplate.name}
+                  Preview: {previewTemplate.attributes?.name}
                 </h3>
                 <button
                   onClick={() => setPreviewTemplate(null)}
@@ -360,10 +361,10 @@ export default function EmailTemplateManager({
               <div className="p-6 overflow-y-auto max-h-[60vh]">
                 <div className="mb-4">
                   <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300">Subject:</h4>
-                  <p className="text-gray-900 dark:text-gray-100">{previewTemplate.subject}</p>
+                  <p className="text-gray-900 dark:text-gray-100">{previewTemplate.attributes?.subject}</p>
                 </div>
                 <div className="border border-gray-200 dark:border-gray-600 rounded-lg p-4 bg-white dark:bg-gray-900">
-                  <div dangerouslySetInnerHTML={{ __html: previewTemplate.htmlContent }} />
+                  <div dangerouslySetInnerHTML={{ __html: previewTemplate.attributes?.html_content || '' }} />
                 </div>
               </div>
             </div>

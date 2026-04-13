@@ -39,16 +39,16 @@ export const modulesAPI = {
 
   // ── Configurations ──────────────────────────────────────
 
-  async getConfigurations(moduleId: string, params?: QueryParams): Promise<CollectionDocument<ModuleConfigurationAttributes>> {
-    return api.get<CollectionDocument<ModuleConfigurationAttributes>>(`/automation_modules/${moduleId}/configurations`, params);
+  async getConfigurations(orgId: string, moduleId: string, params?: QueryParams): Promise<CollectionDocument<ModuleConfigurationAttributes>> {
+    return api.get<CollectionDocument<ModuleConfigurationAttributes>>(`${basePath(orgId)}/${moduleId}/configurations`, params);
   },
 
   async getConfigurationById(id: string): Promise<ResourceDocument<ModuleConfigurationAttributes>> {
     return api.get<ResourceDocument<ModuleConfigurationAttributes>>(`/configurations/${id}`);
   },
 
-  async createConfiguration(moduleId: string, attrs: Partial<ModuleConfigurationAttributes>): Promise<ResourceDocument<ModuleConfigurationAttributes>> {
-    return api.post<ResourceDocument<ModuleConfigurationAttributes>>(`/automation_modules/${moduleId}/configurations`, buildResource('module_configuration', attrs));
+  async createConfiguration(orgId: string, moduleId: string, attrs: Partial<ModuleConfigurationAttributes>): Promise<ResourceDocument<ModuleConfigurationAttributes>> {
+    return api.post<ResourceDocument<ModuleConfigurationAttributes>>(`${basePath(orgId)}/${moduleId}/configurations`, buildResource('module_configuration', attrs));
   },
 
   async updateConfiguration(id: string, attrs: Partial<ModuleConfigurationAttributes>): Promise<ResourceDocument<ModuleConfigurationAttributes>> {
