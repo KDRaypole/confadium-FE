@@ -135,8 +135,8 @@ export default function ProductDetail() {
             {/* Variants */}
             <VariantEditor
               variants={variants}
-              onAdd={(attrs) => createVariant(attrs)}
-              onUpdate={(id, attrs) => updateVariant({ id, attrs })}
+              onAdd={async (attrs) => { await createVariant(attrs); }}
+              onUpdate={async (id, attrs) => { await updateVariant({ id, attrs }); }}
               onDelete={deleteVariant}
             />
           </div>

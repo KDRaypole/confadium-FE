@@ -10,3 +10,32 @@ body {
     color-scheme: dark;
   }
 }
+
+/* Page builder grid overrides */
+.page-builder-grid .react-grid-item {
+  transition: all 200ms ease;
+  border: 1px solid transparent;
+  border-radius: 4px;
+}
+.page-builder-grid .react-grid-item:hover {
+  border-color: rgba(124, 58, 237, 0.3);
+}
+.page-builder-grid .react-grid-item.react-grid-placeholder {
+  background: rgba(124, 58, 237, 0.15) !important;
+  border: 2px dashed rgba(124, 58, 237, 0.5);
+  border-radius: 4px;
+}
+.page-builder-grid .react-grid-item > .react-resizable-handle {
+  background: none;
+}
+.page-builder-grid .react-grid-item > .react-resizable-handle::after {
+  content: "";
+  position: absolute;
+  right: 3px;
+  bottom: 3px;
+  width: 8px;
+  height: 8px;
+  border-right: 2px solid rgba(124, 58, 237, 0.5);
+  border-bottom: 2px solid rgba(124, 58, 237, 0.5);
+  border-radius: 0 0 2px 0;
+}

@@ -1,5 +1,6 @@
 export { default as PageBuilder } from './PageBuilder';
-export { PageBuilderProvider, usePageBuilder, DEFAULT_COMPONENTS } from './PageBuilderContext';
+export { PageBuilderProvider, usePageBuilder, DEFAULT_COMPONENTS, DEFAULT_GRID_SIZES } from './PageBuilderContext';
+export { default as SectionGrid } from './SectionGrid';
 export { default as ComponentRenderer } from './ComponentRenderer';
 export { default as ComponentPalette } from './ComponentPalette';
 export { default as ComponentEditor } from './ComponentEditor';

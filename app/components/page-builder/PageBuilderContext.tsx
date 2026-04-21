@@ -10,6 +10,7 @@ interface PageBuilderState {
   editMode: boolean;
   device: DeviceMode;
   dragComponent: string | null;
+  showGrid: boolean;
   history: (PageComponentNode | null)[];
   historyIndex: number;
 }
@@ -24,8 +25,15 @@ interface PageBuilderActions {
   removeComponent: (selector: string) => void;
   moveComponent: (selector: string, direction: 'up' | 'down') => void;
   duplicateComponent: (selector: string) => void;
+  /** Reorder a section within the root children (nav/footer stay pinned) */
+  reorderSections: (fromIndex: number, toIndex: number) => void;
+  /** Update grid position for a component inside a section */
+  updateGridPosition: (selector: string, breakpoint: 'lg' | 'sm', pos: { x: number; y: number; w: number; h: number }) => void;
+  /** Add a component to a section with auto-generated grid position */
+  addToSection: (sectionSelector: string, componentType: string, gridOverride?: { x: number; y: number; w: number; h: number }) => void;
   setDevice: (device: DeviceMode) => void;
   setDragComponent: (type: string | null) => void;
+  setShowGrid: (show: boolean) => void;
   undo: () => void;
   redo: () => void;
   canUndo: boolean;
@@ -81,6 +89,21 @@ function reindexSelectors(node: PageComponentNode, prefix: string): PageComponen
   return updated;
 }
 
+/** Default grid sizes when dropping content into a section (matching attract-ui) */
+const DEFAULT_GRID_SIZES: Record<string, { lg: { w: number; h: number; minW?: number; minH?: number }; sm: { w: number; h: number } }> = {
+  Text:              { lg: { w: 12, h: 3 },              sm: { w: 8, h: 3 } },
+  Image:             { lg: { w: 12, h: 8 },              sm: { w: 8, h: 6 } },
+  ContentButton:     { lg: { w: 6,  h: 2, minW: 4, minH: 2 }, sm: { w: 4, h: 2 } },
+  ContentVideo:      { lg: { w: 12, h: 8, minW: 6, minH: 6 }, sm: { w: 8, h: 6 } },
+  ContentDivider:    { lg: { w: 12, h: 1 },              sm: { w: 8, h: 1 } },
+  ContentList:       { lg: { w: 12, h: 4 },              sm: { w: 8, h: 4 } },
+  ContentAccordion:  { lg: { w: 12, h: 6 },              sm: { w: 8, h: 6 } },
+  IconItem:          { lg: { w: 4,  h: 3 },              sm: { w: 3, h: 3 } },
+  BoxItem:           { lg: { w: 8,  h: 4, minW: 4, minH: 2 }, sm: { w: 6, h: 4 } },
+  FormEmbed:         { lg: { w: 12, h: 6 },              sm: { w: 8, h: 6 } },
+  ProductEmbed:      { lg: { w: 12, h: 6 },              sm: { w: 8, h: 6 } },
+};
+
 const DEFAULT_COMPONENTS: Record<string, Partial<PageComponentNode>> = {
   Text: { node: false, type: 'Text', props: { verbiage: 'New text block', tagType: 'paragraph_1', textAlign: 'left', color: '' } },
   Image: { node: false, type: 'Image', props: { src: '', alt: 'Image', objectFit: 'cover', radiusType: 'none' } },
@@ -99,8 +122,12 @@ const DEFAULT_COMPONENTS: Record<string, Partial<PageComponentNode>> = {
     props: {
       children: [],
       rows: { lg: 12, sm: 12 },
+      backgroundColor: '',
+      paddingX: 32,
+      paddingY: 24,
+      gridGapX: 8,
+      gridGapY: 8,
     },
-    grid: { lg: { x: 0, y: 0, w: 12, h: 6 }, sm: { x: 0, y: 0, w: 4, h: 4 } },
   },
 };
 
@@ -119,6 +146,7 @@ export function PageBuilderProvider({ initialStructure, initialTheme, children, 
   const [selectedSelector, setSelectedSelector] = useState<string | null>(null);
   const [device, setDevice] = useState<DeviceMode>('desktop');
   const [dragComponent, setDragComponent] = useState<string | null>(null);
+  const [showGrid, setShowGrid] = useState(false);
 
   const historyRef = useRef<(PageComponentNode | null)[]>([initialStructure]);
   const historyIndexRef = useRef(0);
@@ -243,6 +271,87 @@ export function PageBuilderProvider({ initialStructure, initialTheme, children, 
     updateStructure(cloned);
   }, [structure, updateStructure]);
 
+  const reorderSections = useCallback((fromIndex: number, toIndex: number) => {
+    if (!structure) return;
+    const cloned = deepClone(structure);
+    const children = (cloned.props.children as PageComponentNode[]) || [];
+    // Identify movable sections (not Navigation or Footer)
+    const movable: { node: PageComponentNode; origIdx: number }[] = [];
+    const pinned: { node: PageComponentNode; origIdx: number }[] = [];
+    children.forEach((c, i) => {
+      if (c.type === 'Navigation' || c.type === 'Footer') {
+        pinned.push({ node: c, origIdx: i });
+      } else {
+        movable.push({ node: c, origIdx: i });
+      }
+    });
+    if (fromIndex < 0 || fromIndex >= movable.length || toIndex < 0 || toIndex >= movable.length) return;
+    const [moved] = movable.splice(fromIndex, 1);
+    movable.splice(toIndex, 0, moved);
+    // Reconstruct: nav first (if exists), then sections in new order, footer last (if exists)
+    const nav = pinned.find(p => p.node.type === 'Navigation');
+    const footer = pinned.find(p => p.node.type === 'Footer');
+    const rebuilt: PageComponentNode[] = [];
+    if (nav) rebuilt.push(nav.node);
+    movable.forEach(m => rebuilt.push(m.node));
+    if (footer) rebuilt.push(footer.node);
+    cloned.props = { ...cloned.props, children: rebuilt.map((c, i) => reindexSelectors(c, `${cloned.selector}-${i}`)) };
+    updateStructure(cloned);
+  }, [structure, updateStructure]);
+
+  const updateGridPosition = useCallback((selector: string, breakpoint: 'lg' | 'sm', pos: { x: number; y: number; w: number; h: number }) => {
+    if (!structure) return;
+    const cloned = deepClone(structure);
+    const target = findBySelector(cloned, selector);
+    if (!target) return;
+    const existingGrid = target.grid || { lg: { x: 0, y: 0, w: 12, h: 4 }, sm: { x: 0, y: 0, w: 8, h: 4 } };
+    target.grid = {
+      ...existingGrid,
+      [breakpoint]: { ...existingGrid[breakpoint], ...pos },
+    };
+    updateStructure(cloned);
+  }, [structure, updateStructure]);
+
+  const addToSection = useCallback((sectionSelector: string, componentType: string, gridOverride?: { x: number; y: number; w: number; h: number }) => {
+    if (!structure) return;
+    const template = DEFAULT_COMPONENTS[componentType];
+    if (!template) return;
+
+    const cloned = deepClone(structure);
+    const section = findBySelector(cloned, sectionSelector);
+    if (!section) return;
+
+    const children = (section.props.children as PageComponentNode[]) || [];
+    const newIdx = children.length;
+    const newSelector = `${sectionSelector}-${newIdx}`;
+
+    // Calculate next y position from existing children
+    let nextY = 0;
+    for (const child of children) {
+      const g = child.grid?.lg;
+      if (g) nextY = Math.max(nextY, g.y + g.h);
+    }
+
+    const defaults = DEFAULT_GRID_SIZES[template.type!] || { lg: { w: 12, h: 4 }, sm: { w: 8, h: 4 } };
+    const lgPos = gridOverride || { x: 0, y: nextY, w: defaults.lg.w, h: defaults.lg.h };
+
+    const newComponent: PageComponentNode = {
+      selector: newSelector,
+      node: template.node ?? false,
+      type: template.type!,
+      props: deepClone(template.props) as PageComponentNode['props'],
+      grid: {
+        lg: { ...lgPos, minW: defaults.lg.minW, minH: defaults.lg.minH },
+        sm: { x: 0, y: nextY, w: defaults.sm.w, h: defaults.sm.h },
+      },
+    };
+
+    children.push(newComponent);
+    section.props = { ...section.props, children };
+    updateStructure(cloned);
+    setSelectedSelector(newSelector);
+  }, [structure, updateStructure]);
+
   const undo = useCallback(() => {
     if (historyIndexRef.current > 0) {
       historyIndexRef.current--;
@@ -268,6 +377,7 @@ export function PageBuilderProvider({ initialStructure, initialTheme, children, 
     editMode: true,
     device,
     dragComponent,
+    showGrid,
     history: historyRef.current,
     historyIndex: historyIndexRef.current,
     setStructure,
@@ -279,8 +389,12 @@ export function PageBuilderProvider({ initialStructure, initialTheme, children, 
     removeComponent,
     moveComponent,
     duplicateComponent,
+    reorderSections,
+    updateGridPosition,
+    addToSection,
     setDevice,
     setDragComponent,
+    setShowGrid,
     undo,
     redo,
     canUndo: historyIndexRef.current > 0,
@@ -290,4 +404,4 @@ export function PageBuilderProvider({ initialStructure, initialTheme, children, 
   return <PageBuilderCtx.Provider value={value}>{children}</PageBuilderCtx.Provider>;
 }
 
-export { DEFAULT_COMPONENTS };
+export { DEFAULT_COMPONENTS, DEFAULT_GRID_SIZES };

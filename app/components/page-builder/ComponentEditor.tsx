@@ -1,10 +1,10 @@
 import { usePageBuilder } from "./PageBuilderContext";
 import type { PageComponentNode } from "~/lib/api/types";
-import { useActiveForms } from "~/hooks/useForms";
+import { useForms } from "~/hooks/useForms";
 import { useProducts } from "~/hooks/useProducts";
 
 export default function ComponentEditor() {
-  const { selectedSelector, getComponent, manipulate, select } = usePageBuilder();
+  const { selectedSelector, getComponent, manipulate, select, removeComponent, duplicateComponent } = usePageBuilder();
 
   if (!selectedSelector) {
     return (
@@ -17,6 +17,15 @@ export default function ComponentEditor() {
   const component = getComponent(selectedSelector);
   if (!component) return null;
 
+  const handleDelete = () => {
+    removeComponent(selectedSelector);
+    select(null);
+  };
+
+  const handleDuplicate = () => {
+    duplicateComponent(selectedSelector);
+  };
+
   return (
     <div className="p-4 space-y-4">
       <div className="flex items-center justify-between">
@@ -28,6 +37,22 @@ export default function ComponentEditor() {
 
       <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
         {renderEditor(component, manipulate)}
+      </div>
+
+      {/* Actions */}
+      <div className="border-t border-gray-200 dark:border-gray-700 pt-4 flex items-center gap-2">
+        <button
+          onClick={handleDuplicate}
+          className="flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600"
+        >
+          Duplicate
+        </button>
+        <button
+          onClick={handleDelete}
+          className="flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md text-white bg-red-600 hover:bg-red-700"
+        >
+          Delete
+        </button>
       </div>
     </div>
   );
@@ -52,6 +77,8 @@ function renderEditor(
       return <IconEditor node={node} onChange={update} />;
     case 'BoxItem':
       return <BoxEditor node={node} onChange={update} />;
+    case 'Section':
+      return <SectionEditor node={node} onChange={update} />;
     case 'Navigation':
       return <NavigationEditor node={node} onChange={update} />;
     case 'Footer':
@@ -239,27 +266,139 @@ function BoxEditor({ node, onChange }: { node: PageComponentNode; onChange: (c: 
   );
 }
 
+function SectionEditor({ node, onChange }: { node: PageComponentNode; onChange: (c: Record<string, unknown>) => void }) {
+  const p = node.props as Record<string, unknown>;
+  const paddingX = (p.paddingX as number) ?? 32;
+  const paddingY = (p.paddingY as number) ?? 24;
+  const gridGapX = (p.gridGapX as number) ?? 8;
+  const gridGapY = (p.gridGapY as number) ?? 8;
+
+  return (
+    <div className="space-y-3">
+      <Field label="Background Color">
+        <ColorInput value={(p.backgroundColor as string) || ''} onChange={(v) => onChange({ backgroundColor: v })} />
+      </Field>
+
+      <div className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider pt-2">Padding</div>
+      <Field label="Horizontal">
+        <div className="flex items-center space-x-2">
+          <input
+            type="range"
+            min="0"
+            max="120"
+            step="4"
+            value={paddingX}
+            onChange={(e) => onChange({ paddingX: parseInt(e.target.value, 10) })}
+            className="flex-1"
+          />
+          <span className="text-xs text-gray-500 tabular-nums w-10 text-right">{paddingX}px</span>
+        </div>
+      </Field>
+      <Field label="Vertical">
+        <div className="flex items-center space-x-2">
+          <input
+            type="range"
+            min="0"
+            max="120"
+            step="4"
+            value={paddingY}
+            onChange={(e) => onChange({ paddingY: parseInt(e.target.value, 10) })}
+            className="flex-1"
+          />
+          <span className="text-xs text-gray-500 tabular-nums w-10 text-right">{paddingY}px</span>
+        </div>
+      </Field>
+
+      <div className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider pt-2">Grid Gap</div>
+      <Field label="Column Gap">
+        <div className="flex items-center space-x-2">
+          <input
+            type="range"
+            min="0"
+            max="32"
+            step="2"
+            value={gridGapX}
+            onChange={(e) => onChange({ gridGapX: parseInt(e.target.value, 10) })}
+            className="flex-1"
+          />
+          <span className="text-xs text-gray-500 tabular-nums w-10 text-right">{gridGapX}px</span>
+        </div>
+      </Field>
+      <Field label="Row Gap">
+        <div className="flex items-center space-x-2">
+          <input
+            type="range"
+            min="0"
+            max="32"
+            step="2"
+            value={gridGapY}
+            onChange={(e) => onChange({ gridGapY: parseInt(e.target.value, 10) })}
+            className="flex-1"
+          />
+          <span className="text-xs text-gray-500 tabular-nums w-10 text-right">{gridGapY}px</span>
+        </div>
+      </Field>
+
+      <div className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider pt-2">Size</div>
+      <Field label="Min Rows (height)">
+        <div className="flex items-center space-x-2">
+          <input
+            type="range"
+            min="4"
+            max="40"
+            value={parseInt(((p.rows as { lg: number })?.lg ?? 12).toString(), 10)}
+            onChange={(e) => {
+              const val = parseInt(e.target.value, 10);
+              onChange({ rows: { lg: val, sm: val } });
+            }}
+            className="flex-1"
+          />
+          <span className="text-xs text-gray-500 tabular-nums w-6 text-right">
+            {(p.rows as { lg: number })?.lg || 12}
+          </span>
+        </div>
+      </Field>
+    </div>
+  );
+}
+
 function NavigationEditor({ node, onChange }: { node: PageComponentNode; onChange: (c: Record<string, unknown>) => void }) {
   const p = node.props as Record<string, string>;
   return (
-    <Field label="Logo Text">
-      <TextInput value={p.logo || ''} onChange={(v) => onChange({ logo: v })} placeholder="Your Logo" />
-    </Field>
+    <div className="space-y-3">
+      <Field label="Logo Text">
+        <TextInput value={p.logo || ''} onChange={(v) => onChange({ logo: v })} placeholder="Your Logo" />
+      </Field>
+      <Field label="Background Color">
+        <ColorInput value={p.backgroundColor || ''} onChange={(v) => onChange({ backgroundColor: v })} />
+      </Field>
+      <Field label="Text Color">
+        <ColorInput value={p.textColor || ''} onChange={(v) => onChange({ textColor: v })} />
+      </Field>
+    </div>
   );
 }
 
 function FooterEditor({ node, onChange }: { node: PageComponentNode; onChange: (c: Record<string, unknown>) => void }) {
   const p = node.props as Record<string, string>;
   return (
-    <Field label="Footer Text">
-      <TextArea value={p.text || ''} onChange={(v) => onChange({ text: v })} />
-    </Field>
+    <div className="space-y-3">
+      <Field label="Footer Text">
+        <TextArea value={p.text || ''} onChange={(v) => onChange({ text: v })} />
+      </Field>
+      <Field label="Background Color">
+        <ColorInput value={p.backgroundColor || ''} onChange={(v) => onChange({ backgroundColor: v })} />
+      </Field>
+      <Field label="Text Color">
+        <ColorInput value={p.textColor || ''} onChange={(v) => onChange({ textColor: v })} />
+      </Field>
+    </div>
   );
 }
 
 function FormEmbedEditor({ node, onChange }: { node: PageComponentNode; onChange: (c: Record<string, unknown>) => void }) {
   const p = node.props as { formId?: string };
-  const { data: forms } = useActiveForms();
+  const { forms, loading } = useForms();
 
   return (
     <Field label="Select Form">
@@ -271,9 +410,12 @@ function FormEmbedEditor({ node, onChange }: { node: PageComponentNode; onChange
         }}
         className="block w-full border border-gray-300 dark:border-gray-600 rounded px-2 py-1.5 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
       >
-        <option value="">Choose a form...</option>
+        <option value="">{loading ? 'Loading forms...' : 'Choose a form...'}</option>
         {forms?.map(form => (
-          <option key={form.id} value={form.id}>{form.attributes.name}</option>
+          <option key={form.id} value={form.id}>
+            {form.attributes.name}
+            {form.attributes.state?.action ? ` (${form.attributes.state.action})` : ''}
+          </option>
         ))}
       </select>
     </Field>
@@ -282,7 +424,7 @@ function FormEmbedEditor({ node, onChange }: { node: PageComponentNode; onChange
 
 function ProductEmbedEditor({ node, onChange }: { node: PageComponentNode; onChange: (c: Record<string, unknown>) => void }) {
   const p = node.props as { productId?: string };
-  const { products } = useProducts();
+  const { products, loading } = useProducts();
 
   return (
     <Field label="Select Product">
@@ -294,9 +436,12 @@ function ProductEmbedEditor({ node, onChange }: { node: PageComponentNode; onCha
         }}
         className="block w-full border border-gray-300 dark:border-gray-600 rounded px-2 py-1.5 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
       >
-        <option value="">Choose a product...</option>
+        <option value="">{loading ? 'Loading products...' : 'Choose a product...'}</option>
         {products?.map(product => (
-          <option key={product.id} value={product.id}>{product.attributes.name}</option>
+          <option key={product.id} value={product.id}>
+            {product.attributes.name}
+            {product.attributes.state?.action ? ` (${product.attributes.state.action})` : ''}
+          </option>
         ))}
       </select>
     </Field>

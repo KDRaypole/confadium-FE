@@ -14,6 +14,7 @@ import {
   Squares2X2Icon,
   Cog6ToothIcon,
   EyeIcon,
+  ViewColumnsIcon,
 } from "@heroicons/react/24/outline";
 
 type SidebarTab = 'components' | 'properties' | 'theme';
@@ -42,12 +43,21 @@ export default function PageBuilder({ initialStructure, initialTheme, onSave, sa
 }
 
 function BuilderLayout({ onSave, saving }: { onSave: () => void; saving?: boolean }) {
-  const { structure, device, setDevice, undo, redo, canUndo, canRedo, selectedSelector } = usePageBuilder();
+  const { structure, device, setDevice, undo, redo, canUndo, canRedo, selectedSelector, showGrid, setShowGrid } = usePageBuilder();
   const [sidebarTab, setSidebarTab] = useState<SidebarTab>('components');
   const [showPreview, setShowPreview] = useState(false);
 
-  // Auto-switch to properties when a component is selected
-  const activeTab = selectedSelector && sidebarTab === 'components' ? 'properties' : sidebarTab;
+  // Auto-switch to properties when a content component is selected.
+  // Selecting a section keeps the palette visible so the user can add content to it.
+  const isSelectedSection = (() => {
+    if (!selectedSelector || !structure) return false;
+    const rootChildren = (structure.props.children as PageComponentNode[]) || [];
+    return rootChildren.some(c => c.selector === selectedSelector && c.type === 'Section');
+  })();
+
+  const activeTab = selectedSelector && sidebarTab === 'components' && !isSelectedSection
+    ? 'properties'
+    : sidebarTab;
 
   return (
     <div className="h-[calc(100vh-4rem)] flex flex-col">
@@ -85,6 +95,17 @@ function BuilderLayout({ onSave, saving }: { onSave: () => void; saving?: boolea
             className={`p-1.5 rounded ${device === 'mobile' ? 'bg-purple-100 dark:bg-purple-900 text-purple-600' : 'hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-400'}`}
           >
             <DevicePhoneMobileIcon className="h-4 w-4" />
+          </button>
+
+          <div className="w-px h-5 bg-gray-300 dark:bg-gray-600 mx-2" />
+
+          {/* Grid toggle */}
+          <button
+            onClick={() => setShowGrid(!showGrid)}
+            className={`p-1.5 rounded ${showGrid ? 'bg-purple-100 dark:bg-purple-900 text-purple-600' : 'hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-400'}`}
+            title={showGrid ? 'Hide grid' : 'Show grid'}
+          >
+            <ViewColumnsIcon className="h-4 w-4" />
           </button>
         </div>
 
@@ -155,7 +176,7 @@ function BuilderLayout({ onSave, saving }: { onSave: () => void; saving?: boolea
         <div className="flex-1 overflow-y-auto bg-gray-100 dark:bg-gray-900">
           <div
             className={`mx-auto transition-all ${
-              device === 'mobile' ? 'max-w-[375px]' : 'max-w-full'
+              device === 'mobile' ? 'max-w-[375px]' : 'max-w-[1280px]'
             } ${showPreview ? '' : 'p-4'}`}
           >
             <div className={`bg-white dark:bg-gray-800 ${showPreview ? '' : 'shadow-lg rounded-lg overflow-hidden'} min-h-[600px]`}>

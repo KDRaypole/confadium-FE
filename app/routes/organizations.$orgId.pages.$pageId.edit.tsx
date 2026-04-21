@@ -16,16 +16,19 @@ export default function EditPage() {
   const [saving, setSaving] = useState(false);
 
   const handleSave = useCallback(async (structure: PageComponentNode | null, theme: PageTheme) => {
+    if (!page) return;
     setSaving(true);
     try {
       await updatePage({
+        name: page.attributes.name,
+        slug: page.attributes.slug,
         structure: structure as Record<string, unknown>,
         theme,
       });
     } finally {
       setSaving(false);
     }
-  }, [updatePage]);
+  }, [updatePage, page]);
 
   if (loading || !page) {
     return (

@@ -10,6 +10,8 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useState } from 'react';
 
 import "./tailwind.css";
+import "react-grid-layout/css/styles.css";
+import "react-resizable/css/styles.css";
 import { DarkModeProvider } from "~/contexts/DarkModeContext";
 import { AuthProvider } from "~/contexts/AuthContext";
 
