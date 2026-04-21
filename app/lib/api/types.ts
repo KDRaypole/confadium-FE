@@ -309,3 +309,142 @@ export interface CalendarIntegrationAttributes extends Timestamps {
   sync_enabled: boolean;
   last_sync_at: string | null;
 }
+
+// ── Page Builder ────────────────────────────────────────────
+
+export interface PageComponentNode {
+  selector: string;
+  node: boolean;
+  type: string;
+  props: Record<string, unknown> & {
+    children?: PageComponentNode[];
+  };
+  grid?: {
+    lg: GridPosition;
+    sm: GridPosition;
+  };
+}
+
+export interface GridPosition {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+  minW?: number;
+  minH?: number;
+  maxW?: number;
+  maxH?: number;
+}
+
+export interface PageThemeFonts {
+  fontFamily?: string;
+  fontWeight?: string;
+  lineHeight?: string;
+  letterSpacing?: string;
+}
+
+export interface PageThemeButton {
+  padding?: string;
+  style?: 'solid' | 'outline';
+  shape?: 'square' | 'rounded' | 'pill';
+}
+
+export interface PageTheme {
+  fonts?: {
+    headings?: PageThemeFonts;
+    paragraphs?: PageThemeFonts;
+    buttons?: PageThemeFonts;
+  };
+  buttons?: {
+    primary?: PageThemeButton;
+    secondary?: PageThemeButton;
+    tertiary?: PageThemeButton;
+  };
+  colorPalette?: {
+    color1?: string;
+    color2?: string;
+    color3?: string;
+    color4?: string;
+    color5?: string;
+  };
+  selectedTheme?: string;
+}
+
+export interface PageSettings {
+  seoTitle?: string;
+  seoDescription?: string;
+  ogImage?: string;
+  favicon?: string;
+  customCss?: string;
+  customJs?: string;
+  analyticsId?: string;
+  passwordProtected?: boolean;
+  password?: string;
+}
+
+export interface PageAttributes extends Timestamps, StatefulAttributes {
+  name: string;
+  slug: string;
+  description: string | null;
+  layout: string | null;
+  structure: PageComponentNode | Record<string, unknown>;
+  theme: PageTheme;
+  template_name: string | null;
+  published_url: string | null;
+  settings: PageSettings;
+}
+
+// ── Page Template ───────────────────────────────────────────
+
+export type PageTemplateCategory = 'landing' | 'portfolio' | 'contact' | 'product' | 'blank';
+
+export interface PageTemplateAttributes extends Timestamps {
+  name: string;
+  description: string | null;
+  category: PageTemplateCategory | null;
+  thumbnail_url: string | null;
+  structure: PageComponentNode | Record<string, unknown>;
+  theme: PageTheme;
+}
+
+// ── Product ─────────────────────────────────────────────────
+
+export type PricingType = 'fixed' | 'variable' | 'tiered';
+
+export interface PricingTier {
+  min_quantity: number;
+  max_quantity: number | null;
+  price_cents: number;
+}
+
+export interface PricingConfig {
+  tiers?: PricingTier[];
+  min_cents?: number;
+  max_cents?: number;
+}
+
+export interface ProductAttributes extends Timestamps, StatefulAttributes {
+  name: string;
+  description: string | null;
+  sku: string | null;
+  price_cents: number | null;
+  currency: string;
+  pricing_type: PricingType;
+  pricing_config: PricingConfig;
+  category: string | null;
+  image_url: string | null;
+  available: boolean;
+  inventory_count: number | null;
+  metadata: Record<string, unknown>;
+}
+
+// ── Product Variant ─────────────────────────────────────────
+
+export interface ProductVariantAttributes extends Timestamps {
+  name: string;
+  sku: string | null;
+  price_cents: number | null;
+  options: Record<string, unknown>;
+  available: boolean;
+  inventory_count: number | null;
+}
