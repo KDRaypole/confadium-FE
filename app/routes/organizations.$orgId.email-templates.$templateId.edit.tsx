@@ -6,7 +6,7 @@ import HTMLEditor from "~/components/email/HTMLEditor";
 import { replaceVariables } from "~/components/email/EmailTemplates";
 import { useEmailTemplate } from "~/hooks/useEmailTemplates";
 import type { EmailTemplateUpdateData } from "~/lib/api/emailTemplates";
-import { 
+import {
   ArrowLeftIcon,
   EyeIcon,
   ClipboardDocumentIcon,
@@ -14,8 +14,12 @@ import {
   XMarkIcon,
   PlusIcon,
   TrashIcon,
-  TagIcon
+  TagIcon,
+  Squares2X2Icon,
+  CodeBracketIcon,
 } from "@heroicons/react/24/outline";
+import { EmailBuilder } from "~/components/email-builder";
+import type { EmailComponentNode, EmailTheme } from "~/lib/api/types";
 
 export const meta: MetaFunction = () => {
   return [
@@ -46,6 +50,17 @@ export default function EditEmailTemplate() {
   const [sampleVariables, setSampleVariables] = useState<Record<string, string>>({});
   const [previewMode, setPreviewMode] = useState<"html" | "text">("html");
   const [showPreview, setShowPreview] = useState(true);
+  const [editorMode, setEditorMode] = useState<'code' | 'visual'>('code');
+
+  // Determine initial editor mode based on whether structure exists
+  useEffect(() => {
+    if (template) {
+      const structure = (template.attributes as any)?.structure;
+      if (structure && Array.isArray(structure) && structure.length > 0) {
+        setEditorMode('visual');
+      }
+    }
+  }, [template]);
 
   const extractVariablesFromContent = (content: string) => {
     const regex = /\{\{([^}]+)\}\}/g;
@@ -325,6 +340,81 @@ export default function EditEmailTemplate() {
             </div>
           </div>
 
+          {/* Editor mode toggle */}
+          <div className="mb-6 flex items-center space-x-1 bg-gray-100 dark:bg-gray-700 rounded-md p-0.5 w-fit">
+            <button
+              onClick={() => setEditorMode('visual')}
+              className={`inline-flex items-center px-3 py-1.5 text-sm font-medium rounded ${editorMode === 'visual' ? 'bg-white dark:bg-gray-600 text-purple-600 shadow-sm' : 'text-gray-600 dark:text-gray-400'}`}
+            >
+              <Squares2X2Icon className="h-4 w-4 mr-1.5" /> Visual Builder
+            </button>
+            <button
+              onClick={() => setEditorMode('code')}
+              className={`inline-flex items-center px-3 py-1.5 text-sm font-medium rounded ${editorMode === 'code' ? 'bg-white dark:bg-gray-600 text-purple-600 shadow-sm' : 'text-gray-600 dark:text-gray-400'}`}
+            >
+              <CodeBracketIcon className="h-4 w-4 mr-1.5" /> Code Editor
+            </button>
+          </div>
+
+          {/* Visual Builder Mode */}
+          {editorMode === 'visual' && template && (
+            <div className="space-y-6">
+              {/* Basic metadata fields */}
+              <div className="bg-white dark:bg-gray-800 shadow rounded-lg border border-gray-200 dark:border-gray-700 p-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Name *</label>
+                    <input type="text" value={templateData.name} onChange={(e) => setTemplateData(prev => ({ ...prev, name: e.target.value }))} className="block w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 sm:text-sm" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Category</label>
+                    <select value={templateData.category} onChange={(e) => setTemplateData(prev => ({ ...prev, category: e.target.value }))} className="block w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 sm:text-sm">
+                      <option value="welcome">Welcome</option>
+                      <option value="follow_up">Follow Up</option>
+                      <option value="nurturing">Nurturing</option>
+                      <option value="promotion">Promotion</option>
+                      <option value="notification">Notification</option>
+                      <option value="reminder">Reminder</option>
+                    </select>
+                  </div>
+                  <div className="md:col-span-2">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Subject Line</label>
+                    <input type="text" value={templateData.subject} onChange={(e) => setTemplateData(prev => ({ ...prev, subject: e.target.value }))} placeholder="Email subject..." className="block w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 sm:text-sm" />
+                  </div>
+                  <div className="md:col-span-2">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Preview Text</label>
+                    <input type="text" value={templateData.previewText} onChange={(e) => setTemplateData(prev => ({ ...prev, previewText: e.target.value }))} placeholder="Preview text shown in inbox..." className="block w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 sm:text-sm" />
+                  </div>
+                </div>
+              </div>
+
+              {/* Email Builder */}
+              <EmailBuilder
+                initialComponents={((template.attributes as any)?.structure as EmailComponentNode[]) || []}
+                initialTheme={((template.attributes as any)?.theme as EmailTheme) || {}}
+                initialHtmlContent={templateData.htmlContent}
+                onSave={async (data) => {
+                  try {
+                    await updateTemplate({
+                      ...templateData,
+                      htmlContent: data.html_content,
+                      textContent: data.text_content,
+                      structure: data.structure as any,
+                      theme: data.theme as any,
+                    });
+                    alert("Template saved!");
+                    navigate(`/organizations/${orgId}/email-templates`);
+                  } catch (err) {
+                    alert("Failed to save template.");
+                  }
+                }}
+                saving={isUpdating}
+              />
+            </div>
+          )}
+
+          {/* Code Editor Mode (existing UI) */}
+          {editorMode === 'code' && (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Left Panel - Template Editor */}
             <div className="space-y-6">
@@ -601,6 +691,7 @@ export default function EditEmailTemplate() {
               </div>
             )}
           </div>
+          )}
         </div>
       </div>
     </Layout>

@@ -172,6 +172,25 @@ export interface FormSubmissionAttributes extends Timestamps {
 
 export type EmailTemplateCategory = 'welcome' | 'follow_up' | 'nurturing' | 'promotion' | 'notification' | 'reminder';
 
+export interface EmailTheme {
+  bodyBg?: string;
+  contentBg?: string;
+  primaryColor?: string;
+  textColor?: string;
+  headingColor?: string;
+  linkColor?: string;
+  fontFamily?: string;
+  headingFontSize?: string;
+  bodyFontSize?: string;
+  smallFontSize?: string;
+}
+
+export interface EmailComponentNode {
+  id: string;
+  type: string;
+  props: Record<string, unknown>;
+}
+
 export interface EmailTemplateAttributes extends Timestamps {
   name: string;
   category: EmailTemplateCategory | null;
@@ -181,6 +200,8 @@ export interface EmailTemplateAttributes extends Timestamps {
   description: string | null;
   preview_text: string | null;
   variables: string[];
+  structure: EmailComponentNode[] | Record<string, unknown>;
+  theme: EmailTheme;
 }
 
 // ── Automation Module ───────────────────────────────────────
