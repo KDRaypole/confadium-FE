@@ -24,9 +24,11 @@ interface PageBuilderProps {
   initialTheme: PageTheme;
   onSave: (structure: PageComponentNode | null, theme: PageTheme) => void;
   saving?: boolean;
+  websiteId?: string;
+  pageId?: string;
 }
 
-export default function PageBuilder({ initialStructure, initialTheme, onSave, saving }: PageBuilderProps) {
+export default function PageBuilder({ initialStructure, initialTheme, onSave, saving, websiteId, pageId }: PageBuilderProps) {
   const [currentStructure, setCurrentStructure] = useState<PageComponentNode | null>(initialStructure);
   const [currentTheme, setCurrentTheme] = useState<PageTheme>(initialTheme);
 
@@ -36,7 +38,7 @@ export default function PageBuilder({ initialStructure, initialTheme, onSave, sa
   }, []);
 
   return (
-    <PageBuilderProvider initialStructure={initialStructure} initialTheme={initialTheme} onChange={handleChange}>
+    <PageBuilderProvider initialStructure={initialStructure} initialTheme={initialTheme} onChange={handleChange} websiteId={websiteId} pageId={pageId}>
       <BuilderLayout onSave={() => onSave(currentStructure, currentTheme)} saving={saving} />
     </PageBuilderProvider>
   );

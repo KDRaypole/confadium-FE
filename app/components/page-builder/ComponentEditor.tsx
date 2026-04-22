@@ -2,6 +2,7 @@ import { usePageBuilder } from "./PageBuilderContext";
 import type { PageComponentNode } from "~/lib/api/types";
 import { useForms } from "~/hooks/useForms";
 import { useProducts } from "~/hooks/useProducts";
+import { useWebsitePages } from "~/hooks/useWebsites";
 
 export default function ComponentEditor() {
   const { selectedSelector, getComponent, manipulate, select, removeComponent, duplicateComponent } = usePageBuilder();
@@ -199,6 +200,25 @@ function ImageEditor({ node, onChange }: { node: PageComponentNode; onChange: (c
           { value: 'none', label: 'None' }, { value: 'rounded', label: 'Rounded' }, { value: 'circle', label: 'Circle' },
         ]} />
       </Field>
+      <Field label="Link (optional)">
+        <SelectInput value={p.linkType || 'none'} onChange={(v) => onChange({ linkType: v })} options={[
+          { value: 'none', label: 'No Link' },
+          { value: 'link', label: 'External URL' },
+          { value: 'page', label: 'Website Page' },
+        ]} />
+      </Field>
+      {p.linkType === 'link' && (
+        <Field label="URL">
+          <TextInput value={p.link || ''} onChange={(v) => onChange({ link: v })} placeholder="https://..." />
+        </Field>
+      )}
+      {p.linkType === 'page' && (
+        <PageLinkPicker
+          value={p.link || ''}
+          pageId={p.linkedPageId || ''}
+          onChange={(pageId, slug) => onChange({ linkedPageId: pageId, link: slug })}
+        />
+      )}
     </div>
   );
 }
@@ -210,14 +230,25 @@ function ButtonEditor({ node, onChange }: { node: PageComponentNode; onChange: (
       <Field label="Button Text">
         <TextInput value={p.text || ''} onChange={(v) => onChange({ text: v })} />
       </Field>
-      <Field label="Link URL">
-        <TextInput value={p.link || ''} onChange={(v) => onChange({ link: v })} placeholder="https://..." />
-      </Field>
       <Field label="Link Type">
         <SelectInput value={p.linkType || 'link'} onChange={(v) => onChange({ linkType: v })} options={[
-          { value: 'link', label: 'URL' }, { value: 'anchor', label: 'Page Anchor' }, { value: 'phone', label: 'Phone' },
+          { value: 'link', label: 'External URL' },
+          { value: 'page', label: 'Website Page' },
+          { value: 'anchor', label: 'Page Anchor' },
+          { value: 'phone', label: 'Phone' },
         ]} />
       </Field>
+      {p.linkType === 'page' ? (
+        <PageLinkPicker
+          value={p.link || ''}
+          pageId={p.linkedPageId || ''}
+          onChange={(pageId, slug) => onChange({ linkedPageId: pageId, link: slug })}
+        />
+      ) : (
+        <Field label={p.linkType === 'phone' ? 'Phone Number' : p.linkType === 'anchor' ? 'Anchor ID' : 'URL'}>
+          <TextInput value={p.link || ''} onChange={(v) => onChange({ link: v })} placeholder={p.linkType === 'phone' ? '+1234567890' : p.linkType === 'anchor' ? '#section-name' : 'https://...'} />
+        </Field>
+      )}
       <Field label="Style">
         <SelectInput value={p.buttonType || 'primary'} onChange={(v) => onChange({ buttonType: v })} options={[
           { value: 'primary', label: 'Primary' }, { value: 'secondary', label: 'Secondary' }, { value: 'tertiary', label: 'Outline' },
@@ -363,18 +394,80 @@ function SectionEditor({ node, onChange }: { node: PageComponentNode; onChange: 
 }
 
 function NavigationEditor({ node, onChange }: { node: PageComponentNode; onChange: (c: Record<string, unknown>) => void }) {
-  const p = node.props as Record<string, string>;
+  const p = node.props as Record<string, unknown>;
+  const { websiteId, pageId } = usePageBuilder();
+  const { pages } = useWebsitePages(websiteId || '');
+  const links = (p.links as { text: string; href: string; pageId?: string }[]) || [];
+  const useAutoLinks = (p.autoLinksFromWebsite as boolean) ?? true;
+
+  const handleAutoPopulate = () => {
+    const autoLinks = pages
+      .filter(pg => pg.id !== pageId)
+      .map(pg => ({ text: pg.attributes.name, href: `/${pg.attributes.slug}`, pageId: pg.id }));
+    onChange({ links: autoLinks, autoLinksFromWebsite: true });
+  };
+
+  const updateLink = (index: number, field: string, value: string) => {
+    const updated = [...links];
+    updated[index] = { ...updated[index], [field]: value };
+    onChange({ links: updated, autoLinksFromWebsite: false });
+  };
+
+  const addLink = () => {
+    onChange({ links: [...links, { text: 'New Link', href: '#' }], autoLinksFromWebsite: false });
+  };
+
+  const removeLink = (index: number) => {
+    onChange({ links: links.filter((_, i) => i !== index), autoLinksFromWebsite: false });
+  };
+
   return (
     <div className="space-y-3">
       <Field label="Logo Text">
-        <TextInput value={p.logo || ''} onChange={(v) => onChange({ logo: v })} placeholder="Your Logo" />
+        <TextInput value={(p.logo as string) || ''} onChange={(v) => onChange({ logo: v })} placeholder="Your Logo" />
       </Field>
       <Field label="Background Color">
-        <ColorInput value={p.backgroundColor || ''} onChange={(v) => onChange({ backgroundColor: v })} />
+        <ColorInput value={(p.backgroundColor as string) || ''} onChange={(v) => onChange({ backgroundColor: v })} />
       </Field>
       <Field label="Text Color">
-        <ColorInput value={p.textColor || ''} onChange={(v) => onChange({ textColor: v })} />
+        <ColorInput value={(p.textColor as string) || ''} onChange={(v) => onChange({ textColor: v })} />
       </Field>
+
+      <div className="border-t border-gray-200 dark:border-gray-700 pt-3">
+        <div className="flex items-center justify-between mb-2">
+          <span className="text-xs font-medium text-gray-600 dark:text-gray-400">Navigation Links</span>
+          {websiteId && pages.length > 0 && (
+            <button onClick={handleAutoPopulate} className="text-xs text-purple-600 hover:text-purple-700 dark:text-purple-400">
+              Auto from pages
+            </button>
+          )}
+        </div>
+
+        <div className="space-y-2">
+          {links.map((link, i) => (
+            <div key={i} className="flex items-center gap-1">
+              <input
+                type="text"
+                value={link.text}
+                onChange={(e) => updateLink(i, 'text', e.target.value)}
+                placeholder="Label"
+                className="flex-1 border border-gray-300 dark:border-gray-600 rounded px-2 py-1 text-xs bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+              />
+              <input
+                type="text"
+                value={link.href}
+                onChange={(e) => updateLink(i, 'href', e.target.value)}
+                placeholder="/slug"
+                className="flex-1 border border-gray-300 dark:border-gray-600 rounded px-2 py-1 text-xs bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+              />
+              <button onClick={() => removeLink(i)} className="text-red-500 hover:text-red-700 text-xs px-1">&times;</button>
+            </div>
+          ))}
+          <button onClick={addLink} className="text-xs text-purple-600 hover:text-purple-700 dark:text-purple-400">
+            + Add link
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
@@ -441,6 +534,50 @@ function ProductEmbedEditor({ node, onChange }: { node: PageComponentNode; onCha
           <option key={product.id} value={product.id}>
             {product.attributes.name}
             {product.attributes.state?.action ? ` (${product.attributes.state.action})` : ''}
+          </option>
+        ))}
+      </select>
+    </Field>
+  );
+}
+
+// ── Page link picker (for inter-page linking) ──────────────
+
+function PageLinkPicker({ value, pageId: linkedPageId, onChange }: {
+  value: string;
+  pageId: string;
+  onChange: (pageId: string, slug: string) => void;
+}) {
+  const { websiteId, pageId: currentPageId } = usePageBuilder();
+  const { pages, loading } = useWebsitePages(websiteId || '');
+
+  // Filter out current page
+  const availablePages = pages.filter(p => p.id !== currentPageId);
+
+  if (!websiteId) {
+    return (
+      <Field label="Page Link">
+        <p className="text-xs text-gray-500 dark:text-gray-400">
+          This page is not part of a website. Page linking requires a website.
+        </p>
+      </Field>
+    );
+  }
+
+  return (
+    <Field label="Link to Page">
+      <select
+        value={linkedPageId}
+        onChange={(e) => {
+          const page = availablePages.find(p => p.id === e.target.value);
+          onChange(e.target.value, page ? `/${page.attributes.slug}` : '');
+        }}
+        className="block w-full border border-gray-300 dark:border-gray-600 rounded px-2 py-1.5 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+      >
+        <option value="">{loading ? 'Loading pages...' : 'Choose a page...'}</option>
+        {availablePages.map(page => (
+          <option key={page.id} value={page.id}>
+            {page.attributes.name} (/{page.attributes.slug})
           </option>
         ))}
       </select>

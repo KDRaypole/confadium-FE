@@ -11,6 +11,8 @@ interface PageBuilderState {
   device: DeviceMode;
   dragComponent: string | null;
   showGrid: boolean;
+  websiteId?: string;
+  pageId?: string;
   history: (PageComponentNode | null)[];
   historyIndex: number;
 }
@@ -138,9 +140,13 @@ interface PageBuilderProviderProps {
   initialTheme: PageTheme;
   children: React.ReactNode;
   onChange?: (structure: PageComponentNode | null, theme: PageTheme) => void;
+  /** Website ID for inter-page linking */
+  websiteId?: string;
+  /** Current page ID */
+  pageId?: string;
 }
 
-export function PageBuilderProvider({ initialStructure, initialTheme, children, onChange }: PageBuilderProviderProps) {
+export function PageBuilderProvider({ initialStructure, initialTheme, children, onChange, websiteId, pageId }: PageBuilderProviderProps) {
   const [structure, setStructureState] = useState<PageComponentNode | null>(initialStructure);
   const [theme, setThemeState] = useState<PageTheme>(initialTheme);
   const [selectedSelector, setSelectedSelector] = useState<string | null>(null);
@@ -378,6 +384,8 @@ export function PageBuilderProvider({ initialStructure, initialTheme, children, 
     device,
     dragComponent,
     showGrid,
+    websiteId,
+    pageId,
     history: historyRef.current,
     historyIndex: historyIndexRef.current,
     setStructure,

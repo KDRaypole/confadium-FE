@@ -389,8 +389,23 @@ export interface PageAttributes extends Timestamps, StatefulAttributes {
   layout: string | null;
   structure: PageComponentNode | Record<string, unknown>;
   theme: PageTheme;
+  theme_overrides: PageTheme;
   template_name: string | null;
   published_url: string | null;
+  settings: PageSettings;
+  website_id: string | null;
+  position: number | null;
+  is_homepage: boolean;
+}
+
+// ── Website ─────────────────────────────────────────────────
+
+export interface WebsiteAttributes extends Timestamps, StatefulAttributes {
+  name: string;
+  slug: string;
+  description: string | null;
+  domain: string | null;
+  theme: PageTheme;
   settings: PageSettings;
 }
 

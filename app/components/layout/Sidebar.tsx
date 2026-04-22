@@ -15,7 +15,7 @@ import {
   EnvelopeIcon,
   TagIcon,
   DocumentTextIcon,
-  DocumentIcon,
+  GlobeAltIcon,
   CubeIcon,
 } from "@heroicons/react/24/outline";
 
@@ -40,7 +40,7 @@ const getOrgNavigation = (orgId: string) => [
   { name: "Reports", href: `/organizations/${orgId}/reports`, icon: ChartBarIcon },
   { name: "Email Templates", href: `/organizations/${orgId}/email-templates`, icon: EnvelopeIcon },
   { name: "Forms", href: `/organizations/${orgId}/forms`, icon: DocumentTextIcon },
-  { name: "Pages", href: `/organizations/${orgId}/pages`, icon: DocumentIcon },
+  { name: "Websites", href: `/organizations/${orgId}/websites`, icon: GlobeAltIcon },
   { name: "Products", href: `/organizations/${orgId}/products`, icon: CubeIcon },
   { name: "Tags", href: `/organizations/${orgId}/tags`, icon: TagIcon },
   { name: "Modules", href: `/organizations/${orgId}/modules`, icon: CogIcon },

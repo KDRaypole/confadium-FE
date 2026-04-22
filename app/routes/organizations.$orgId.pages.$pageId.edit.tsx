@@ -23,7 +23,8 @@ export default function EditPage() {
         name: page.attributes.name,
         slug: page.attributes.slug,
         structure: structure as Record<string, unknown>,
-        theme,
+        // Save as theme_overrides — the backend merges with the website theme
+        theme_overrides: theme,
       });
     } finally {
       setSaving(false);
@@ -52,7 +53,7 @@ export default function EditPage() {
           onClick={() => navigate(`/organizations/${orgId}/pages/${pageId}`)}
           className="text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200"
         >
-          &larr; Back to {page.attributes.name}
+          &larr; {page.attributes.name}
         </button>
         <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
           Editing: {page.attributes.name}
@@ -67,6 +68,8 @@ export default function EditPage() {
           initialTheme={theme}
           onSave={handleSave}
           saving={saving}
+          websiteId={page.attributes.website_id || undefined}
+          pageId={pageId}
         />
       </div>
     </div>

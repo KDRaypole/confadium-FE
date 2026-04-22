@@ -50,8 +50,14 @@ export default function PagePreview() {
         <div className="w-full px-4 sm:px-6 lg:px-8">
           {/* Header */}
           <div className="mb-6">
-            <Link to={`/organizations/${orgId}/pages`} className="inline-flex items-center text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 mb-4">
-              <ArrowLeftIcon className="h-4 w-4 mr-1" /> Back to Pages
+            <Link
+              to={attrs.website_id
+                ? `/organizations/${orgId}/websites/${attrs.website_id}`
+                : `/organizations/${orgId}/pages`
+              }
+              className="inline-flex items-center text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 mb-4"
+            >
+              <ArrowLeftIcon className="h-4 w-4 mr-1" /> {attrs.website_id ? 'Back to Website' : 'Back to Pages'}
             </Link>
             <div className="flex items-center justify-between">
               <div>
