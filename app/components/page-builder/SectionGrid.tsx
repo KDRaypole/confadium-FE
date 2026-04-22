@@ -140,7 +140,7 @@ export default function SectionGrid({ node }: SectionGridProps) {
           </div>
         ) : (
           <Responsive
-            className="page-builder-grid"
+            className={`page-builder-grid${editMode ? ' edit-mode' : ''}`}
             layouts={layouts}
             breakpoints={{ lg: 996, sm: 0 }}
             cols={{ lg: 12, sm: 8 }}

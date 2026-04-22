@@ -12,23 +12,24 @@ body {
 }
 
 /* Page builder grid overrides */
-.page-builder-grid .react-grid-item {
+/* Edit mode grid styles — only applied when .edit-mode is on the grid */
+.page-builder-grid.edit-mode .react-grid-item {
   transition: all 200ms ease;
   border: 1px solid transparent;
   border-radius: 4px;
 }
-.page-builder-grid .react-grid-item:hover {
+.page-builder-grid.edit-mode .react-grid-item:hover {
   border-color: rgba(124, 58, 237, 0.3);
 }
-.page-builder-grid .react-grid-item.react-grid-placeholder {
+.page-builder-grid.edit-mode .react-grid-item.react-grid-placeholder {
   background: rgba(124, 58, 237, 0.15) !important;
   border: 2px dashed rgba(124, 58, 237, 0.5);
   border-radius: 4px;
 }
-.page-builder-grid .react-grid-item > .react-resizable-handle {
+.page-builder-grid.edit-mode .react-grid-item > .react-resizable-handle {
   background: none;
 }
-.page-builder-grid .react-grid-item > .react-resizable-handle::after {
+.page-builder-grid.edit-mode .react-grid-item > .react-resizable-handle::after {
   content: "";
   position: absolute;
   right: 3px;

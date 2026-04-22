@@ -1,6 +1,7 @@
 import { usePageBuilder } from "./PageBuilderContext";
 import SectionGrid from "./SectionGrid";
 import EmbeddedForm from "./EmbeddedForm";
+import EmbeddedProduct from "./EmbeddedProduct";
 import type { PageComponentNode, PageTheme, PageThemeButton } from "~/lib/api/types";
 import {
   Bars3Icon,
@@ -311,7 +312,8 @@ function TextComponent({ node }: { node: PageComponentNode }) {
 }
 
 function ImageComponent({ node }: { node: PageComponentNode }) {
-  const { src, alt, objectFit, radiusType } = node.props as Record<string, string>;
+  const { editMode } = usePageBuilder();
+  const { src, alt, objectFit, radiusType, link, linkType } = node.props as Record<string, string>;
   const borderRadius = radiusType === 'rounded' ? '0.5rem' : radiusType === 'circle' ? '50%' : '0';
 
   if (!src) {
@@ -324,7 +326,7 @@ function ImageComponent({ node }: { node: PageComponentNode }) {
     );
   }
 
-  return (
+  const img = (
     <img
       src={src}
       alt={alt || ''}
@@ -336,30 +338,40 @@ function ImageComponent({ node }: { node: PageComponentNode }) {
       }}
     />
   );
+
+  if (!editMode && link && linkType && linkType !== 'none') {
+    return <a href={link} target={linkType === 'link' ? '_blank' : undefined} rel={linkType === 'link' ? 'noopener noreferrer' : undefined}>{img}</a>;
+  }
+
+  return img;
 }
 
 function ButtonComponent({ node }: { node: PageComponentNode }) {
-  const { theme } = usePageBuilder();
-  const { text, buttonType } = node.props as Record<string, string>;
-  const variant = buttonType || 'primary';
-
+  const { theme, editMode } = usePageBuilder();
+  const p = node.props as Record<string, string>;
+  const variant = p.buttonType || 'primary';
   const btnStyle = resolveButtonStyle(theme, variant);
+  const style: CSSProperties = {
+    ...btnStyle,
+    padding: theme.buttons?.[variant as keyof typeof theme.buttons]?.padding || '0.625rem 1.5rem',
+    fontSize: '0.875rem',
+    fontWeight: btnStyle.fontWeight || '500',
+    cursor: editMode ? 'default' : 'pointer',
+    display: 'inline-block',
+    textDecoration: 'none',
+  };
 
-  return (
-    <button
-      style={{
-        ...btnStyle,
-        padding: theme.buttons?.[variant as keyof typeof theme.buttons]?.padding || '0.625rem 1.5rem',
-        fontSize: '0.875rem',
-        fontWeight: btnStyle.fontWeight || '500',
-        cursor: 'pointer',
-        display: 'inline-block',
-        textDecoration: 'none',
-      }}
-    >
-      {text || 'Button'}
-    </button>
-  );
+  const href = p.linkType === 'phone' ? `tel:${p.link}` : p.link || '#';
+
+  if (!editMode && p.link) {
+    return (
+      <a href={href} target={p.linkType === 'link' ? '_blank' : undefined} rel={p.linkType === 'link' ? 'noopener noreferrer' : undefined} style={style}>
+        {p.text || 'Button'}
+      </a>
+    );
+  }
+
+  return <span style={style}>{p.text || 'Button'}</span>;
 }
 
 function VideoComponent({ node }: { node: PageComponentNode }) {
@@ -684,7 +696,7 @@ function SortableSection({ node, depth }: { node: PageComponentNode; depth: numb
 
 
 function NavigationComponent({ node }: { node: PageComponentNode }) {
-  const { theme } = usePageBuilder();
+  const { theme, editMode } = usePageBuilder();
   const { logo, links, backgroundColor, textColor } = node.props as {
     logo?: string;
     links?: { text: string; href: string }[];
@@ -696,6 +708,13 @@ function NavigationComponent({ node }: { node: PageComponentNode }) {
   const navBg = backgroundColor || palette?.color5 || '#ffffff';
   const navTextColor = textColor || palette?.color4 || '#1f2937';
   const linkColor = palette?.color4 || '#6b7280';
+  const linkStyle: CSSProperties = {
+    fontSize: '0.875rem',
+    color: linkColor,
+    cursor: editMode ? 'default' : 'pointer',
+    textDecoration: 'none',
+    ...paragraphFontStyle(theme),
+  };
 
   return (
     <nav style={{
@@ -713,16 +732,13 @@ function NavigationComponent({ node }: { node: PageComponentNode }) {
           {logo || 'Your Logo'}
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
-          {(links || [{ text: 'Home', href: '#' }, { text: 'About', href: '#' }, { text: 'Contact', href: '#' }]).map((link, i) => (
-            <span key={i} style={{
-              fontSize: '0.875rem',
-              color: linkColor,
-              cursor: 'pointer',
-              ...paragraphFontStyle(theme),
-            }}>
-              {link.text}
-            </span>
-          ))}
+          {(links || [{ text: 'Home', href: '#' }, { text: 'About', href: '#' }, { text: 'Contact', href: '#' }]).map((link, i) =>
+            editMode ? (
+              <span key={i} style={linkStyle}>{link.text}</span>
+            ) : (
+              <a key={i} href={link.href} style={linkStyle}>{link.text}</a>
+            )
+          )}
         </div>
       </div>
     </nav>
@@ -818,37 +834,50 @@ function FormEmbedComponent({ node }: { node: PageComponentNode }) {
 }
 
 function ProductEmbedComponent({ node }: { node: PageComponentNode }) {
-  const { theme } = usePageBuilder();
+  const { theme, editMode } = usePageBuilder();
   const { productId, productName } = node.props as { productId?: string; productName?: string };
   const palette = theme.colorPalette;
+  const accentColor = palette?.color1 || '#7c3aed';
 
-  const accentColor = palette?.color1 || '#059669';
+  if (!productId) {
+    return (
+      <div style={{
+        border: `2px dashed ${accentColor}40`,
+        borderRadius: '0.5rem',
+        padding: '1.5rem',
+        backgroundColor: `${accentColor}08`,
+      }}>
+        <div style={{ textAlign: 'center' }}>
+          <span style={{
+            display: 'inline-flex', alignItems: 'center',
+            padding: '0.25rem 0.5rem', borderRadius: '0.25rem',
+            fontSize: '0.75rem', fontWeight: 500,
+            backgroundColor: `${accentColor}20`, color: accentColor,
+            marginBottom: '0.5rem',
+          }}>
+            Product Embed
+          </span>
+          <p style={{ fontSize: '0.875rem', color: palette?.color4 || '#6b7280', ...paragraphFontStyle(theme) }}>
+            No product selected &mdash; click to configure
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div style={{
-      border: `2px dashed ${accentColor}40`,
-      borderRadius: '0.5rem',
-      padding: '1.5rem',
-      backgroundColor: `${accentColor}08`,
-    }}>
-      <div style={{ textAlign: 'center' }}>
-        <span style={{
-          display: 'inline-flex',
-          alignItems: 'center',
-          padding: '0.25rem 0.5rem',
-          borderRadius: '0.25rem',
-          fontSize: '0.75rem',
-          fontWeight: 500,
-          backgroundColor: `${accentColor}20`,
-          color: accentColor,
-          marginBottom: '0.5rem',
+    <div style={{ position: 'relative' }}>
+      {editMode && (
+        <div style={{
+          position: 'absolute', top: '0.25rem', right: '0.25rem', zIndex: 10,
+          padding: '0.125rem 0.5rem', borderRadius: '0.25rem',
+          backgroundColor: accentColor, color: '#fff',
+          fontSize: '0.625rem', fontWeight: 500,
         }}>
-          Product Embed
-        </span>
-        <p style={{ fontSize: '0.875rem', color: palette?.color4 || '#6b7280', ...paragraphFontStyle(theme) }}>
-          {productId ? `Product: ${productName || productId}` : 'No product selected \u2014 click to configure'}
-        </p>
-      </div>
+          Product: {productName || 'Embedded'}
+        </div>
+      )}
+      <EmbeddedProduct productId={productId} />
     </div>
   );
 }

@@ -33,6 +33,7 @@ interface PageBuilderActions {
   updateGridPosition: (selector: string, breakpoint: 'lg' | 'sm', pos: { x: number; y: number; w: number; h: number }) => void;
   /** Add a component to a section with auto-generated grid position */
   addToSection: (sectionSelector: string, componentType: string, gridOverride?: { x: number; y: number; w: number; h: number }) => void;
+  setEditMode: (editMode: boolean) => void;
   setDevice: (device: DeviceMode) => void;
   setDragComponent: (type: string | null) => void;
   setShowGrid: (show: boolean) => void;
@@ -151,6 +152,7 @@ export function PageBuilderProvider({ initialStructure, initialTheme, children, 
   const [theme, setThemeState] = useState<PageTheme>(initialTheme);
   const [selectedSelector, setSelectedSelector] = useState<string | null>(null);
   const [device, setDevice] = useState<DeviceMode>('desktop');
+  const [editMode, setEditMode] = useState(true);
   const [dragComponent, setDragComponent] = useState<string | null>(null);
   const [showGrid, setShowGrid] = useState(false);
 
@@ -380,7 +382,7 @@ export function PageBuilderProvider({ initialStructure, initialTheme, children, 
     structure,
     theme,
     selectedSelector,
-    editMode: true,
+    editMode,
     device,
     dragComponent,
     showGrid,
@@ -401,6 +403,7 @@ export function PageBuilderProvider({ initialStructure, initialTheme, children, 
     updateGridPosition,
     addToSection,
     setDevice,
+    setEditMode,
     setDragComponent,
     setShowGrid,
     undo,
