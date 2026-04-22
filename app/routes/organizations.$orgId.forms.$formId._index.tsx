@@ -4,7 +4,8 @@ import { useState } from "react";
 import Layout from "~/components/layout/Layout";
 import FormPreview from "~/components/forms/FormPreview";
 import ShareFormButton from "~/components/forms/ShareFormButton";
-import { useForm } from "~/hooks/useForms";
+import { useForm, FORMS_QUERY_KEYS } from "~/hooks/useForms";
+import StateManager from "~/components/ui/StateManager";
 import { 
   ArrowLeftIcon, 
   PencilIcon, 
@@ -143,15 +144,15 @@ export default function ViewForm() {
             {/* Form Status and Stats */}
             <div className="mt-4 flex items-center justify-between">
               <div className="flex items-center space-x-4">
-                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                  form.attributes?.state?.action === 'active'
-                    ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
-                    : form.attributes?.state?.action === 'draft'
-                    ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200'
-                    : 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200'
-                }`}>
-                  {form.attributes?.state?.action === 'active' ? '🟢' : form.attributes?.state?.action === 'draft' ? '🟡' : '⭕'} {(form.attributes?.state?.action || '').toUpperCase()}
-                </span>
+                {form.attributes && formId && (
+                  <StateManager
+                    entityType="forms"
+                    entityId={formId}
+                    stateAttrs={form.attributes}
+                    invalidateKeys={[FORMS_QUERY_KEYS.all, FORMS_QUERY_KEYS.detail(formId)]}
+                    layout="inline"
+                  />
+                )}
 
                 <div className="flex items-center space-x-6 text-sm text-gray-500 dark:text-gray-400">
                   <span>

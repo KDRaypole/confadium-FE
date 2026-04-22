@@ -1,8 +1,9 @@
 import type { MetaFunction } from "@remix-run/node";
 import { Link, useParams } from "@remix-run/react";
 import Layout from "~/components/layout/Layout";
-import { useWebsite, useWebsitePages } from "~/hooks/useWebsites";
+import { useWebsite, useWebsitePages, WEBSITES_QUERY_KEYS } from "~/hooks/useWebsites";
 import { usePage } from "~/hooks/usePages";
+import StateManager, { StateBadge } from "~/components/ui/StateManager";
 import {
   PlusIcon,
   PencilIcon,
@@ -46,19 +47,6 @@ export default function WebsiteDetail() {
 
   const attrs = website.attributes;
 
-  const getStatusBadge = (state: { action: string; name: string } | null) => {
-    switch (state?.action) {
-      case 'published':
-        return <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">Published</span>;
-      case 'draft':
-        return <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200">Draft</span>;
-      case 'archived':
-        return <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200">Archived</span>;
-      default:
-        return null;
-    }
-  };
-
   // Theme preview colors
   const palette = attrs.theme?.colorPalette;
 
@@ -75,7 +63,13 @@ export default function WebsiteDetail() {
               <div className="flex items-center space-x-3">
                 <GlobeAltIcon className="h-6 w-6 text-purple-600" />
                 <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">{attrs.name}</h1>
-                {getStatusBadge(attrs.state)}
+                <StateManager
+                  entityType="websites"
+                  entityId={websiteId}
+                  stateAttrs={attrs}
+                  invalidateKeys={[WEBSITES_QUERY_KEYS.all, WEBSITES_QUERY_KEYS.detail(websiteId)]}
+                  layout="inline"
+                />
               </div>
               <div className="mt-1 flex items-center space-x-3 text-sm text-gray-500 dark:text-gray-400">
                 <span>/{attrs.slug}</span>
@@ -156,7 +150,7 @@ export default function WebsiteDetail() {
                       </div>
                     </div>
                     <div className="flex items-center space-x-3">
-                      {getStatusBadge(page.attributes.state)}
+                      <StateBadge state={page.attributes.state} />
                       <div className="flex space-x-2">
                         <Link to={`/organizations/${orgId}/pages/${page.id}`} className="text-purple-600 hover:text-purple-700">
                           <EyeIcon className="h-4 w-4" />

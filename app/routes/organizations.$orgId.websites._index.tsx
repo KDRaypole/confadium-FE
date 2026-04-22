@@ -12,6 +12,7 @@ import {
   FunnelIcon,
 } from "@heroicons/react/24/outline";
 import { useWebsites } from "~/hooks/useWebsites";
+import { StateBadge } from "~/components/ui/StateManager";
 
 export const meta: MetaFunction = () => {
   return [
@@ -36,18 +37,7 @@ export default function WebsitesIndex() {
     return matchesSearch && matchesStatus;
   });
 
-  const getStatusBadge = (state: { action: string; name: string } | null) => {
-    switch (state?.action) {
-      case 'published':
-        return <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">Published</span>;
-      case 'draft':
-        return <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200">Draft</span>;
-      case 'archived':
-        return <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200">Archived</span>;
-      default:
-        return null;
-    }
-  };
+  const getStatusBadge = (state: { action: string; name: string } | null) => <StateBadge state={state} />;
 
   const handleDelete = async (id: string) => {
     if (window.confirm("Delete this website and all its pages?")) {

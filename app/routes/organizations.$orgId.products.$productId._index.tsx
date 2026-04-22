@@ -8,6 +8,8 @@ import {
   ArrowLeftIcon,
   CubeIcon,
 } from "@heroicons/react/24/outline";
+import StateManager from "~/components/ui/StateManager";
+import { PRODUCTS_QUERY_KEYS } from "~/hooks/useProducts";
 
 export const meta: MetaFunction = () => {
   return [{ title: "Product Detail - CRM Dashboard" }];
@@ -62,15 +64,6 @@ export default function ProductDetail() {
                   <span className="text-xl font-semibold text-purple-600 dark:text-purple-400">
                     {formatPrice(attrs.price_cents, attrs.currency)}
                   </span>
-                  {attrs.state && (
-                    <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                      attrs.state.action === 'active' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' :
-                      attrs.state.action === 'draft' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200' :
-                      'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200'
-                    }`}>
-                      {attrs.state.name}
-                    </span>
-                  )}
                 </div>
               </div>
               <Link
@@ -82,8 +75,17 @@ export default function ProductDetail() {
             </div>
           </div>
 
+          {/* State management */}
+          <StateManager
+            entityType="products"
+            entityId={productId}
+            stateAttrs={attrs}
+            invalidateKeys={[PRODUCTS_QUERY_KEYS.all, PRODUCTS_QUERY_KEYS.detail(productId)]}
+            layout="full"
+          />
+
           {/* Details */}
-          <div className="space-y-6">
+          <div className="space-y-6 mt-6">
             <div className="bg-white dark:bg-gray-800 shadow rounded-lg border border-gray-200 dark:border-gray-700">
               <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
                 <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">Details</h3>

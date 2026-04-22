@@ -11,6 +11,8 @@ import {
   GlobeAltIcon,
   DocumentIcon,
 } from "@heroicons/react/24/outline";
+import StateManager from "~/components/ui/StateManager";
+import { PAGES_QUERY_KEYS } from "~/hooks/usePages";
 
 export const meta: MetaFunction = () => {
   return [{ title: "Page Preview - CRM Dashboard" }];
@@ -62,18 +64,7 @@ export default function PagePreview() {
             <div className="flex items-center justify-between">
               <div>
                 <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">{attrs.name}</h1>
-                <div className="flex items-center space-x-3 mt-1">
-                  <span className="text-sm text-gray-500">/{attrs.slug}</span>
-                  {attrs.state && (
-                    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
-                      attrs.state.action === 'published' ? 'bg-green-100 text-green-800' :
-                      attrs.state.action === 'draft' ? 'bg-yellow-100 text-yellow-800' :
-                      'bg-gray-100 text-gray-800'
-                    }`}>
-                      {attrs.state.name}
-                    </span>
-                  )}
-                </div>
+                <span className="text-sm text-gray-500 mt-1">/{attrs.slug}</span>
               </div>
               <div className="flex space-x-3">
                 {attrs.published_url && (
@@ -93,6 +84,17 @@ export default function PagePreview() {
                 </Link>
               </div>
             </div>
+          </div>
+
+          {/* State management */}
+          <div className="mb-6">
+            <StateManager
+              entityType="pages"
+              entityId={pageId}
+              stateAttrs={attrs}
+              invalidateKeys={[PAGES_QUERY_KEYS.all, PAGES_QUERY_KEYS.detail(pageId)]}
+              layout="full"
+            />
           </div>
 
           {/* Preview */}
