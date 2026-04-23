@@ -3,7 +3,7 @@ import { Link, useParams, Outlet, useLocation } from "@remix-run/react";
 import { useState } from "react";
 import Layout from "~/components/layout/Layout";
 import SimpleSelect from "~/components/ui/SimpleSelect";
-import { PlusIcon, MagnifyingGlassIcon, XMarkIcon } from "@heroicons/react/24/outline";
+import { PlusIcon, MagnifyingGlassIcon, XMarkIcon, ChevronLeftIcon, ChevronRightIcon } from "@heroicons/react/24/outline";
 import { useContacts } from "~/hooks/useContacts";
 import type { ContactAttributes, ContactStatus } from "~/lib/api/types";
 
@@ -36,29 +36,37 @@ const emptyForm: Partial<ContactAttributes> = {
 export default function Contacts() {
   const { orgId } = useParams();
   const location = useLocation();
-  const { contacts, loading, createContact } = useContacts();
-
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+
+  const { contacts, loading, createContact, total, totalPages } = useContacts({
+    page: currentPage,
+    pageSize,
+    search: searchQuery || undefined,
+    filter: statusFilter !== 'all' ? { status: statusFilter } : undefined,
+  });
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [formData, setFormData] = useState<Partial<ContactAttributes>>({ ...emptyForm });
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const [creating, setCreating] = useState(false);
 
-  const filteredContacts = contacts.filter((contact) => {
-    const attrs = contact.attributes;
-    if (!attrs) return false;
+  // Reset to page 1 when filters change
+  const handleSearchChange = (value: string) => {
+    setSearchQuery(value);
+    setCurrentPage(1);
+  };
 
-    if (statusFilter !== 'all' && attrs.status !== statusFilter) return false;
+  const handleStatusFilterChange = (value: string) => {
+    setStatusFilter(value);
+    setCurrentPage(1);
+  };
 
-    if (searchQuery) {
-      const query = searchQuery.toLowerCase();
-      const searchable = [attrs.first_name, attrs.last_name, attrs.email, attrs.company].filter(Boolean).join(' ').toLowerCase();
-      if (!searchable.includes(query)) return false;
-    }
-
-    return true;
-  });
+  const handlePageSizeChange = (value: string) => {
+    setPageSize(parseInt(value, 10));
+    setCurrentPage(1);
+  };
 
   const handleCreateSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -144,7 +152,7 @@ export default function Contacts() {
                     <input
                       type="text"
                       value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
+                      onChange={(e) => handleSearchChange(e.target.value)}
                       className="block w-full pl-10 pr-3 py-2 border border-gray-300 dark:border-gray-600 rounded shadow-sm bg-white dark:bg-gray-700 placeholder-gray-400 dark:placeholder-gray-500 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
                       placeholder="Search contacts..."
                     />
@@ -160,7 +168,7 @@ export default function Contacts() {
                       { value: "churned", label: "Churned" }
                     ]}
                     value={statusFilter}
-                    onChange={(value) => setStatusFilter(value)}
+                    onChange={(value) => handleStatusFilterChange(value)}
                   />
                 </div>
               </div>
@@ -168,12 +176,12 @@ export default function Contacts() {
           </div>
 
           {/* Contacts Table */}
-          <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded shadow-sm overflow-hidden">
+          <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded shadow-sm">
             {loading ? (
               <div className="flex items-center justify-center h-48">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
               </div>
-            ) : filteredContacts.length === 0 ? (
+            ) : contacts.length === 0 ? (
               <div className="text-center py-12">
                 <p className="text-sm text-gray-500 dark:text-gray-400">
                   {contacts.length === 0 ? 'No contacts yet. Create your first contact to get started.' : 'No contacts match your search.'}
@@ -205,7 +213,7 @@ export default function Contacts() {
                     </tr>
                   </thead>
                   <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-                    {filteredContacts.map((contact) => (
+                    {contacts.map((contact) => (
                       <tr key={contact.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div>
@@ -257,6 +265,52 @@ export default function Contacts() {
                     ))}
                   </tbody>
                 </table>
+              </div>
+            )}
+
+            {/* Pagination */}
+            {contacts.length > 0 && (
+              <div className="px-6 py-3 border-t border-gray-200 dark:border-gray-700 flex items-center justify-between">
+                <div className="flex items-center space-x-4">
+                  <span className="text-sm text-gray-700 dark:text-gray-300">
+                    Showing {((currentPage - 1) * pageSize) + 1}–{Math.min(currentPage * pageSize, total)} of {total}
+                  </span>
+                  <div className="flex items-center space-x-2">
+                    <span className="text-sm text-gray-500 dark:text-gray-400">Per page:</span>
+                    <SimpleSelect
+                      options={[
+                        { value: "10", label: "10" },
+                        { value: "30", label: "30" },
+                        { value: "100", label: "100" },
+                      ]}
+                      value={String(pageSize)}
+                      onChange={handlePageSizeChange}
+                      size="sm"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex items-center space-x-2">
+                  <button
+                    onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                    disabled={currentPage <= 1}
+                    className="inline-flex items-center px-3 py-1.5 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-md text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-40 disabled:cursor-not-allowed"
+                  >
+                    <ChevronLeftIcon className="h-4 w-4 mr-1" />
+                    Previous
+                  </button>
+                  <span className="text-sm text-gray-700 dark:text-gray-300">
+                    Page {currentPage} of {totalPages}
+                  </span>
+                  <button
+                    onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                    disabled={currentPage >= totalPages}
+                    className="inline-flex items-center px-3 py-1.5 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-md text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-40 disabled:cursor-not-allowed"
+                  >
+                    Next
+                    <ChevronRightIcon className="h-4 w-4 ml-1" />
+                  </button>
+                </div>
               </div>
             )}
           </div>

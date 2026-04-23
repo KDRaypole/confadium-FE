@@ -1,16 +1,17 @@
 import React from 'react';
 import { Handle, Position, NodeProps } from 'reactflow';
-import { 
-  PlayIcon, 
-  PencilIcon, 
+import {
+  PlayIcon,
+  PencilIcon,
   TrashIcon,
   ExclamationTriangleIcon,
   EnvelopeIcon,
-  PlusIcon,
   TagIcon,
   BellIcon,
-  ClipboardDocumentCheckIcon
+  ClipboardDocumentCheckIcon,
+  UserPlusIcon,
 } from '@heroicons/react/24/outline';
+import { useTags } from '~/hooks/useTags';
 
 export interface ActionNodeData {
   label: string;
@@ -22,20 +23,38 @@ export interface ActionNodeData {
   onDelete?: () => void;
 }
 
+/** Extract the resolved value from a param (handles both { source, value } objects and plain strings) */
+function paramValue(param: any): string {
+  if (!param) return '';
+  if (typeof param === 'object' && param.value !== undefined) return param.value;
+  if (typeof param === 'string') return param;
+  return '';
+}
+
 const ActionNode: React.FC<NodeProps<ActionNodeData>> = ({ data, selected }) => {
   const { label, actionType, target, parameters = {}, isValid = true, onEdit, onDelete } = data;
+  const { tags } = useTags();
+
+  const getTag = () => {
+    const tagId = paramValue(parameters.tag_id) || paramValue(parameters.tagId);
+    if (!tagId) return null;
+    return tags.find(t => t.id === tagId) || null;
+  };
 
   const getActionIcon = () => {
     switch (actionType) {
       case 'send_email':
         return <EnvelopeIcon className="h-4 w-4" />;
       case 'create_task':
+      case 'create_activity':
         return <ClipboardDocumentCheckIcon className="h-4 w-4" />;
       case 'add_tag':
       case 'remove_tag':
         return <TagIcon className="h-4 w-4" />;
       case 'send_notification':
         return <BellIcon className="h-4 w-4" />;
+      case 'create_contact_from_submission':
+        return <UserPlusIcon className="h-4 w-4" />;
       default:
         return <PlayIcon className="h-4 w-4" />;
     }
@@ -46,6 +65,7 @@ const ActionNode: React.FC<NodeProps<ActionNodeData>> = ({ data, selected }) => 
       case 'send_email':
         return 'from-green-500 to-green-600';
       case 'create_task':
+      case 'create_activity':
         return 'from-purple-500 to-purple-600';
       case 'add_tag':
         return 'from-indigo-500 to-indigo-600';
@@ -53,6 +73,8 @@ const ActionNode: React.FC<NodeProps<ActionNodeData>> = ({ data, selected }) => 
         return 'from-red-500 to-red-600';
       case 'send_notification':
         return 'from-orange-500 to-orange-600';
+      case 'create_contact_from_submission':
+        return 'from-blue-500 to-blue-600';
       default:
         return 'from-gray-500 to-gray-600';
     }
@@ -60,42 +82,50 @@ const ActionNode: React.FC<NodeProps<ActionNodeData>> = ({ data, selected }) => 
 
   const getDisplayText = () => {
     if (!actionType) return 'Configure Action';
-    
-    let text = actionType.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
-    if (target) {
-      text += ` → ${target}`;
-    }
-    return text;
+    return actionType.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
   };
 
   const getParameterSummary = () => {
-    if (actionType === 'send_email' && parameters.emailTemplate) {
-      const assignmentCount = parameters.variableAssignments?.length || 0;
-      return `Template selected${assignmentCount > 0 ? `, ${assignmentCount} variables` : ''}`;
+    const parts: string[] = [];
+
+    // Tag is rendered as a badge separately — skip here
+
+    // Check for mapped fields (source: "field" params)
+    const fieldMappings = Object.entries(parameters).filter(([_, v]) =>
+      typeof v === 'object' && v?.source === 'field' && v?.value
+    );
+    if (fieldMappings.length > 0) {
+      parts.push(`${fieldMappings.length} field${fieldMappings.length > 1 ? 's' : ''} mapped`);
     }
-    if (actionType === 'create_task' && parameters.title) {
-      return `"${parameters.title}"`;
+
+    // Check for static values set
+    const staticValues = Object.entries(parameters).filter(([key, v]) =>
+      typeof v === 'object' && v?.source === 'static' && v?.value && !['tagId', 'tag_id', 'tagName'].includes(key)
+    );
+    if (staticValues.length > 0 && fieldMappings.length === 0) {
+      parts.push(`${staticValues.length} param${staticValues.length > 1 ? 's' : ''} set`);
     }
-    if (actionType === 'add_tag' && parameters.tagName) {
-      return `Tag: ${parameters.tagName}`;
+
+    // Check for email template (legacy or new format)
+    const emailTemplate = paramValue(parameters.emailTemplate);
+    if (emailTemplate) {
+      parts.push('Template selected');
     }
-    return null;
+
+    // Check for kind (e.g., create_activity)
+    const kind = paramValue(parameters.kind);
+    if (kind) {
+      parts.push(`Kind: ${kind}`);
+    }
+
+    return parts.length > 0 ? parts.join(' · ') : null;
   };
 
   const hasValidConfiguration = () => {
-    if (!actionType || !target) return false;
-    
-    switch (actionType) {
-      case 'send_email':
-        return !!parameters.emailTemplate;
-      case 'create_task':
-        return !!parameters.title;
-      case 'add_tag':
-      case 'remove_tag':
-        return !!parameters.tagId;
-      default:
-        return true;
-    }
+    if (!actionType) return false;
+    // For DSL-driven actions, having an action type is sufficient
+    // The param validation happens in the modal
+    return true;
   };
 
   const isConfigurationValid = hasValidConfiguration();
@@ -151,19 +181,40 @@ const ActionNode: React.FC<NodeProps<ActionNodeData>> = ({ data, selected }) => 
         <div className="text-sm font-medium">
           {getDisplayText()}
         </div>
+        {target && (
+          <div className="text-xs text-white text-opacity-80 mt-0.5">
+            Target: {target}
+          </div>
+        )}
+        {(() => {
+          const tag = getTag();
+          if (!tag) return null;
+          const color = tag.attributes?.color || '#6b7280';
+          return (
+            <div className="mt-1.5 flex items-center space-x-1.5">
+              <TagIcon className="h-3 w-3 text-white text-opacity-70" />
+              <span
+                className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium"
+                style={{ backgroundColor: color, color: '#fff' }}
+              >
+                {tag.attributes?.name || 'Tag'}
+              </span>
+            </div>
+          );
+        })()}
         {getParameterSummary() && (
           <div className="text-xs text-white text-opacity-80 mt-1">
             {getParameterSummary()}
           </div>
         )}
-        {(!isValid || !isConfigurationValid) && (
+        {!isValid && !actionType && (
           <div className="text-xs text-yellow-200 mt-1">
-            {!actionType || !target ? 'Type and target required' : 'Configuration incomplete'}
+            Click to configure
           </div>
         )}
       </div>
 
-      {/* Add another action handle (optional) */}
+      {/* Output Handle */}
       <Handle
         type="source"
         position={Position.Right}

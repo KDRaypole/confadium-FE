@@ -69,13 +69,13 @@ export default function SimpleSelect({
         onClick={() => !disabled && setIsOpen(!isOpen)}
         disabled={disabled}
         className={`
-          relative w-full cursor-pointer rounded-md border border-gray-300 dark:border-gray-600 
+          relative w-full cursor-pointer rounded-md border border-gray-300 dark:border-gray-600
           bg-white dark:bg-gray-700 text-left shadow-sm
           focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500
           hover:border-gray-400 dark:hover:border-gray-500
           ${sizeClasses[size]}
-          ${disabled 
-            ? 'cursor-not-allowed bg-gray-50 dark:bg-gray-800 text-gray-500 dark:text-gray-400' 
+          ${disabled
+            ? 'cursor-not-allowed bg-gray-50 dark:bg-gray-800 text-gray-500 dark:text-gray-400'
             : ''
           }
           ${isOpen ? 'ring-1 ring-blue-500 border-blue-500' : ''}
@@ -116,7 +116,7 @@ export default function SimpleSelect({
                 <span className={`block truncate ${isSelected ? 'font-medium' : 'font-normal'}`}>
                   {option.label}
                 </span>
-                
+
                 {isSelected && (
                   <span className="absolute inset-y-0 right-0 flex items-center pr-4">
                     <CheckIcon className="h-4 w-4" />

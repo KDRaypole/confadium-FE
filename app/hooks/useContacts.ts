@@ -17,18 +17,30 @@ interface Tagging {
 
 export const CONTACTS_QUERY_KEYS = {
   all: ['contacts'] as const,
-  list: (orgId: string) => [...CONTACTS_QUERY_KEYS.all, 'list', orgId] as const,
+  list: (orgId: string, page?: number, size?: number, search?: string, filter?: Record<string, string>) =>
+    [...CONTACTS_QUERY_KEYS.all, 'list', orgId, page, size, search, JSON.stringify(filter)] as const,
   detail: (id: string) => [...CONTACTS_QUERY_KEYS.all, 'detail', id] as const,
 };
 
-export const useContacts = () => {
+interface UseContactsOptions {
+  page?: number;
+  pageSize?: number;
+  search?: string;
+  filter?: Record<string, string>;
+}
+
+export const useContacts = (options: UseContactsOptions = {}) => {
+  const { page = 1, pageSize = 25, search, filter } = options;
   const { orgId = '' } = useParams();
   const queryClient = useQueryClient();
 
   const query = useQuery({
-    queryKey: CONTACTS_QUERY_KEYS.list(orgId),
-    queryFn: () => contactsAPI.getContacts(orgId),
-    select: (data) => data.data,
+    queryKey: CONTACTS_QUERY_KEYS.list(orgId, page, pageSize, search, filter),
+    queryFn: () => contactsAPI.getContacts(orgId, {
+      page: { number: page, size: pageSize },
+      ...(search ? { search } : {}),
+      ...(filter ? { filter } : {}),
+    }),
     enabled: !!orgId,
   });
 
@@ -50,11 +62,15 @@ export const useContacts = () => {
     onSuccess: invalidate,
   });
 
+  const pagination = query.data?.meta?.pagination;
+
   return {
-    contacts: query.data || [],
+    contacts: query.data?.data || [],
     loading: query.isLoading,
     error: query.error?.message || null,
     refetch: query.refetch,
+    total: pagination?.total || 0,
+    totalPages: pagination?.pages || 1,
     createContact: createMutation.mutateAsync,
     updateContact: updateMutation.mutateAsync,
     deleteContact: deleteMutation.mutateAsync,

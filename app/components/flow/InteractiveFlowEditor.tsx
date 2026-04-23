@@ -145,7 +145,7 @@ const InteractiveFlowEditor: React.FC<InteractiveFlowEditorProps> = ({
           actionType: action.type,
           target: action.target,
           parameters: action.parameters,
-          isValid: !!(action.type && action.target),
+          isValid: !!action.type,
           onEdit: () => onNodeEdit('action', action.id),
           onDelete: () => handleDeleteAction(action.id),
         } as ActionNodeData,
