@@ -1,5 +1,5 @@
 import { api, buildResource, type Resource, type CollectionDocument, type ResourceDocument, type QueryParams } from './client';
-import type { AutomationModuleAttributes, ModuleConfigurationAttributes } from './types';
+import type { AutomationModuleAttributes, ModuleConfigurationAttributes, TriggerableSchema } from './types';
 
 export type AutomationModule = Resource<AutomationModuleAttributes>;
 export type ModuleConfiguration = Resource<ModuleConfigurationAttributes>;
@@ -57,5 +57,11 @@ export const modulesAPI = {
 
   async deleteConfiguration(id: string): Promise<void> {
     return api.delete(`/configurations/${id}`);
+  },
+
+  // ── Triggerable Schema ─────────────────────────────────
+
+  async getTriggerableSchema(): Promise<TriggerableSchema> {
+    return api.get<TriggerableSchema>('/triggerable/schema');
   },
 };

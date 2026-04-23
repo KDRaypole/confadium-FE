@@ -9,6 +9,7 @@ import { useDarkMode } from '~/contexts/DarkModeContext';
 import { useTags } from '~/hooks/useTags';
 import { formsApi, type FormField } from '~/lib/api/forms';
 import { getEntityFieldsForType } from '~/lib/utils/variableProcessor';
+import type { TriggerableActionPreset } from '~/lib/api/types';
 
 export interface ActionConfig {
   id: string;
@@ -33,44 +34,41 @@ interface FieldMapping {
   };
 }
 
+export interface ActionTypeConfig {
+  value: string;
+  label: string;
+  targets: string[];
+}
+
 interface ActionConfigModalProps {
   isOpen: boolean;
   action?: ActionConfig;
   entityType?: string;
   trigger?: TriggerConfig;
+  actionTypes?: ActionTypeConfig[];
+  actionPresets?: TriggerableActionPreset[];
   onSave: (action: ActionConfig) => void;
   onClose: () => void;
   onRequestEmailEditor?: (actionId: string, currentTemplate?: string, currentVariables?: Record<string, string>, currentAssignments?: VariableAssignment[]) => void;
 }
 
-const actionTypes = [
-  { value: "assign_lead", label: "Assign Lead", targets: ["Sales Rep", "Sales Team", "Territory Owner"] },
-  { value: "send_email", label: "Send Email", targets: ["Me", "Contact", "Lead", "Sales Rep", "Sales Manager"] },
-  { value: "create_task", label: "Create Task", targets: ["Sales Rep", "Sales Manager", "Support Team"] },
-  { value: "update_field", label: "Update Field", targets: ["Contact", "Deal", "Activity"] },
-  { value: "change_status", label: "Change Status", targets: ["Contact", "Deal", "Lead"] },
-  { value: "add_tag", label: "Add Tag", targets: ["Contact", "Deal"] },
-  { value: "remove_tag", label: "Remove Tag", targets: ["Contact", "Deal"] },
-  { value: "send_notification", label: "Send Notification", targets: ["Sales Team", "Management", "Support"] },
-  { value: "create_deal", label: "Create Deal", targets: ["Contact"] },
-  { value: "schedule_followup", label: "Schedule Follow-up", targets: ["Sales Rep", "Contact"] },
-  { value: "webhook", label: "Send Webhook", targets: ["External System", "API Endpoint"] },
-  { value: "create_contact", label: "Create Contact", targets: ["From Form Data"] },
-  { value: "create_deal_from_form", label: "Create Deal from Form", targets: ["From Form Data"] },
-  { value: "create_activity_from_form", label: "Create Activity from Form", targets: ["From Form Data"] }
-];
+const defaultActionTypes: ActionTypeConfig[] = [];
 
 const ActionConfigModal: React.FC<ActionConfigModalProps> = ({
   isOpen,
   action,
   entityType = 'contact',
   trigger,
+  actionTypes: actionTypesProp,
+  actionPresets,
   onSave,
   onClose,
   onRequestEmailEditor
 }) => {
+  const actionTypes = actionTypesProp || defaultActionTypes;
   const { isDarkMode } = useDarkMode();
-  const { tags, getTagById } = useTags();
+  const { tags } = useTags();
+  const getTagById = (id: string) => tags.find(t => t.id === id);
   const [formData, setFormData] = useState<ActionConfig>({
     id: '',
     type: '',

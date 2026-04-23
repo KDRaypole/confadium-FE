@@ -10,12 +10,14 @@ import { useEmailTemplates } from "~/hooks/useEmailTemplates";
 import { getTagColorClass } from "~/components/tags/TagsData";
 import SimpleSelect, { type SimpleSelectOption } from "~/components/ui/SimpleSelect";
 import { useTags, type Tag } from "~/hooks/useTags";
+import ResourceSelect from "~/components/ui/ResourceSelect";
 import { useModule, useConfiguration, useModuleConfigurations, type Configuration, type ConfigurationCreateData } from "~/hooks/useModules";
 import { useActiveForms } from "~/hooks/useForms";
 import InteractiveFlowEditor from "~/components/flow/InteractiveFlowEditor";
-import TriggerConfigModal, { type TriggerConfig } from "~/components/flow/modals/TriggerConfigModal";
-import ConditionConfigModal, { type Condition } from "~/components/flow/modals/ConditionConfigModal";
-import ActionConfigModal, { type ActionConfig } from "~/components/flow/modals/ActionConfigModal";
+import TriggerConfigModal, { type TriggerConfig, type EntityTypeConfig } from "~/components/flow/modals/TriggerConfigModal";
+import ConditionConfigModal, { type Condition, type CrmFieldConfig } from "~/components/flow/modals/ConditionConfigModal";
+import ActionConfigModal, { type ActionConfig, type ActionTypeConfig } from "~/components/flow/modals/ActionConfigModal";
+import { useTriggerableSchema } from "~/hooks/useTriggerableSchema";
 import { 
   ArrowLeftIcon,
   PlusIcon,
@@ -219,6 +221,7 @@ export default function ModuleEdit() {
   const { createConfiguration, isCreating } = useModuleConfigurations(moduleId);
   const { templates: emailTemplates } = useEmailTemplates();
   const { forms: availableForms } = useActiveForms();
+  const { schema } = useTriggerableSchema();
 
   // Helper function to get template by ID from the proper templates source
   const getTemplateById = (templateId: string) => {
@@ -252,6 +255,82 @@ export default function ModuleEdit() {
       });
     }
   }, [existingConfig]);
+
+  // Derive entity types, CRM fields, and action types from the backend schema
+  const EVENT_MAP: Record<string, string> = { create: 'created', update: 'updated', delete: 'destroyed' };
+  const EVENT_LABEL: Record<string, string> = { created: 'create', updated: 'update', destroyed: 'delete' };
+
+  const schemaEntityTypes: EntityTypeConfig[] | undefined = React.useMemo(() => {
+    if (!schema?.models?.length) return undefined;
+    return schema.models.map(model => {
+      const allConditions = model.triggers.flatMap(t => t.conditions);
+      const uniqueAttrs = Array.from(new Map(allConditions.map(c => [c.name, c])).values());
+      return {
+        value: model.model.toLowerCase(),
+        label: model.model.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
+        actions: model.triggers.map(t => EVENT_LABEL[t.event] || t.event),
+        attributes: uniqueAttrs.map(c => ({ value: c.name, label: c.name.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) })),
+      };
+    });
+  }, [schema]);
+
+  // Build CRM fields scoped to the currently selected entity type and trigger action
+  const schemaCrmFields: CrmFieldConfig[] | undefined = React.useMemo(() => {
+    if (!schema?.models?.length) return undefined;
+    const selectedEntity = configuration.trigger.entityType;
+    const selectedAction = configuration.trigger.action;
+    if (!selectedEntity) return undefined;
+
+    const model = schema.models.find(m => m.model.toLowerCase() === selectedEntity);
+    if (!model) return undefined;
+
+    const event = EVENT_MAP[selectedAction] || selectedAction;
+    const trigger = model.triggers.find(t => t.event === event);
+    if (!trigger) return undefined;
+
+    return trigger.conditions.map(c => ({
+      value: `${selectedEntity}.${c.name}`,
+      label: c.name.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
+      type: c.type === 'select' ? 'select' : c.type === 'tag' ? 'tag' : c.type === 'number' ? 'number' : c.type === 'date' ? 'date' : 'text',
+      ...(c.options ? { options: c.options } : {}),
+    }));
+  }, [schema, configuration.trigger.entityType, configuration.trigger.action]);
+
+  // Build action types from schema — only show actions defined in the DSL
+  const schemaActionTypes: ActionTypeConfig[] | undefined = React.useMemo(() => {
+    if (!schema?.models?.length) return undefined;
+    const selectedEntity = configuration.trigger.entityType;
+    const selectedAction = configuration.trigger.action;
+    if (!selectedEntity || !selectedAction) return [];
+
+    const model = schema.models.find(m => m.model.toLowerCase() === selectedEntity);
+    if (!model) return [];
+
+    const event = EVENT_MAP[selectedAction] || selectedAction;
+    const trigger = model.triggers.find(t => t.event === event);
+    if (!trigger) return [];
+
+    return trigger.actions.map(a => ({
+      value: a.name,
+      label: a.description || a.name.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
+      targets: [],
+    }));
+  }, [schema, configuration.trigger.entityType, configuration.trigger.action]);
+
+  // Full action presets from the schema (includes params + available_fields)
+  const schemaActionPresets = React.useMemo(() => {
+    if (!schema?.models?.length) return undefined;
+    const selectedEntity = configuration.trigger.entityType;
+    const selectedAction = configuration.trigger.action;
+    if (!selectedEntity || !selectedAction) return undefined;
+
+    const model = schema.models.find(m => m.model.toLowerCase() === selectedEntity);
+    if (!model) return undefined;
+
+    const event = EVENT_MAP[selectedAction] || selectedAction;
+    const trigger = model.triggers.find(t => t.event === event);
+    return trigger?.actions;
+  }, [schema, configuration.trigger.entityType, configuration.trigger.action]);
 
   // View mode state
   const [viewMode, setViewMode] = useState<'form' | 'flow'>('form');
@@ -331,13 +410,15 @@ export default function ModuleEdit() {
     }));
   };
 
+  const resolvedCrmFields = schemaCrmFields || crmFields;
+
   const getFieldType = (fieldValue: string) => {
-    const field = crmFields.find(f => f.value === fieldValue);
+    const field = resolvedCrmFields.find(f => f.value === fieldValue);
     return field?.type || "text";
   };
 
   const getFieldOptions = (fieldValue: string) => {
-    const field = crmFields.find(f => f.value === fieldValue);
+    const field = resolvedCrmFields.find(f => f.value === fieldValue);
     return field?.options || [];
   };
 
@@ -418,8 +499,10 @@ export default function ModuleEdit() {
     return action?.parameters?.variableAssignments || [];
   };
 
+  const resolvedEntityTypes = schemaEntityTypes || entityTypes;
+
   const getEntityType = (entityValue: string) => {
-    return entityTypes.find(entity => entity.value === entityValue);
+    return resolvedEntityTypes.find(entity => entity.value === entityValue);
   };
 
   const getAvailableActions = (entityValue: string) => {
@@ -456,8 +539,10 @@ export default function ModuleEdit() {
     return display;
   };
 
+  const resolvedActionTypes = schemaActionTypes || [];
+
   const getAvailableTargets = (actionType: string): string[] => {
-    const action = actionTypes.find(at => at.value === actionType);
+    const action = resolvedActionTypes.find(at => at.value === actionType);
     return action ? action.targets : [];
   };
 
@@ -769,7 +854,7 @@ export default function ModuleEdit() {
                   <SimpleSelect
                     options={[
                       { value: "", label: "Select entity type..." },
-                      ...entityTypes.map(entity => ({
+                      ...resolvedEntityTypes.map(entity => ({
                         value: entity.value,
                         label: entity.label
                       }))
@@ -954,7 +1039,7 @@ export default function ModuleEdit() {
                             <SimpleSelect
                               options={[
                                 { value: "", label: "Select field..." },
-                                ...crmFields.map(field => ({
+                                ...resolvedCrmFields.map(field => ({
                                   value: field.value,
                                   label: field.label
                                 }))
@@ -1088,7 +1173,7 @@ export default function ModuleEdit() {
                             <SimpleSelect
                               options={[
                                 { value: "", label: "Select action type..." },
-                                ...actionTypes.map(actionType => ({
+                                ...resolvedActionTypes.map(actionType => ({
                                   value: actionType.value,
                                   label: actionType.label
                                 }))
@@ -1116,190 +1201,100 @@ export default function ModuleEdit() {
                           </div>
                         </div>
                         
-                        {/* Action-specific parameters */}
-                        {action.type && (
-                          <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-600">
-                            <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-2">Additional Parameters</label>
-                            <div className="space-y-2">
-                              {action.type === "send_email" && (
-                                <>
-                                  <div className="space-y-3">
-                                    <div className="flex items-center space-x-2">
-                                      <button
-                                        onClick={() => openEmailEditor(action.id)}
-                                        className="flex-1 inline-flex items-center justify-center px-3 py-2 border border-blue-300 dark:border-blue-600 shadow-sm text-sm leading-4 font-medium rounded-md text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-900 hover:bg-blue-100 dark:hover:bg-blue-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-                                      >
-                                        <EnvelopeIcon className="-ml-0.5 mr-2 h-4 w-4" />
-                                        {action.parameters?.emailTemplate ? "Edit Email Template" : "Select Email Template"}
-                                      </button>
-                                      {action.parameters?.emailTemplate && (
-                                        <button
-                                          onClick={() => {
-                                            setCurrentActionId(action.id);
-                                            setEmailPreviewOpen(true);
-                                          }}
-                                          className="px-3 py-2 border border-gray-300 dark:border-gray-600 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-                                          title="Preview email"
-                                        >
-                                          <EyeIcon className="h-4 w-4" />
-                                        </button>
+                        {/* Dynamic action parameters from schema */}
+                        {action.type && schemaActionPresets && (() => {
+                          const preset = schemaActionPresets.find(p => p.name === action.type);
+                          if (!preset || preset.params.length === 0) return null;
+                          return (
+                            <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-600">
+                              <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-2">Parameters</label>
+                              <div className="space-y-3">
+                                {preset.params.map(param => {
+                                  const paramValue = action.parameters?.[param.name] as { source?: string; value?: string } | string | undefined;
+                                  const currentSource = typeof paramValue === 'object' && paramValue?.source ? paramValue.source : 'static';
+                                  const currentValue = typeof paramValue === 'object' && paramValue?.value !== undefined ? paramValue.value : (typeof paramValue === 'string' ? paramValue : '');
+
+                                  const setParamValue = (source: string, value: string) => {
+                                    updateAction(action.id, {
+                                      parameters: {
+                                        ...action.parameters,
+                                        [param.name]: { source, value }
+                                      }
+                                    });
+                                  };
+
+                                  return (
+                                    <div key={param.name} className="border border-gray-200 dark:border-gray-600 rounded-md p-3">
+                                      <div className="flex items-center justify-between mb-1.5">
+                                        <label className="text-xs font-medium text-gray-700 dark:text-gray-300">
+                                          {param.name.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                                          {param.required && <span className="text-red-500 ml-0.5">*</span>}
+                                        </label>
+                                        {param.source === 'any' && (
+                                          <SimpleSelect
+                                            options={[
+                                              { value: "static", label: "Static value" },
+                                              { value: "field", label: "From record field" }
+                                            ]}
+                                            value={currentSource}
+                                            onChange={(v) => setParamValue(v, '')}
+                                            size="sm"
+                                            className="w-40"
+                                          />
+                                        )}
+                                      </div>
+                                      {param.description && (
+                                        <p className="text-xs text-gray-400 dark:text-gray-500 mb-1.5">{param.description}</p>
+                                      )}
+                                      {(param.source === 'field' || (param.source === 'any' && currentSource === 'field')) ? (
+                                        <SimpleSelect
+                                          options={[
+                                            { value: "", label: "Select record field..." },
+                                            ...(preset.available_fields || []).map(f => ({
+                                              value: f.name,
+                                              label: f.name.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())
+                                            }))
+                                          ]}
+                                          value={currentValue}
+                                          onChange={(v) => setParamValue('field', v)}
+                                          size="sm"
+                                        />
+                                      ) : param.resource ? (
+                                        <ResourceSelect
+                                          resource={param.resource}
+                                          value={currentValue}
+                                          onChange={(v) => setParamValue('static', v)}
+                                          size="sm"
+                                        />
+                                      ) : param.source_options ? (
+                                        <SimpleSelect
+                                          options={[
+                                            { value: "", label: `Select ${param.name.replace(/_/g, ' ')}...` },
+                                            ...param.source_options.map(opt => ({
+                                              value: opt,
+                                              label: opt.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())
+                                            }))
+                                          ]}
+                                          value={currentValue}
+                                          onChange={(v) => setParamValue('static', v)}
+                                          size="sm"
+                                        />
+                                      ) : (
+                                        <input
+                                          type="text"
+                                          value={currentValue}
+                                          onChange={(e) => setParamValue('static', e.target.value)}
+                                          placeholder={`Enter ${param.name.replace(/_/g, ' ')}...`}
+                                          className="block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-sm"
+                                        />
                                       )}
                                     </div>
-                                    
-                                    {action.parameters?.emailTemplate && (
-                                      <div className="bg-gray-50 dark:bg-gray-700 p-3 rounded-lg">
-                                        {(() => {
-                                          const template = getTemplateById(action.parameters.emailTemplate);
-                                          return template ? (
-                                            <div>
-                                              <div className="flex items-center justify-between mb-2">
-                                                <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                                                  {template.attributes?.name || ''}
-                                                </span>
-                                                <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
-                                                  {template.attributes?.category || ''}
-                                                </span>
-                                              </div>
-                                              <p className="text-xs text-gray-600 dark:text-gray-400 mb-2">
-                                                {template.attributes?.description || ''}
-                                              </p>
-                                              <div className="text-xs text-gray-500 dark:text-gray-400">
-                                                <strong>Name:</strong> {template.attributes?.name || ''}
-                                              </div>
-                                              {(template.attributes?.variables || []).length > 0 && (
-                                                <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                                                  <strong>Variables:</strong> {(template.attributes?.variables || []).join(", ")}
-                                                  {action.parameters?.variableAssignments && action.parameters.variableAssignments.length > 0 && (
-                                                    <div className="mt-1">
-                                                      <strong>Assignments:</strong> {action.parameters.variableAssignments.length}/{(template.attributes?.variables || []).length} configured
-                                                    </div>
-                                                  )}
-                                                </div>
-                                              )}
-                                            </div>
-                                          ) : (
-                                            <span className="text-sm text-red-600 dark:text-red-400">Template not found</span>
-                                          );
-                                        })()}
-                                      </div>
-                                    )}
-                                    
-                                    <input
-                                      type="text"
-                                      placeholder="Delay (e.g., 5 minutes, 1 hour)..."
-                                      value={action.parameters?.delay || ""}
-                                      onChange={(e) => updateAction(action.id, {
-                                        parameters: { ...action.parameters, delay: e.target.value }
-                                      })}
-                                      className="block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-sm"
-                                    />
-                                  </div>
-                                </>
-                              )}
-                              {action.type === "create_task" && (
-                                <>
-                                  <input
-                                    type="text"
-                                    placeholder="Task title..."
-                                    className="block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-sm"
-                                  />
-                                  <input
-                                    type="text"
-                                    placeholder="Due date (e.g., 2 hours, tomorrow)..."
-                                    className="block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-sm"
-                                  />
-                                  <SimpleSelect
-                                    options={[
-                                      { value: "", label: "Task priority..." },
-                                      { value: "low", label: "Low" },
-                                      { value: "medium", label: "Medium" },
-                                      { value: "high", label: "High" },
-                                      { value: "urgent", label: "Urgent" }
-                                    ]}
-                                    value={action.parameters?.priority || ""}
-                                    onChange={(value) => updateAction(action.id, {
-                                      parameters: { ...action.parameters, priority: value }
-                                    })}
-                                    size="sm"
-                                  />
-                                </>
-                              )}
-                              {action.type === "update_field" && (
-                                <>
-                                  <SimpleSelect
-                                    options={[
-                                      { value: "", label: "Field to update..." },
-                                      ...crmFields.map(field => ({
-                                        value: field.value,
-                                        label: field.label
-                                      }))
-                                    ]}
-                                    value={action.parameters?.fieldToUpdate || ""}
-                                    onChange={(value) => updateAction(action.id, {
-                                      parameters: { ...action.parameters, fieldToUpdate: value }
-                                    })}
-                                    size="sm"
-                                  />
-                                  <input
-                                    type="text"
-                                    placeholder="New value..."
-                                    className="block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-sm"
-                                  />
-                                </>
-                              )}
-                              {action.type === "add_tag" && (
-                                <>
-                                  <div>
-                                    <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Select Tag to Add</label>
-                                    <SimpleSelect
-                                      options={[
-                                        { value: "", label: "Select a tag..." },
-                                        ...availableTags.map(tag => ({
-                                          value: tag.id,
-                                          label: tag.attributes?.name || ''
-                                        }))
-                                      ]}
-                                      value={action.parameters?.tagId || ""}
-                                      onChange={(value) => updateAction(action.id, {
-                                        parameters: { ...action.parameters, tagId: value }
-                                      })}
-                                      size="sm"
-                                    />
-                                    {action.parameters?.tagId && (
-                                      <div className="mt-2 flex items-center space-x-2">
-                                        <span className="text-xs text-gray-500 dark:text-gray-400">Selected tag:</span>
-                                        {(() => {
-                                          const selectedTag = availableTags.find(t => t.id === action.parameters?.tagId);
-                                          return selectedTag ? (
-                                            <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getTagColorClass(selectedTag.attributes?.color || '')}`}>
-                                              {selectedTag.attributes?.name || ''}
-                                            </span>
-                                          ) : null;
-                                        })()}
-                                      </div>
-                                    )}
-                                  </div>
-                                  <div>
-                                    <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Entity to Add Tag To</label>
-                                    <SimpleSelect
-                                      options={[
-                                        { value: "", label: "Select entity type..." },
-                                        { value: "contact", label: "Contact" },
-                                        { value: "deal", label: "Deal" },
-                                        { value: "activity", label: "Activity" }
-                                      ]}
-                                      value={action.parameters?.entityType || ""}
-                                      onChange={(value) => updateAction(action.id, {
-                                        parameters: { ...action.parameters, entityType: value }
-                                      })}
-                                      size="sm"
-                                    />
-                                  </div>
-                                </>
-                              )}
+                                  );
+                                })}
+                              </div>
                             </div>
-                          </div>
-                        )}
+                          );
+                        })()}
                       </div>
                     ))}
                   </div>
@@ -1315,6 +1310,7 @@ export default function ModuleEdit() {
       <TriggerConfigModal
         isOpen={triggerModalOpen}
         trigger={configuration.trigger}
+        entityTypes={schemaEntityTypes}
         onSave={handleTriggerSave}
         onClose={() => setTriggerModalOpen(false)}
       />
@@ -1323,6 +1319,7 @@ export default function ModuleEdit() {
         isOpen={conditionModalOpen}
         conditions={configuration.conditions}
         trigger={configuration.trigger}
+        crmFields={schemaCrmFields}
         onSave={handleConditionsSave}
         onClose={() => setConditionModalOpen(false)}
       />
@@ -1332,6 +1329,8 @@ export default function ModuleEdit() {
         action={getEditingAction()}
         entityType={configuration.trigger.entityType}
         trigger={configuration.trigger}
+        actionTypes={schemaActionTypes}
+        actionPresets={schemaActionPresets}
         onSave={handleActionSave}
         onRequestEmailEditor={handleEmailEditorRequest}
         onClose={() => {

@@ -250,6 +250,52 @@ export interface ModuleConfigurationAttributes extends Timestamps {
   status: ConfigurationStatus | null;
 }
 
+// ── Triggerable Schema ──────────────────────────────────────
+
+export interface TriggerableConditionField {
+  name: string;
+  type: 'string' | 'select' | 'number' | 'date' | 'tag' | 'boolean';
+  options?: string[];
+  description?: string;
+}
+
+export interface TriggerableActionParam {
+  name: string;
+  type: string;
+  required: boolean;
+  default?: unknown;
+  description?: string;
+  source: 'static' | 'field' | 'any';
+  source_options?: string[];
+  resource?: string;
+}
+
+export interface TriggerableActionPreset {
+  name: string;
+  class_name: string | null;
+  description: string | null;
+  params: TriggerableActionParam[];
+  available_fields: TriggerableConditionField[];
+}
+
+export interface TriggerableModelTrigger {
+  event: string;
+  conditions: TriggerableConditionField[];
+  actions: TriggerableActionPreset[];
+}
+
+export interface TriggerableModel {
+  model: string;
+  triggers: TriggerableModelTrigger[];
+}
+
+export interface TriggerableSchema {
+  models: TriggerableModel[];
+  action_presets: TriggerableActionPreset[];
+  lifecycle_events: string[];
+  condition_operators: string[];
+}
+
 // ── Tag ─────────────────────────────────────────────────────
 
 export type TagPriority = 'low' | 'medium' | 'high' | 'critical';

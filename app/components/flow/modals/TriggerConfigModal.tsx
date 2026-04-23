@@ -12,89 +12,52 @@ export interface TriggerConfig {
   formId?: string; // Added for form-specific triggers
 }
 
+export interface EntityTypeConfig {
+  value: string;
+  label: string;
+  actions: string[];
+  attributes: { value: string; label: string }[];
+}
+
 interface TriggerConfigModalProps {
   isOpen: boolean;
   trigger?: TriggerConfig;
+  entityTypes?: EntityTypeConfig[];
   onSave: (trigger: TriggerConfig) => void;
   onClose: () => void;
 }
 
-// Entity types and their available actions
-const entityTypes = [
+// Default entity types (fallback when schema is not provided)
+const defaultEntityTypes: EntityTypeConfig[] = [
   {
     value: "contact",
     label: "Contact",
-    actions: ["create", "update", "delete", "tag_added", "tag_removed"],
+    actions: ["create", "update", "delete"],
     attributes: [
-      { value: "name", label: "Name" },
-      { value: "email", label: "Email" },
-      { value: "phone", label: "Phone" },
-      { value: "company", label: "Company" },
       { value: "status", label: "Status" },
-      { value: "source", label: "Lead Source" },
-      { value: "score", label: "Lead Score" },
-      { value: "value", label: "Estimated Value" },
-      { value: "territory", label: "Territory" },
-      { value: "lastContact", label: "Last Contact Date" },
+      { value: "email", label: "Email" },
+      { value: "first_name", label: "First Name" },
+      { value: "last_name", label: "Last Name" },
       { value: "tags", label: "Tags" }
     ]
   },
   {
     value: "deal",
-    label: "Deal/Opportunity",
-    actions: ["create", "update", "delete", "tag_added", "tag_removed"],
+    label: "Deal",
+    actions: ["create", "update", "delete"],
     attributes: [
-      { value: "name", label: "Deal Name" },
       { value: "stage", label: "Stage" },
-      { value: "value", label: "Deal Value" },
-      { value: "probability", label: "Probability" },
-      { value: "closeDate", label: "Close Date" },
-      { value: "assignedTo", label: "Assigned To" },
-      { value: "contactId", label: "Primary Contact" },
-      { value: "description", label: "Description" },
+      { value: "name", label: "Name" },
       { value: "tags", label: "Tags" }
     ]
   },
   {
     value: "activity",
     label: "Activity",
-    actions: ["create", "update", "delete"],
+    actions: ["create", "update"],
     attributes: [
-      { value: "type", label: "Activity Type" },
-      { value: "status", label: "Status" },
-      { value: "subject", label: "Subject" },
-      { value: "description", label: "Description" },
-      { value: "dueDate", label: "Due Date" },
-      { value: "priority", label: "Priority" },
-      { value: "assignedTo", label: "Assigned To" },
-      { value: "contactId", label: "Related Contact" },
-      { value: "dealId", label: "Related Deal" }
-    ]
-  },
-  {
-    value: "email",
-    label: "Email",
-    actions: ["sent", "opened", "clicked", "bounced", "replied"],
-    attributes: [
-      { value: "subject", label: "Subject" },
-      { value: "templateId", label: "Template" },
-      { value: "recipientEmail", label: "Recipient Email" },
-      { value: "openCount", label: "Open Count" },
-      { value: "clickCount", label: "Click Count" },
-      { value: "sentDate", label: "Sent Date" },
-      { value: "campaignId", label: "Campaign ID" }
-    ]
-  },
-  {
-    value: "form",
-    label: "Form",
-    actions: ["submitted"],
-    attributes: [
-      { value: "formId", label: "Form ID" },
-      { value: "formName", label: "Form Name" },
-      { value: "submitterEmail", label: "Submitter Email" },
-      { value: "submissionDate", label: "Submission Date" },
-      { value: "source", label: "Source Page" }
+      { value: "kind", label: "Kind" },
+      { value: "subject", label: "Subject" }
     ]
   }
 ];
@@ -118,9 +81,11 @@ const triggerActions = {
 const TriggerConfigModal: React.FC<TriggerConfigModalProps> = ({
   isOpen,
   trigger,
+  entityTypes: entityTypesProp,
   onSave,
   onClose
 }) => {
+  const entityTypes = entityTypesProp || defaultEntityTypes;
   const { isDarkMode } = useDarkMode();
   const { forms: availableForms, loading: formsLoading } = useActiveForms();
   const [formData, setFormData] = useState<TriggerConfig>({

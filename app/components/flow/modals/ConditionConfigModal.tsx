@@ -22,16 +22,24 @@ interface TriggerConfig {
   formId?: string;
 }
 
+export interface CrmFieldConfig {
+  value: string;
+  label: string;
+  type: string;
+  options?: string[];
+}
+
 interface ConditionConfigModalProps {
   isOpen: boolean;
   conditions?: Condition[];
   trigger?: TriggerConfig;
+  crmFields?: CrmFieldConfig[];
   onSave: (conditions: Condition[]) => void;
   onClose: () => void;
 }
 
-// CRM field options for dropdown conditions
-const getBaseCrmFields = () => [
+// Default CRM field options (fallback when schema is not provided)
+const getBaseCrmFields = (): CrmFieldConfig[] => [
   { value: "contact.name", label: "Contact Name", type: "text" },
   { value: "contact.email", label: "Contact Email", type: "email" },
   { value: "contact.phone", label: "Contact Phone", type: "text" },
@@ -80,11 +88,14 @@ const ConditionConfigModal: React.FC<ConditionConfigModalProps> = ({
   isOpen,
   conditions = [],
   trigger,
+  crmFields: crmFieldsProp,
   onSave,
   onClose
 }) => {
+  const resolvedCrmFields = crmFieldsProp || getBaseCrmFields();
   const { isDarkMode } = useDarkMode();
-  const { tags, getTagById } = useTags();
+  const { tags } = useTags();
+  const getTagById = (id: string) => tags.find(t => t.id === id);
   const [formConditions, setFormConditions] = useState<Condition[]>([]);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [formFields, setFormFields] = useState<FormField[]>([]);
@@ -173,7 +184,7 @@ const ConditionConfigModal: React.FC<ConditionConfigModalProps> = ({
   };
 
   // Combine base CRM fields with form fields
-  const crmFields = [...getBaseCrmFields(), ...getFormFieldOptions()];
+  const crmFields = [...resolvedCrmFields, ...getFormFieldOptions()];
 
   const getFieldType = (fieldValue: string) => {
     const field = crmFields.find(f => f.value === fieldValue);
