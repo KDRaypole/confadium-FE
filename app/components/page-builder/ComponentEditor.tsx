@@ -3,6 +3,7 @@ import type { PageComponentNode } from "~/lib/api/types";
 import { useForms } from "~/hooks/useForms";
 import { useProducts } from "~/hooks/useProducts";
 import { useWebsitePages } from "~/hooks/useWebsites";
+import { usePages } from "~/hooks/usePages";
 
 export default function ComponentEditor() {
   const { selectedSelector, getComponent, manipulate, select, removeComponent, duplicateComponent } = usePageBuilder();
@@ -398,7 +399,9 @@ function SectionEditor({ node, onChange }: { node: PageComponentNode; onChange: 
 function NavigationEditor({ node, onChange }: { node: PageComponentNode; onChange: (c: Record<string, unknown>) => void }) {
   const p = node.props as Record<string, unknown>;
   const { websiteId, pageId } = usePageBuilder();
-  const { pages } = useWebsitePages(websiteId || '');
+  const { pages: websitePages } = useWebsitePages(websiteId || '');
+  const { pages: orgPages } = usePages();
+  const pages = websiteId ? websitePages : orgPages;
   const links = (p.links as { text: string; href: string; pageId?: string }[]) || [];
   const useAutoLinks = (p.autoLinksFromWebsite as boolean) ?? true;
 
@@ -438,7 +441,7 @@ function NavigationEditor({ node, onChange }: { node: PageComponentNode; onChang
       <div className="border-t border-gray-200 dark:border-gray-700 pt-3">
         <div className="flex items-center justify-between mb-2">
           <span className="text-xs font-medium text-gray-600 dark:text-gray-400">Navigation Links</span>
-          {websiteId && pages.length > 0 && (
+          {pages.length > 0 && (
             <button onClick={handleAutoPopulate} className="text-xs text-purple-600 hover:text-purple-700 dark:text-purple-400">
               Auto from pages
             </button>
@@ -446,25 +449,87 @@ function NavigationEditor({ node, onChange }: { node: PageComponentNode; onChang
         </div>
 
         <div className="space-y-2">
-          {links.map((link, i) => (
-            <div key={i} className="flex items-center gap-1">
-              <input
-                type="text"
-                value={link.text}
-                onChange={(e) => updateLink(i, 'text', e.target.value)}
-                placeholder="Label"
-                className="flex-1 border border-gray-300 dark:border-gray-600 rounded px-2 py-1 text-xs bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
-              />
-              <input
-                type="text"
-                value={link.href}
-                onChange={(e) => updateLink(i, 'href', e.target.value)}
-                placeholder="/slug"
-                className="flex-1 border border-gray-300 dark:border-gray-600 rounded px-2 py-1 text-xs bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
-              />
-              <button onClick={() => removeLink(i)} className="text-red-500 hover:text-red-700 text-xs px-1">&times;</button>
-            </div>
-          ))}
+          {links.map((link, i) => {
+            const linkType = link.pageId !== undefined ? 'page' : 'custom';
+            return (
+              <div key={i} className="space-y-1.5 border border-gray-200 dark:border-gray-600 rounded p-2">
+                <div className="flex items-center gap-1">
+                  <input
+                    type="text"
+                    value={link.text}
+                    onChange={(e) => updateLink(i, 'text', e.target.value)}
+                    placeholder="Label"
+                    className="flex-1 border border-gray-300 dark:border-gray-600 rounded px-2 py-1 text-xs bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                  />
+                  <button onClick={() => removeLink(i)} className="text-red-500 hover:text-red-700 text-xs px-1">&times;</button>
+                </div>
+
+                {/* Link type toggle */}
+                <div className="flex gap-1">
+                  {pages.length > 0 && (
+                    <button
+                      onClick={() => {
+                        const updated = [...links];
+                        if (linkType === 'page') {
+                          updated[i] = { ...updated[i], pageId: undefined, href: '#' };
+                        } else {
+                          updated[i] = { ...updated[i], pageId: '', href: '' };
+                        }
+                        onChange({ links: updated, autoLinksFromWebsite: false });
+                      }}
+                      className={`px-2 py-0.5 text-xs rounded ${linkType === 'page' ? 'bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300' : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400'}`}
+                    >
+                      Page
+                    </button>
+                  )}
+                  <button
+                    onClick={() => {
+                      const updated = [...links];
+                      updated[i] = { ...updated[i], pageId: undefined };
+                      onChange({ links: updated, autoLinksFromWebsite: false });
+                    }}
+                    className={`px-2 py-0.5 text-xs rounded ${linkType === 'custom' ? 'bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300' : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400'}`}
+                  >
+                    Custom URL
+                  </button>
+                </div>
+
+                {/* Page selector or URL input */}
+                {linkType === 'page' && pages.length > 0 ? (
+                  <select
+                    value={link.pageId || ''}
+                    onChange={(e) => {
+                      const selectedPage = pages.find(pg => pg.id === e.target.value);
+                      if (selectedPage) {
+                        const updated = [...links];
+                        updated[i] = {
+                          ...updated[i],
+                          pageId: selectedPage.id,
+                          href: `/${selectedPage.attributes.slug}`,
+                          text: updated[i].text === 'New Link' || !updated[i].text ? selectedPage.attributes.name : updated[i].text,
+                        };
+                        onChange({ links: updated, autoLinksFromWebsite: false });
+                      }
+                    }}
+                    className="w-full border border-gray-300 dark:border-gray-600 rounded px-2 py-1 text-xs bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                  >
+                    <option value="">Select a page...</option>
+                    {pages.filter(pg => pg.id !== pageId).map(pg => (
+                      <option key={pg.id} value={pg.id}>{pg.attributes.name} (/{pg.attributes.slug})</option>
+                    ))}
+                  </select>
+                ) : (
+                  <input
+                    type="text"
+                    value={link.href}
+                    onChange={(e) => updateLink(i, 'href', e.target.value)}
+                    placeholder="https://... or /path"
+                    className="w-full border border-gray-300 dark:border-gray-600 rounded px-2 py-1 text-xs bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                  />
+                )}
+              </div>
+            );
+          })}
           <button onClick={addLink} className="text-xs text-purple-600 hover:text-purple-700 dark:text-purple-400">
             + Add link
           </button>

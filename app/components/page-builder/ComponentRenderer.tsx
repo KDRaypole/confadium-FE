@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { usePageBuilder } from "./PageBuilderContext";
 import SectionGrid from "./SectionGrid";
 import EmbeddedForm from "./EmbeddedForm";
@@ -699,7 +699,8 @@ function SortableSection({ node, depth }: { node: PageComponentNode; depth: numb
 
 
 function NavigationComponent({ node }: { node: PageComponentNode }) {
-  const { theme, editMode } = usePageBuilder();
+  const { theme, editMode, device } = usePageBuilder();
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const { logo, links, backgroundColor, textColor } = node.props as {
     logo?: string;
     links?: { text: string; href: string }[];
@@ -719,11 +720,25 @@ function NavigationComponent({ node }: { node: PageComponentNode }) {
     ...paragraphFontStyle(theme),
   };
 
+  const navLinks = links || [{ text: 'Home', href: '#' }, { text: 'About', href: '#' }, { text: 'Contact', href: '#' }];
+
+  // In edit mode, follow the device toggle. On public pages, detect actual viewport width.
+  const [viewportWidth, setViewportWidth] = useState(typeof window !== 'undefined' ? window.innerWidth : 1024);
+  useEffect(() => {
+    if (editMode) return; // Editor uses device toggle, not viewport
+    const handleResize = () => setViewportWidth(window.innerWidth);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, [editMode]);
+
+  const isMobile = editMode ? device === 'mobile' : viewportWidth < 768;
+
   return (
     <nav style={{
       backgroundColor: navBg,
       borderBottom: `1px solid ${palette?.color2 || '#e5e7eb'}`,
       padding: '1rem 1.5rem',
+      position: 'relative',
     }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <div style={{
@@ -734,16 +749,81 @@ function NavigationComponent({ node }: { node: PageComponentNode }) {
         }}>
           {logo || 'Your Logo'}
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
-          {(links || [{ text: 'Home', href: '#' }, { text: 'About', href: '#' }, { text: 'Contact', href: '#' }]).map((link, i) =>
+
+        {/* Desktop links */}
+        {!isMobile && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
+            {navLinks.map((link, i) =>
+              editMode ? (
+                <span key={i} style={linkStyle}>{link.text}</span>
+              ) : (
+                <a key={i} href={link.href} style={linkStyle}>{link.text}</a>
+              )
+            )}
+          </div>
+        )}
+
+        {/* Mobile hamburger button */}
+        {isMobile && (
+          <button
+            onClick={(e) => { e.stopPropagation(); setMobileMenuOpen(!mobileMenuOpen); }}
+            style={{
+              background: 'none', border: 'none', cursor: 'pointer', padding: '0.25rem',
+              color: navTextColor, display: 'flex', flexDirection: 'column', gap: '4px',
+            }}
+            aria-label="Toggle menu"
+          >
+            <span style={{ display: 'block', width: '20px', height: '2px', backgroundColor: navTextColor, borderRadius: '1px', transition: 'transform 0.2s', transform: mobileMenuOpen ? 'rotate(45deg) translate(4px, 4px)' : 'none' }} />
+            <span style={{ display: 'block', width: '20px', height: '2px', backgroundColor: navTextColor, borderRadius: '1px', transition: 'opacity 0.2s', opacity: mobileMenuOpen ? 0 : 1 }} />
+            <span style={{ display: 'block', width: '20px', height: '2px', backgroundColor: navTextColor, borderRadius: '1px', transition: 'transform 0.2s', transform: mobileMenuOpen ? 'rotate(-45deg) translate(4px, -4px)' : 'none' }} />
+          </button>
+        )}
+      </div>
+
+      {/* Mobile slide-out menu */}
+      {isMobile && mobileMenuOpen && (
+        <div style={{
+          position: 'absolute',
+          top: '100%',
+          left: 0,
+          right: 0,
+          backgroundColor: navBg,
+          borderBottom: `1px solid ${palette?.color2 || '#e5e7eb'}`,
+          boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)',
+          zIndex: 50,
+          padding: '0.5rem 0',
+        }}>
+          {navLinks.map((link, i) =>
             editMode ? (
-              <span key={i} style={linkStyle}>{link.text}</span>
+              <span
+                key={i}
+                style={{
+                  ...linkStyle,
+                  display: 'block',
+                  padding: '0.75rem 1.5rem',
+                  borderBottom: i < navLinks.length - 1 ? `1px solid ${palette?.color2 || '#f3f4f6'}` : undefined,
+                }}
+              >
+                {link.text}
+              </span>
             ) : (
-              <a key={i} href={link.href} style={linkStyle}>{link.text}</a>
+              <a
+                key={i}
+                href={link.href}
+                onClick={() => setMobileMenuOpen(false)}
+                style={{
+                  ...linkStyle,
+                  display: 'block',
+                  padding: '0.75rem 1.5rem',
+                  borderBottom: i < navLinks.length - 1 ? `1px solid ${palette?.color2 || '#f3f4f6'}` : undefined,
+                }}
+              >
+                {link.text}
+              </a>
             )
           )}
         </div>
-      </div>
+      )}
     </nav>
   );
 }

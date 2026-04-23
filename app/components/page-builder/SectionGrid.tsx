@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef, useState, useEffect, type ComponentType } from "react";
+import { useCallback, useMemo, useRef, useState, useEffect, type ComponentType, type ReactNode } from "react";
 import { Responsive as ResponsiveImport } from "react-grid-layout";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -7,6 +7,40 @@ import { usePageBuilder } from "./PageBuilderContext";
 import ComponentRenderer from "./ComponentRenderer";
 import type { PageComponentNode } from "~/lib/api/types";
 import { PlusIcon } from "@heroicons/react/24/outline";
+
+/**
+ * Wrapper that measures its content and reports when the content height
+ * exceeds the grid-allocated height, so the parent can grow the item's row span.
+ */
+function AutoSizeItem({ children, rowHeight, gridH, margin, onHeightChange }: {
+  children: ReactNode;
+  rowHeight: number;
+  gridH: number;
+  margin: number;
+  onHeightChange: (neededH: number) => void;
+}) {
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!ref.current) return;
+    const observer = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        const contentHeight = entry.contentRect.height;
+        // Calculate how many grid rows the content actually needs
+        // Grid item pixel height = h * rowHeight + (h - 1) * margin
+        // Solve for h: h = ceil((contentHeight + margin) / (rowHeight + margin))
+        const neededH = Math.ceil((contentHeight + margin) / (rowHeight + margin));
+        if (neededH > gridH) {
+          onHeightChange(neededH);
+        }
+      }
+    });
+    observer.observe(ref.current);
+    return () => observer.disconnect();
+  }, [rowHeight, gridH, margin, onHeightChange]);
+
+  return <div ref={ref}>{children}</div>;
+}
 
 type GLayout = {
   i: string; x: number; y: number; w: number; h: number;
@@ -33,8 +67,14 @@ export default function SectionGrid({ node }: SectionGridProps) {
 
   const gridAreaRef = useRef<HTMLDivElement>(null);
   const [gridAreaWidth, setGridAreaWidth] = useState(0);
+  const [heightOverrides, setHeightOverrides] = useState<Record<string, number>>({});
 
   const breakpoint = device === 'mobile' ? 'sm' : 'lg';
+
+  // Reset height overrides when breakpoint changes (content reflows at different widths)
+  useEffect(() => {
+    setHeightOverrides({});
+  }, [breakpoint]);
   const cols = breakpoint === 'lg' ? 12 : 8;
   const isSectionSelected = selectedSelector === node.selector;
   const gridMargin: [number, number] = [gapX, gapY];
@@ -58,23 +98,62 @@ export default function SectionGrid({ node }: SectionGridProps) {
     children.forEach((child) => {
       const gLg = child.grid?.lg || { x: 0, y: 0, w: 12, h: 4 };
       const gSm = child.grid?.sm || { x: 0, y: 0, w: 8, h: 4 };
-      lg.push({ i: child.selector, x: gLg.x, y: gLg.y, w: gLg.w, h: gLg.h, minW: gLg.minW || 2, minH: gLg.minH || 1, isDraggable: editMode, isResizable: editMode });
-      sm.push({ i: child.selector, x: gSm.x, y: gSm.y, w: gSm.w, h: gSm.h, minW: 2, minH: 1, isDraggable: editMode, isResizable: editMode });
+      // Clamp width to column count so items never exceed the grid
+      const lgW = Math.min(gLg.w, 12);
+      const smW = Math.min(gSm.w, 8);
+      // Clamp x so item doesn't start beyond available columns
+      const lgX = Math.min(gLg.x, 12 - lgW);
+      const smX = Math.min(gSm.x, 8 - smW);
+      // Apply height overrides from content measurement
+      const override = heightOverrides[child.selector];
+      const lgH = override ? Math.max(gLg.h, override) : gLg.h;
+      const smH = override ? Math.max(gSm.h, override) : gSm.h;
+      lg.push({ i: child.selector, x: lgX, y: gLg.y, w: lgW, h: lgH, minW: gLg.minW || 2, minH: gLg.minH || 1, isDraggable: editMode, isResizable: editMode });
+      sm.push({ i: child.selector, x: smX, y: gSm.y, w: smW, h: smH, minW: 2, minH: 1, isDraggable: editMode, isResizable: editMode });
     });
     return { lg, sm };
-  }, [children, editMode]);
+  }, [children, editMode, heightOverrides]);
 
-  const handleLayoutChange = useCallback(
+  // Use a ref to track whether a drag/resize is in progress to prevent
+  // layout recalculations from fighting with the grid's internal state
+  const isDraggingRef = useRef(false);
+
+  const handleDragStart = useCallback(() => { isDraggingRef.current = true; }, []);
+  const handleDragStop = useCallback(
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (_currentLayout: any[], allLayouts: any) => {
-      const layoutForBp = allLayouts?.[breakpoint] || _currentLayout;
-      if (!Array.isArray(layoutForBp)) return;
+    (layout: any[]) => {
+      isDraggingRef.current = false;
+      if (!Array.isArray(layout)) return;
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      layoutForBp.forEach((item: any) => {
+      layout.forEach((item: any) => {
         const child = children.find((c) => c.selector === item.i);
         if (!child) return;
         const existing = child.grid?.[breakpoint];
         if (existing && existing.x === item.x && existing.y === item.y && existing.w === item.w && existing.h === item.h) return;
+        updateGridPosition(item.i, breakpoint, { x: item.x, y: item.y, w: item.w, h: item.h });
+      });
+    },
+    [children, breakpoint, updateGridPosition]
+  );
+
+  const handleResizeStop = useCallback(
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (layout: any[]) => {
+      isDraggingRef.current = false;
+      if (!Array.isArray(layout)) return;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      layout.forEach((item: any) => {
+        const child = children.find((c) => c.selector === item.i);
+        if (!child) return;
+        const existing = child.grid?.[breakpoint];
+        if (existing && existing.x === item.x && existing.y === item.y && existing.w === item.w && existing.h === item.h) return;
+        // Clear height override when user explicitly resizes
+        setHeightOverrides(prev => {
+          if (!prev[item.i]) return prev;
+          const next = { ...prev };
+          delete next[item.i];
+          return next;
+        });
         updateGridPosition(item.i, breakpoint, { x: item.x, y: item.y, w: item.w, h: item.h });
       });
     },
@@ -110,7 +189,7 @@ export default function SectionGrid({ node }: SectionGridProps) {
       }}
     >
       {/* Grid area — overlay + react-grid-layout share this same container */}
-      <div ref={gridAreaRef} style={{ position: 'relative', overflow: 'hidden' }}>
+      <div ref={gridAreaRef} style={{ position: 'relative' }}>
         {/* Grid overlay — uses measured width to replicate react-grid-layout column positions */}
         {editMode && showGrid && gridAreaWidth > 0 && (
           <GridOverlay
@@ -147,19 +226,51 @@ export default function SectionGrid({ node }: SectionGridProps) {
             rowHeight={rowHeight}
             margin={gridMargin}
             compactType="vertical"
+            preventCollision={false}
             isDraggable={editMode}
             isResizable={editMode}
             useCSSTransforms
             resizeHandles={editMode ? ['se'] : []}
-            onLayoutChange={handleLayoutChange}
+            onDragStart={() => { isDraggingRef.current = true; }}
+            onDragStop={(layout: any[]) => {
+              isDraggingRef.current = false;
+              handleDragStop(layout);
+            }}
+            onResizeStart={() => { isDraggingRef.current = true; }}
+            onResizeStop={(layout: any[]) => {
+              isDraggingRef.current = false;
+              handleResizeStop(layout);
+            }}
+            onLayoutChange={(_currentLayout: any[], allLayouts: any) => {
+              // Only persist layout changes when not mid-drag
+              if (isDraggingRef.current) return;
+            }}
             onWidthChange={(width: number) => setGridAreaWidth(width)}
             width={gridAreaWidth || undefined}
+            autoSize
           >
-            {children.map((child) => (
-              <div key={child.selector} style={{ overflow: 'visible' }}>
-                <ComponentRenderer node={child} />
-              </div>
-            ))}
+            {children.map((child) => {
+              const gridH = (breakpoint === 'lg'
+                ? child.grid?.lg?.h
+                : child.grid?.sm?.h) || 4;
+              return (
+                <div key={child.selector} style={{ overflow: 'hidden' }}>
+                  <AutoSizeItem
+                    rowHeight={rowHeight}
+                    gridH={heightOverrides[child.selector] || gridH}
+                    margin={gapY}
+                    onHeightChange={(neededH) => {
+                      setHeightOverrides(prev => {
+                        if (prev[child.selector] === neededH) return prev;
+                        return { ...prev, [child.selector]: neededH };
+                      });
+                    }}
+                  >
+                    <ComponentRenderer node={child} />
+                  </AutoSizeItem>
+                </div>
+              );
+            })}
           </Responsive>
         )}
       </div>
