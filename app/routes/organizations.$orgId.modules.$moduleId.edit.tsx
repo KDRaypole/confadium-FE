@@ -220,7 +220,7 @@ export default function ModuleEdit() {
   const { configuration: existingConfig, loading: configLoading, updateConfiguration, isUpdating } = useConfiguration(configId || undefined);
   const { createConfiguration, isCreating } = useModuleConfigurations(moduleId);
   const { templates: emailTemplates } = useEmailTemplates();
-  const { forms: availableForms } = useActiveForms();
+  const { data: availableForms = [] } = useActiveForms();
   const { schema } = useTriggerableSchema();
 
   // Helper function to get template by ID from the proper templates source
@@ -266,8 +266,8 @@ export default function ModuleEdit() {
       const allConditions = model.triggers.flatMap(t => t.conditions);
       const uniqueAttrs = Array.from(new Map(allConditions.map(c => [c.name, c])).values());
       return {
-        value: model.model.toLowerCase(),
-        label: model.model.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
+        value: model.model.replace(/([a-z])([A-Z])/g, '$1_$2').toLowerCase(),
+        label: model.model.replace(/([a-z])([A-Z])/g, '$1 $2'),
         actions: model.triggers.map(t => EVENT_LABEL[t.event] || t.event),
         attributes: uniqueAttrs.map(c => ({ value: c.name, label: c.name.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) })),
       };
@@ -929,7 +929,7 @@ export default function ModuleEdit() {
                 )}
 
                 {/* Form Selection for Form Triggers */}
-                {configuration.trigger.entityType === "form" && configuration.trigger.action === "submitted" && (
+                {(configuration.trigger.entityType === "form" || configuration.trigger.entityType === "form_submission") && configuration.trigger.action && (
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                       Select Form
@@ -1247,18 +1247,28 @@ export default function ModuleEdit() {
                                         <p className="text-xs text-gray-400 dark:text-gray-500 mb-1.5">{param.description}</p>
                                       )}
                                       {(param.source === 'field' || (param.source === 'any' && currentSource === 'field')) ? (
-                                        <SimpleSelect
-                                          options={[
-                                            { value: "", label: "Select record field..." },
-                                            ...(preset.available_fields || []).map(f => ({
-                                              value: f.name,
-                                              label: f.name.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())
-                                            }))
-                                          ]}
-                                          value={currentValue}
-                                          onChange={(v) => setParamValue('field', v)}
-                                          size="sm"
-                                        />
+                                        configuration.trigger.entityType === 'form_submission' ? (
+                                          <ResourceSelect
+                                            resource="form_field"
+                                            value={currentValue}
+                                            onChange={(v) => setParamValue('field', v)}
+                                            size="sm"
+                                            formId={configuration.trigger.formId}
+                                          />
+                                        ) : (
+                                          <SimpleSelect
+                                            options={[
+                                              { value: "", label: "Select record field..." },
+                                              ...(preset.available_fields || []).map(f => ({
+                                                value: f.name,
+                                                label: f.name.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())
+                                              }))
+                                            ]}
+                                            value={currentValue}
+                                            onChange={(v) => setParamValue('field', v)}
+                                            size="sm"
+                                          />
+                                        )
                                       ) : param.resource ? (
                                         <ResourceSelect
                                           resource={param.resource}

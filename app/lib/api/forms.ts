@@ -3,6 +3,7 @@ import type {
   FormAttributes, FormFieldAttributes, FormSubmissionAttributes,
   FormTheme, FormSettings, FormFieldType, ConditionalAction, FormFieldValidation,
 } from './types';
+import { generateFormUrl } from '~/lib/jwt';
 
 export type Form = Resource<FormAttributes>;
 export type FormField = Resource<FormFieldAttributes>;
@@ -75,4 +76,34 @@ export const formsApi = {
   async transitionState(formId: string, stateId: string): Promise<void> {
     await api.put(`/forms/${formId}/state/${stateId}`, {});
   },
+
+  // ── Public Form Access ─────────────────────────────────
+
+  getShareableUrl(formId: string): string {
+    return generateFormUrl(formId);
+  },
+
+  async getPublicForm(formId: string): Promise<Form> {
+    const result = await api.get<ResourceDocument<FormAttributes>>(`/public/forms/${formId}`);
+    // Flatten attributes onto the resource so PublicFormRenderer can access
+    // form.fields, form.settings, etc. directly
+    const resource = result.data;
+    return { ...resource, ...resource.attributes } as Form;
+  },
+
+  async submitForm(formId: string, data: Record<string, unknown>, recaptchaToken?: string): Promise<{ success: boolean; message: string }> {
+    try {
+      await api.post<ResourceDocument<FormSubmissionAttributes>>(
+        `/public/forms/${formId}/submissions`,
+        buildResource('form_submission', { data, recaptcha_token: recaptchaToken })
+      );
+      return { success: true, message: "Form submitted successfully!" };
+    } catch (error) {
+      return { success: false, message: error instanceof Error ? error.message : "Failed to submit form" };
+    }
+  },
+
+  // Debug stubs (used by public form route)
+  syncData(): void {},
+  getStoreState(): Record<string, unknown> { return {}; },
 };

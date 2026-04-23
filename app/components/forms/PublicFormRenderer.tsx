@@ -289,7 +289,14 @@ const PublicFormRenderer: React.FC<PublicFormRendererProps> = ({ form, onSubmit 
     
     setIsSubmitting(true);
     try {
-      const result = await onSubmit({ ...formValues, recaptchaToken });
+      // Remap field UUIDs to labels so submission data is human-readable
+      const labeledValues: Record<string, any> = {};
+      for (const [fieldId, value] of Object.entries(formValues)) {
+        const field = form.fields?.find((f: any) => f.id === fieldId);
+        const key = field?.label || field?.type || fieldId;
+        labeledValues[key] = value;
+      }
+      const result = await onSubmit({ ...labeledValues, recaptchaToken });
       setSubmitResult(result);
       
       if (result.success) {
