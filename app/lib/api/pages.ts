@@ -57,4 +57,12 @@ export const pagesApi = {
   async deleteTemplate(id: string): Promise<void> {
     return api.delete(`/page_templates/${id}`);
   },
+
+  // ── Public Pages ──────────────────────────────────────────
+
+  async getPublicPage(websiteSlug: string, pageSlug: string): Promise<Page> {
+    const result = await api.get<ResourceDocument<PageAttributes>>(`/public/pages/${websiteSlug}/${pageSlug}`);
+    const resource = result.data;
+    return { ...resource, ...resource.attributes } as Page;
+  },
 };

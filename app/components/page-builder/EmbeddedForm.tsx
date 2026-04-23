@@ -44,16 +44,23 @@ interface EmbeddedFormProps {
 export default function EmbeddedForm({ formId }: EmbeddedFormProps) {
   const { editMode } = usePageBuilder();
 
+  // Use public endpoint when not in edit mode (public page viewing)
   const { data: formResource, isLoading: loading, error } = useQuery({
-    queryKey: ['embedded-form', formId],
-    queryFn: () => formsApi.getFormById(formId),
-    select: (data) => data.data,
+    queryKey: ['embedded-form', formId, editMode],
+    queryFn: async () => {
+      if (editMode) {
+        const result = await formsApi.getFormById(formId);
+        return result.data;
+      } else {
+        return await formsApi.getPublicForm(formId);
+      }
+    },
     enabled: !!formId,
     retry: 1,
   });
 
-  const form = formResource?.attributes;
-  const fields: EmbeddedField[] = (form as any)?.fields || [];
+  const form = (editMode ? formResource?.attributes : formResource) as any;
+  const fields: EmbeddedField[] = form?.fields || [];
   const theme: FormTheme = form?.theme || {};
   const settings: FormSettings = form?.settings || {};
 
@@ -109,6 +116,7 @@ export default function EmbeddedForm({ formId }: EmbeddedFormProps) {
       <div style={{ padding: theme.spacing ? `${parseInt(theme.spacing) * 1.5}px` : '1.5rem' }}>
         {isMultiStep ? (
           <MultiStepPreview
+            formId={formId}
             formName={form.name}
             description={form.description}
             fields={fields}
@@ -118,6 +126,7 @@ export default function EmbeddedForm({ formId }: EmbeddedFormProps) {
           />
         ) : (
           <SinglePagePreview
+            formId={formId}
             formName={form.name}
             description={form.description}
             fields={fields}
@@ -134,8 +143,9 @@ export default function EmbeddedForm({ formId }: EmbeddedFormProps) {
 // ── Single-page form ───────────────────────────────────────
 
 function SinglePagePreview({
-  formName, description, fields, theme, settings, editMode,
+  formId, formName, description, fields, theme, settings, editMode,
 }: {
+  formId: string;
   formName: string;
   description: string | null;
   fields: EmbeddedField[];
@@ -144,7 +154,42 @@ function SinglePagePreview({
   editMode: boolean;
 }) {
   const [values, setValues] = useState<Record<string, any>>({});
+  const [submitting, setSubmitting] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
   const visibleFields = useVisibleFields(fields, values);
+
+  const handleSubmit = async () => {
+    if (editMode || submitting) return;
+    setSubmitting(true);
+    try {
+      // Remap field UUIDs to labels
+      const labeled: Record<string, any> = {};
+      for (const [fieldId, value] of Object.entries(values)) {
+        const field = fields.find(f => f.id === fieldId);
+        labeled[field?.label || fieldId] = value;
+      }
+      await formsApi.submitForm(formId, labeled);
+      setSubmitted(true);
+    } catch (e) {
+      console.error('Form submission failed:', e);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  if (submitted) {
+    return (
+      <div style={{ textAlign: 'center', padding: '2rem 1rem' }}>
+        <div style={{ fontSize: '2rem', marginBottom: '0.75rem' }}>&#10003;</div>
+        <h3 style={{ fontWeight: 600, fontSize: '1.125rem', color: theme.textColor || '#1f2937', marginBottom: '0.5rem', fontFamily: theme.fontFamily }}>
+          {settings.confirmationTitle || 'Thank you!'}
+        </h3>
+        <p style={{ color: theme.textColor ? `${theme.textColor}99` : '#6b7280', fontFamily: theme.fontFamily }}>
+          {settings.confirmationMessage || 'Your response has been submitted.'}
+        </p>
+      </div>
+    );
+  }
 
   return (
     <>
@@ -152,14 +197,31 @@ function SinglePagePreview({
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: theme.spacing ? `${parseInt(theme.spacing) * 0.75}px` : '1rem' }}>
         {visibleFields.map((field) => (
-          <FieldRenderer
-            key={field.id}
-            field={field}
-            theme={theme}
-            value={values[field.id]}
-            onChange={(v) => setValues((prev) => ({ ...prev, [field.id]: v }))}
-            disabled={false}
-          />
+          <div key={field.id}>
+            {field.type !== 'checkbox' && (
+              <label style={{
+                display: 'block', fontWeight: 500, marginBottom: '0.375rem',
+                fontSize: theme.fontSize || '0.875rem',
+                color: theme.textColor || '#374151',
+                fontFamily: theme.fontFamily,
+              }}>
+                {field.label}
+                {field.required && <span style={{ color: '#ef4444', marginLeft: '0.25rem' }}>*</span>}
+              </label>
+            )}
+            {field.description && (
+              <p style={{ fontSize: '0.75rem', color: theme.textColor ? `${theme.textColor}99` : '#9ca3af', marginBottom: '0.375rem', fontFamily: theme.fontFamily }}>
+                {field.description}
+              </p>
+            )}
+            <FieldRenderer
+              field={field}
+              theme={theme}
+              value={values[field.id]}
+              onChange={(v) => setValues((prev) => ({ ...prev, [field.id]: v }))}
+              disabled={false}
+            />
+          </div>
         ))}
 
         {fields.length === 0 && (
@@ -170,7 +232,9 @@ function SinglePagePreview({
       </div>
 
       {fields.length > 0 && (
-        <SubmitButton label={settings.submitButtonText || 'Submit'} theme={theme} disabled={editMode} />
+        <div onClick={handleSubmit}>
+          <SubmitButton label={submitting ? 'Submitting...' : (settings.submitButtonText || 'Submit')} theme={theme} disabled={editMode || submitting} />
+        </div>
       )}
     </>
   );
@@ -179,8 +243,9 @@ function SinglePagePreview({
 // ── Multi-step form ────────────────────────────────────────
 
 function MultiStepPreview({
-  formName, description, fields, theme, settings, editMode,
+  formId, formName, description, fields, theme, settings, editMode,
 }: {
+  formId: string;
   formName: string;
   description: string | null;
   fields: EmbeddedField[];
@@ -191,6 +256,8 @@ function MultiStepPreview({
   const [currentStep, setCurrentStep] = useState(0);
   const [values, setValues] = useState<Record<string, any>>({});
   const [direction, setDirection] = useState<'next' | 'prev'>('next');
+  const [submitting, setSubmitting] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
 
   const visibleFields = useVisibleFields(fields, values);
   const totalSteps = visibleFields.length;
@@ -221,6 +288,40 @@ function MultiStepPreview({
       setCurrentStep(idx);
     }
   };
+
+  const handleSubmit = async () => {
+    if (editMode || submitting) return;
+    setSubmitting(true);
+    try {
+      const labeled: Record<string, any> = {};
+      for (const [fieldId, value] of Object.entries(values)) {
+        const field = fields.find(f => f.id === fieldId);
+        labeled[field?.label || fieldId] = value;
+      }
+      await formsApi.submitForm(formId, labeled);
+      setSubmitted(true);
+    } catch (e) {
+      console.error('Form submission failed:', e);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  if (submitted) {
+    return (
+      <div style={{ minHeight: '200px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div style={{ textAlign: 'center' }}>
+          <div style={{ fontSize: '2rem', marginBottom: '0.75rem' }}>&#10003;</div>
+          <h2 style={{ fontWeight: 'bold', marginBottom: '0.5rem', color: theme.textColor || '#1f2937', fontSize: '1.125rem', fontFamily: theme.fontFamily }}>
+            {settings.confirmationTitle || 'Thank you!'}
+          </h2>
+          <p style={{ color: theme.textColor ? `${theme.textColor}99` : '#6b7280', fontFamily: theme.fontFamily }}>
+            {settings.confirmationMessage || 'Your response has been submitted.'}
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   if (endState.shouldEnd) {
     return (
@@ -348,7 +449,7 @@ function MultiStepPreview({
         </button>
 
         <button
-          onClick={isLastStep ? undefined : handleNext}
+          onClick={isLastStep ? (!editMode ? handleSubmit : undefined) : handleNext}
           style={{
             display: 'inline-flex', alignItems: 'center', gap: '0.375rem',
             padding: '0.5rem 1.25rem',
@@ -452,6 +553,7 @@ function FieldRenderer({
           value={value || ''}
           onChange={(e) => onChange(e.target.value)}
           disabled={disabled}
+          required={field.required}
           style={inputStyle}
           autoFocus={autoFocus}
         />
@@ -464,6 +566,7 @@ function FieldRenderer({
           value={value || ''}
           onChange={(e) => onChange(e.target.value)}
           disabled={disabled}
+          required={field.required}
           rows={3}
           style={inputStyle}
           autoFocus={autoFocus}
@@ -477,6 +580,7 @@ function FieldRenderer({
           value={value || ''}
           onChange={(e) => onChange(e.target.value)}
           disabled={disabled}
+          required={field.required}
           style={inputStyle}
           autoFocus={autoFocus}
         />
@@ -488,6 +592,7 @@ function FieldRenderer({
           value={value || ''}
           onChange={(e) => onChange(e.target.value)}
           disabled={disabled}
+          required={field.required}
           style={inputStyle}
         >
           <option value="">{field.placeholder || 'Select an option...'}</option>

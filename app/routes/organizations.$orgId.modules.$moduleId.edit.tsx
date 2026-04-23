@@ -209,6 +209,9 @@ const actionTypes = [
   { value: "webhook", label: "Send Webhook", targets: ["External System", "API Endpoint"] }
 ];
 
+// Helper to convert PascalCase model name to snake_case for matching
+const toSnakeCase = (str: string) => str.replace(/([a-z])([A-Z])/g, '$1_$2').toLowerCase();
+
 export default function ModuleEdit() {
   const params = useParams();
   const [searchParams] = useSearchParams();
@@ -281,7 +284,7 @@ export default function ModuleEdit() {
     const selectedAction = configuration.trigger.action;
     if (!selectedEntity) return undefined;
 
-    const model = schema.models.find(m => m.model.toLowerCase() === selectedEntity);
+    const model = schema.models.find(m => toSnakeCase(m.model) === selectedEntity);
     if (!model) return undefined;
 
     const event = EVENT_MAP[selectedAction] || selectedAction;
@@ -303,7 +306,7 @@ export default function ModuleEdit() {
     const selectedAction = configuration.trigger.action;
     if (!selectedEntity || !selectedAction) return [];
 
-    const model = schema.models.find(m => m.model.toLowerCase() === selectedEntity);
+    const model = schema.models.find(m => toSnakeCase(m.model) === selectedEntity);
     if (!model) return [];
 
     const event = EVENT_MAP[selectedAction] || selectedAction;
@@ -324,7 +327,7 @@ export default function ModuleEdit() {
     const selectedAction = configuration.trigger.action;
     if (!selectedEntity || !selectedAction) return undefined;
 
-    const model = schema.models.find(m => m.model.toLowerCase() === selectedEntity);
+    const model = schema.models.find(m => toSnakeCase(m.model) === selectedEntity);
     if (!model) return undefined;
 
     const event = EVENT_MAP[selectedAction] || selectedAction;

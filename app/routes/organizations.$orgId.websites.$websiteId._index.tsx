@@ -14,6 +14,7 @@ import {
   TrashIcon,
   HomeIcon,
 } from "@heroicons/react/24/outline";
+import ShareLinkButton from "~/components/ui/ShareLinkButton";
 
 export const meta: MetaFunction = () => {
   return [{ title: "Website - CRM Dashboard" }];
@@ -77,6 +78,14 @@ export default function WebsiteDetail() {
               </div>
             </div>
             <div className="flex space-x-3">
+              {attrs.state?.name === 'published' && (
+                <ShareLinkButton
+                  url={`${typeof window !== 'undefined' ? window.location.origin : ''}/${attrs.slug}`}
+                  title="Share Website"
+                  iconOnly={false}
+                  className="inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-sm font-medium text-blue-600 dark:text-blue-400 bg-white dark:bg-gray-700 hover:bg-gray-50"
+                />
+              )}
               <Link
                 to={`/organizations/${orgId}/websites/${websiteId}/edit`}
                 className="inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50"
@@ -158,6 +167,12 @@ export default function WebsiteDetail() {
                         <Link to={`/organizations/${orgId}/pages/${page.id}/edit`} className="text-gray-600 hover:text-gray-700 dark:text-gray-400">
                           <PencilIcon className="h-4 w-4" />
                         </Link>
+                        {page.attributes.state?.name === 'published' && attrs.state?.name === 'published' && (
+                          <ShareLinkButton
+                            url={`${typeof window !== 'undefined' ? window.location.origin : ''}/${attrs.slug}/${page.attributes.slug}`}
+                            title="Share Page"
+                          />
+                        )}
                       </div>
                     </div>
                   </div>

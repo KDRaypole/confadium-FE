@@ -13,6 +13,7 @@ import {
 } from "@heroicons/react/24/outline";
 import { useWebsites } from "~/hooks/useWebsites";
 import { StateBadge } from "~/components/ui/StateManager";
+import ShareLinkButton from "~/components/ui/ShareLinkButton";
 
 export const meta: MetaFunction = () => {
   return [
@@ -146,6 +147,12 @@ export default function WebsitesIndex() {
                       {site.attributes.domain && <span>{site.attributes.domain}</span>}
                     </div>
                     <div className="mt-4 flex justify-end space-x-2" onClick={(e) => e.preventDefault()}>
+                      {site.attributes.state?.name === 'published' && (
+                        <ShareLinkButton
+                          url={`${window.location.origin}/${site.attributes.slug}`}
+                          title="Share Website"
+                        />
+                      )}
                       <Link to={`/organizations/${orgId}/websites/${site.id}/edit`} className="text-gray-600 hover:text-gray-700 dark:text-gray-400">
                         <PencilIcon className="h-4 w-4" />
                       </Link>

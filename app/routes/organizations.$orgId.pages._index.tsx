@@ -15,7 +15,9 @@ import {
   GlobeAltIcon,
 } from "@heroicons/react/24/outline";
 import { usePages } from "~/hooks/usePages";
+import { useWebsites } from "~/hooks/useWebsites";
 import { StateBadge } from "~/components/ui/StateManager";
+import ShareLinkButton from "~/components/ui/ShareLinkButton";
 
 export const meta: MetaFunction = () => {
   return [
@@ -33,6 +35,14 @@ export default function PagesIndex() {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [viewMode, setViewMode] = useState<ViewMode>("grid");
   const { pages, loading, error, deletePage } = usePages();
+  const { websites } = useWebsites();
+
+  const getPagePublicUrl = (page: typeof pages[0]) => {
+    if (!page.attributes.website_id || page.attributes.state?.name !== 'published') return null;
+    const website = websites.find(w => w.id === page.attributes.website_id);
+    if (!website || website.attributes.state?.name !== 'published') return null;
+    return `${window.location.origin}/${website.attributes.slug}/${page.attributes.slug}`;
+  };
 
   const filteredPages = pages.filter(page => {
     const name = page.attributes.name || '';
@@ -219,11 +229,12 @@ export default function PagesIndex() {
                         <Link to={`/organizations/${orgId}/pages/${page.id}/edit`} className="text-gray-600 hover:text-gray-700 dark:text-gray-400">
                           <PencilIcon className="h-4 w-4" />
                         </Link>
-                        {page.attributes.published_url && (
-                          <Link to={`/pages/${page.id}`} target="_blank" className="text-green-600 hover:text-green-700 dark:text-green-400">
-                            <GlobeAltIcon className="h-4 w-4" />
-                          </Link>
-                        )}
+                        {(() => {
+                          const publicUrl = getPagePublicUrl(page);
+                          return publicUrl ? (
+                            <ShareLinkButton url={publicUrl} title="Share Page" />
+                          ) : null;
+                        })()}
                       </div>
                       <button onClick={() => handleDelete(page.id)} className="text-red-600 hover:text-red-700 dark:text-red-400">
                         <TrashIcon className="h-4 w-4" />
@@ -261,6 +272,10 @@ export default function PagesIndex() {
                         <div className="flex justify-end space-x-2">
                           <Link to={`/organizations/${orgId}/pages/${page.id}`} className="text-purple-600 hover:text-purple-700"><EyeIcon className="h-4 w-4" /></Link>
                           <Link to={`/organizations/${orgId}/pages/${page.id}/edit`} className="text-gray-600 hover:text-gray-700"><PencilIcon className="h-4 w-4" /></Link>
+                          {(() => {
+                            const publicUrl = getPagePublicUrl(page);
+                            return publicUrl ? <ShareLinkButton url={publicUrl} title="Share Page" /> : null;
+                          })()}
                           <button onClick={() => handleDelete(page.id)} className="text-red-600 hover:text-red-700"><TrashIcon className="h-4 w-4" /></button>
                         </div>
                       </td>
