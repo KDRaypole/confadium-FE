@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Dialog, Transition } from '@headlessui/react';
 import { XMarkIcon, PlayIcon, InformationCircleIcon, EnvelopeIcon, ArrowsRightLeftIcon } from '@heroicons/react/24/outline';
 import SimpleSelect from '~/components/ui/SimpleSelect';
+import ResourceSelect from '~/components/ui/ResourceSelect';
 import EnhancedEmailEditor from '~/components/email/EnhancedEmailEditor';
 import { type VariableAssignment } from '~/components/email/VariableAssignmentEditor';
 import { getTagColorClass } from '~/components/tags/TagsData';
@@ -414,318 +415,138 @@ const ActionConfigModal: React.FC<ActionConfigModalProps> = ({
                         )}
                       </div>
 
-                      <div>
-                        <label className="block text-sm font-medium mb-2">
-                          Target *
-                        </label>
-                        <SimpleSelect
-                          options={[
-                            { value: "", label: "Select target..." },
-                            ...getAvailableTargets(formData.type).map(target => ({
-                              value: target,
-                              label: target
-                            }))
-                          ]}
-                          value={formData.target}
-                          onChange={(value) => setFormData(prev => ({ ...prev, target: value }))}
-                          disabled={!formData.type}
-                          size="sm"
-                        />
-                        {errors.target && (
-                          <p className="mt-1 text-sm text-red-600 dark:text-red-400">
-                            {errors.target}
-                          </p>
-                        )}
-                      </div>
+                      {!actionPresets && (
+                        <div>
+                          <label className="block text-sm font-medium mb-2">
+                            Target *
+                          </label>
+                          <SimpleSelect
+                            options={[
+                              { value: "", label: "Select target..." },
+                              ...getAvailableTargets(formData.type).map(target => ({
+                                value: target,
+                                label: target
+                              }))
+                            ]}
+                            value={formData.target}
+                            onChange={(value) => setFormData(prev => ({ ...prev, target: value }))}
+                            disabled={!formData.type}
+                            size="sm"
+                          />
+                          {errors.target && (
+                            <p className="mt-1 text-sm text-red-600 dark:text-red-400">
+                              {errors.target}
+                            </p>
+                          )}
+                        </div>
+                      )}
                     </div>
 
-                    {/* Action-specific Parameters */}
-                    {formData.type && (
-                      <div className="border-t border-gray-200 dark:border-gray-600 pt-6">
-                        <h4 className="text-md font-medium mb-4">Action Parameters</h4>
-                        
-                        {formData.type === "send_email" && (
+                    {/* Dynamic action parameters from schema */}
+                    {formData.type && actionPresets && (() => {
+                      const preset = actionPresets.find(p => p.name === formData.type);
+                      if (!preset || preset.params.length === 0) return null;
+                      return (
+                        <div className="border-t border-gray-200 dark:border-gray-600 pt-6">
+                          <h4 className="text-md font-medium mb-4">Action Parameters</h4>
                           <div className="space-y-4">
-                            <div className="flex items-center space-x-2">
-                              <button
-                                type="button"
-                                onClick={handleRequestEmailEditor}
-                                className="flex-1 inline-flex items-center justify-center px-3 py-2 border border-blue-300 dark:border-blue-600 shadow-sm text-sm leading-4 font-medium rounded-md text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-900 hover:bg-blue-100 dark:hover:bg-blue-800"
-                              >
-                                <EnvelopeIcon className="h-4 w-4 mr-2" />
-                                {formData.parameters.emailTemplate ? "Edit Email Template" : "Select Email Template"}
-                              </button>
-                            </div>
-                            
-                            {formData.parameters.emailTemplate && (
-                              <div className="bg-gray-50 dark:bg-gray-700 p-3 rounded-lg">
-                                <div className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                                  Template: {formData.parameters.emailTemplate}
-                                </div>
-                                {formData.parameters.variableAssignments && (
-                                  <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                                    {formData.parameters.variableAssignments.length} variable assignments configured
+                            {preset.params.map(param => {
+                              const paramValue = formData.parameters?.[param.name] as { source?: string; value?: string } | string | undefined;
+                              const currentSource = typeof paramValue === 'object' && paramValue?.source ? paramValue.source : 'static';
+                              const currentValue = typeof paramValue === 'object' && paramValue?.value !== undefined ? paramValue.value : (typeof paramValue === 'string' ? paramValue : '');
+
+                              const setParamValue = (source: string, value: string) => {
+                                setFormData(prev => ({
+                                  ...prev,
+                                  parameters: {
+                                    ...prev.parameters,
+                                    [param.name]: { source, value }
+                                  }
+                                }));
+                              };
+
+                              return (
+                                <div key={param.name} className="border border-gray-200 dark:border-gray-600 rounded-md p-3">
+                                  <div className="flex items-center justify-between mb-1.5">
+                                    <label className="text-sm font-medium">
+                                      {param.name.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                                      {param.required && <span className="text-red-500 ml-0.5">*</span>}
+                                    </label>
+                                    {param.source === 'any' && (
+                                      <SimpleSelect
+                                        options={[
+                                          { value: "static", label: "Static value" },
+                                          { value: "field", label: "From record field" }
+                                        ]}
+                                        value={currentSource}
+                                        onChange={(v) => setParamValue(v, '')}
+                                        size="sm"
+                                        className="w-40"
+                                      />
+                                    )}
                                   </div>
-                                )}
-                              </div>
-                            )}
-                            
-                            <div>
-                              <label className="block text-sm font-medium mb-1">Delay (optional)</label>
-                              <input
-                                type="text"
-                                placeholder="e.g., 5 minutes, 1 hour, immediately"
-                                value={formData.parameters.delay || ""}
-                                onChange={(e) => updateParameter('delay', e.target.value)}
-                                className="block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-sm"
-                              />
-                            </div>
-                            {errors.emailTemplate && (
-                              <p className="text-sm text-red-600 dark:text-red-400">
-                                {errors.emailTemplate}
-                              </p>
-                            )}
-                          </div>
-                        )}
-
-                        {formData.type === "create_task" && (
-                          <div className="space-y-4">
-                            <div>
-                              <label className="block text-sm font-medium mb-1">Task Title *</label>
-                              <input
-                                type="text"
-                                placeholder="Enter task title..."
-                                value={formData.parameters.title || ""}
-                                onChange={(e) => updateParameter('title', e.target.value)}
-                                className="block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-sm"
-                              />
-                              {errors.title && (
-                                <p className="mt-1 text-sm text-red-600 dark:text-red-400">
-                                  {errors.title}
-                                </p>
-                              )}
-                            </div>
-                            <div>
-                              <label className="block text-sm font-medium mb-1">Due Date</label>
-                              <input
-                                type="text"
-                                placeholder="e.g., 2 hours, tomorrow, 3 days"
-                                value={formData.parameters.dueDate || ""}
-                                onChange={(e) => updateParameter('dueDate', e.target.value)}
-                                className="block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-sm"
-                              />
-                            </div>
-                            <div>
-                              <label className="block text-sm font-medium mb-1">Priority</label>
-                              <SimpleSelect
-                                options={[
-                                  { value: "", label: "Select priority..." },
-                                  { value: "low", label: "Low" },
-                                  { value: "medium", label: "Medium" },
-                                  { value: "high", label: "High" },
-                                  { value: "urgent", label: "Urgent" }
-                                ]}
-                                value={formData.parameters.priority || ""}
-                                onChange={(value) => updateParameter('priority', value)}
-                                size="sm"
-                              />
-                            </div>
-                          </div>
-                        )}
-
-                        {(formData.type === "add_tag" || formData.type === "remove_tag") && (
-                          <div>
-                            <label className="block text-sm font-medium mb-1">Select Tag *</label>
-                            <SimpleSelect
-                              options={[
-                                { value: "", label: "Choose a tag..." },
-                                ...tags.map(tag => ({
-                                  value: tag.id,
-                                  label: `${tag.name}${tag.description ? ` - ${tag.description}` : ''}`
-                                }))
-                              ]}
-                              value={selectedTagIds[0] || ""}
-                              onChange={(value) => {
-                                if (value) {
-                                  setSelectedTagIds([value]);
-                                  updateParameter('tagId', value);
-                                  const selectedTag = getTagById(value);
-                                  if (selectedTag) {
-                                    updateParameter('tagName', selectedTag.name);
-                                  }
-                                } else {
-                                  setSelectedTagIds([]);
-                                  updateParameter('tagId', '');
-                                  updateParameter('tagName', '');
-                                }
-                              }}
-                              size="sm"
-                            />
-                            {errors.tagId && (
-                              <p className="mt-1 text-sm text-red-600 dark:text-red-400">
-                                {errors.tagId}
-                              </p>
-                            )}
-                            {selectedTagIds.length > 0 && (
-                              <div className="mt-2 p-2 bg-gray-50 dark:bg-gray-700 rounded-md">
-                                <p className="text-xs text-gray-600 dark:text-gray-400 mb-1">Selected tag:</p>
-                                {(() => {
-                                  const selectedTag = getTagById(selectedTagIds[0]);
-                                  if (selectedTag) {
-                                    return (
-                                      <div className="flex items-center space-x-2">
-                                        <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${getTagColorClass(selectedTag.color)}`}>
-                                          {selectedTag.name}
-                                        </span>
-                                        {selectedTag.description && (
-                                          <span className="text-xs text-gray-500 dark:text-gray-400">{selectedTag.description}</span>
-                                        )}
-                                      </div>
-                                    );
-                                  }
-                                  return null;
-                                })()}
-                              </div>
-                            )}
-                          </div>
-                        )}
-
-                        {isFormBasedAction(formData.type) && (
-                          <div className="space-y-4">
-                            <div className="flex items-center justify-between">
-                              <div>
-                                <h5 className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                                  Field Mapping
-                                </h5>
-                                <p className="text-xs text-gray-500 dark:text-gray-400">
-                                  Map form fields to {getEntityTypeForAction(formData.type)} attributes
-                                </p>
-                              </div>
-                              <button
-                                type="button"
-                                onClick={addFieldMapping}
-                                className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded text-blue-700 dark:text-blue-300 bg-blue-100 dark:bg-blue-900 hover:bg-blue-200 dark:hover:bg-blue-800"
-                                disabled={formFields.length === 0}
-                              >
-                                <ArrowsRightLeftIcon className="h-3 w-3 mr-1" />
-                                Add Mapping
-                              </button>
-                            </div>
-
-                            {loadingFormFields && (
-                              <div className="text-center py-4">
-                                <div className="text-sm text-gray-500 dark:text-gray-400">
-                                  Loading form fields...
+                                  {param.description && (
+                                    <p className="text-xs text-gray-400 dark:text-gray-500 mb-1.5">{param.description}</p>
+                                  )}
+                                  {(param.source === 'field' || (param.source === 'any' && currentSource === 'field')) ? (
+                                    trigger?.entityType === 'form_submission' ? (
+                                      <ResourceSelect
+                                        resource="form_field"
+                                        value={currentValue}
+                                        onChange={(v) => setParamValue('field', v)}
+                                        size="sm"
+                                        formId={trigger?.formId}
+                                      />
+                                    ) : (
+                                      <SimpleSelect
+                                        options={[
+                                          { value: "", label: "Select record field..." },
+                                          ...(preset.available_fields || []).map(f => ({
+                                            value: f.name,
+                                            label: f.name.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())
+                                          }))
+                                        ]}
+                                        value={currentValue}
+                                        onChange={(v) => setParamValue('field', v)}
+                                        size="sm"
+                                      />
+                                    )
+                                  ) : param.resource ? (
+                                    <ResourceSelect
+                                      resource={param.resource}
+                                      value={currentValue}
+                                      onChange={(v) => setParamValue('static', v)}
+                                      size="sm"
+                                    />
+                                  ) : param.source_options ? (
+                                    <SimpleSelect
+                                      options={[
+                                        { value: "", label: `Select ${param.name.replace(/_/g, ' ')}...` },
+                                        ...param.source_options.map(opt => ({
+                                          value: opt,
+                                          label: opt.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())
+                                        }))
+                                      ]}
+                                      value={currentValue}
+                                      onChange={(v) => setParamValue('static', v)}
+                                      size="sm"
+                                    />
+                                  ) : (
+                                    <input
+                                      type="text"
+                                      value={currentValue}
+                                      onChange={(e) => setParamValue('static', e.target.value)}
+                                      placeholder={`Enter ${param.name.replace(/_/g, ' ')}...`}
+                                      className="block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-sm"
+                                    />
+                                  )}
                                 </div>
-                              </div>
-                            )}
-
-                            {formFields.length === 0 && !loadingFormFields && (
-                              <div className="text-center py-4 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg border border-yellow-200 dark:border-yellow-800">
-                                <div className="text-sm text-yellow-700 dark:text-yellow-300">
-                                  No form fields available. Make sure the trigger is set to a form submission.
-                                </div>
-                              </div>
-                            )}
-
-                            {fieldMappings.map((mapping, index) => (
-                              <div key={index} className="grid grid-cols-1 md:grid-cols-3 gap-3 p-3 border border-gray-200 dark:border-gray-600 rounded-lg">
-                                {/* Form Field Selection */}
-                                <div>
-                                  <label className="block text-xs font-medium mb-1">
-                                    Form Field
-                                  </label>
-                                  <SimpleSelect
-                                    options={[
-                                      { value: "", label: "Select form field..." },
-                                      ...formFields.map(field => ({
-                                        value: field.id,
-                                        label: field.label
-                                      }))
-                                    ]}
-                                    value={mapping.formFieldId}
-                                    onChange={(value) => updateFieldMapping(index, { formFieldId: value })}
-                                    size="sm"
-                                  />
-                                </div>
-
-                                {/* Entity Field Selection */}
-                                <div>
-                                  <label className="block text-xs font-medium mb-1">
-                                    {getEntityTypeForAction(formData.type)} Field
-                                  </label>
-                                  <SimpleSelect
-                                    options={[
-                                      { value: "", label: "Select target field..." },
-                                      ...getEntityFieldsForType(getEntityTypeForAction(formData.type)).map(field => ({
-                                        value: field.value,
-                                        label: field.label
-                                      }))
-                                    ]}
-                                    value={mapping.entityField}
-                                    onChange={(value) => updateFieldMapping(index, { entityField: value })}
-                                    size="sm"
-                                  />
-                                </div>
-
-                                {/* Remove Button */}
-                                <div className="flex items-end">
-                                  <button
-                                    type="button"
-                                    onClick={() => removeFieldMapping(index)}
-                                    className="w-full px-2 py-1.5 text-xs text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300 border border-red-300 dark:border-red-600 rounded hover:bg-red-50 dark:hover:bg-red-900/20"
-                                  >
-                                    Remove
-                                  </button>
-                                </div>
-                              </div>
-                            ))}
-
-                            {fieldMappings.length === 0 && formFields.length > 0 && (
-                              <div className="text-center py-4 text-gray-500 dark:text-gray-400 text-sm">
-                                Click "Add Mapping" to map form fields to {getEntityTypeForAction(formData.type)} attributes
-                              </div>
-                            )}
-
-                            {errors.fieldMappings && (
-                              <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
-                                <p className="text-sm text-red-700 dark:text-red-300">
-                                  {errors.fieldMappings}
-                                </p>
-                              </div>
-                            )}
+                              );
+                            })}
                           </div>
-                        )}
-
-                        {formData.type === "webhook" && (
-                          <div className="space-y-4">
-                            <div>
-                              <label className="block text-sm font-medium mb-1">Webhook URL *</label>
-                              <input
-                                type="url"
-                                placeholder="https://api.example.com/webhook"
-                                value={formData.parameters.webhookUrl || ""}
-                                onChange={(e) => updateParameter('webhookUrl', e.target.value)}
-                                className="block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-sm"
-                              />
-                            </div>
-                            <div>
-                              <label className="block text-sm font-medium mb-1">HTTP Method</label>
-                              <SimpleSelect
-                                options={[
-                                  { value: "POST", label: "POST" },
-                                  { value: "PUT", label: "PUT" },
-                                  { value: "PATCH", label: "PATCH" }
-                                ]}
-                                value={formData.parameters.method || "POST"}
-                                onChange={(value) => updateParameter('method', value)}
-                                size="sm"
-                              />
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    )}
+                        </div>
+                      );
+                    })()}
 
                     {/* Action Preview */}
                     {formData.type && formData.target && (
