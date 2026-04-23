@@ -31,7 +31,7 @@ export default function ShareLinkButton({ url, title = "Share Link", iconOnly = 
     <>
       <button
         onClick={(e) => { e.preventDefault(); e.stopPropagation(); setIsOpen(true); }}
-        className={className || "text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"}
+        className={className || "text-brand-primary hover:text-brand-primary-hover"}
         title={title}
       >
         {iconOnly ? (
@@ -53,8 +53,8 @@ export default function ShareLinkButton({ url, title = "Share Link", iconOnly = 
               className="relative bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-lg w-full p-6"
               onClick={(e) => e.stopPropagation()}
             >
-              <div className="flex items-center justify-center h-12 w-12 rounded-full bg-blue-100 dark:bg-blue-900 mx-auto">
-                <ShareIcon className="h-6 w-6 text-blue-600 dark:text-blue-400" />
+              <div className="flex items-center justify-center h-12 w-12 rounded-full bg-brand-primary/10 mx-auto">
+                <ShareIcon className="h-6 w-6 text-brand-primary" />
               </div>
               <h3 className="mt-4 text-lg font-medium text-gray-900 dark:text-gray-100 text-center">{title}</h3>
               <p className="mt-2 text-sm text-gray-500 dark:text-gray-400 text-center">
@@ -70,7 +70,7 @@ export default function ShareLinkButton({ url, title = "Share Link", iconOnly = 
                 />
                 <button
                   onClick={handleCopy}
-                  className="inline-flex items-center px-3 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 transition-colors"
+                  className="inline-flex items-center px-3 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-brand-primary hover:bg-brand-primary-hover transition-colors"
                 >
                   {copied ? (
                     <><CheckIcon className="h-4 w-4 mr-1" /> Copied!</>
@@ -85,7 +85,7 @@ export default function ShareLinkButton({ url, title = "Share Link", iconOnly = 
                   href={url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center text-sm text-blue-600 hover:text-blue-700 dark:text-blue-400"
+                  className="inline-flex items-center text-sm text-brand-primary hover:text-brand-primary-hover"
                 >
                   <ArrowTopRightOnSquareIcon className="h-4 w-4 mr-1" />
                   Open in new tab

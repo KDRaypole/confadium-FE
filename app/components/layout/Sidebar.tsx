@@ -62,9 +62,9 @@ export default function Sidebar({ showOrgNavigation = true }: SidebarProps) {
 
   return (
     <div className="hidden md:flex md:w-64 md:flex-col">
-      <div className="flex min-h-0 flex-1 flex-col bg-gray-50 dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700">
+      <div className="flex min-h-0 flex-1 flex-col bg-brand-sidebar border-r border-gray-200 dark:border-gray-700">
         {/* App Launcher / Organization Header */}
-        <div className="flex items-center px-4 py-3 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
+        <div className="flex items-center px-4 py-3 border-b border-gray-200 dark:border-gray-700 bg-brand-sidebar">
           {showOrgNavigation && orgId ? (
             <div className="flex items-center space-x-2 w-full">
               <Link
@@ -102,13 +102,13 @@ export default function Sidebar({ showOrgNavigation = true }: SidebarProps) {
                     to={item.href}
                     className={`group flex items-center rounded px-3 py-2 text-sm font-medium transition-colors ${
                       isActive
-                        ? "bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 border-l-2 border-blue-500"
-                        : "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-gray-100"
+                        ? "bg-brand-sidebar-active text-brand-primary border-l-2 border-brand-primary"
+                        : "text-brand-sidebar-text hover:bg-brand-sidebar-hover hover:text-gray-900 dark:hover:text-gray-100"
                     }`}
                   >
                     <item.icon
                       className={`mr-3 h-5 w-5 flex-shrink-0 ${
-                        isActive ? "text-blue-600 dark:text-blue-400" : "text-gray-500 dark:text-gray-400 group-hover:text-gray-700 dark:group-hover:text-gray-200"
+                        isActive ? "text-brand-primary" : "text-brand-secondary group-hover:text-gray-700 dark:group-hover:text-gray-200"
                       }`}
                       aria-hidden="true"
                     />
@@ -132,7 +132,7 @@ export default function Sidebar({ showOrgNavigation = true }: SidebarProps) {
                     to={item.href}
                     className="group flex items-center rounded px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-gray-100"
                   >
-                    <div className="mr-3 h-2 w-2 bg-blue-500 rounded-full flex-shrink-0"></div>
+                    <div className="mr-3 h-2 w-2 bg-brand-primary rounded-full flex-shrink-0"></div>
                     <div className="flex-1 min-w-0">
                       <p className="truncate">{item.name}</p>
                       <p className="text-xs text-gray-500 dark:text-gray-400">{item.type}</p>
@@ -150,13 +150,13 @@ export default function Sidebar({ showOrgNavigation = true }: SidebarProps) {
                 to={`/organizations/${orgId}/settings`}
                 className={`group flex items-center rounded px-3 py-2 text-sm font-medium transition-colors ${
                   location.pathname === `/organizations/${orgId}/settings`
-                    ? "bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 border-l-2 border-blue-500"
-                    : "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-gray-100"
+                    ? "bg-brand-sidebar-active text-brand-primary border-l-2 border-brand-primary"
+                    : "text-brand-sidebar-text hover:bg-brand-sidebar-hover hover:text-gray-900 dark:hover:text-gray-100"
                 }`}
               >
                 <Cog6ToothIcon
                   className={`mr-3 h-5 w-5 flex-shrink-0 ${
-                    location.pathname === `/organizations/${orgId}/settings` ? "text-blue-600 dark:text-blue-400" : "text-gray-500 dark:text-gray-400 group-hover:text-gray-700 dark:group-hover:text-gray-200"
+                    location.pathname === `/organizations/${orgId}/settings` ? "text-brand-primary" : "text-brand-secondary group-hover:text-gray-700 dark:group-hover:text-gray-200"
                   }`}
                   aria-hidden="true"
                 />

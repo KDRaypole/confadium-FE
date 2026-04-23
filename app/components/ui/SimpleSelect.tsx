@@ -113,14 +113,14 @@ export default function SimpleSelect({
         className={`
           relative w-full cursor-pointer rounded-md border border-gray-300 dark:border-gray-600
           bg-white dark:bg-gray-700 text-left shadow-sm
-          focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500
+          focus:border-brand-primary focus:outline-none focus:ring-1 focus:ring-brand-primary
           hover:border-gray-400 dark:hover:border-gray-500
           ${sizeClasses[size]}
           ${disabled
             ? 'cursor-not-allowed bg-gray-50 dark:bg-gray-800 text-gray-500 dark:text-gray-400'
             : ''
           }
-          ${isOpen ? 'ring-1 ring-blue-500 border-blue-500' : ''}
+          ${isOpen ? 'ring-1 ring-brand-primary border-brand-primary' : ''}
         `}
       >
         <span className={`block truncate ${!value ? 'text-gray-500 dark:text-gray-400' : 'text-gray-900 dark:text-gray-100'}`}>
@@ -164,7 +164,7 @@ export default function SimpleSelect({
                     relative w-full cursor-pointer select-none py-2 pl-3 pr-9 text-left text-sm
                     transition-colors duration-150
                     ${isSelected
-                      ? 'bg-blue-600 text-white'
+                      ? 'bg-brand-primary text-white'
                       : 'text-gray-900 dark:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-600'
                     }
                   `}

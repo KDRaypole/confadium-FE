@@ -1,7 +1,8 @@
 import type { MetaFunction } from "@remix-run/node";
 import Layout from "~/components/layout/Layout";
 import { UserIcon, BellIcon, ShieldCheckIcon, CogIcon, KeyIcon, GlobeAltIcon, BuildingOfficeIcon } from "@heroicons/react/24/outline";
-import { useDarkMode } from "~/contexts/DarkModeContext";
+import { useTheme } from "~/contexts/ThemeContext";
+import { THEME_LIST, CUSTOM_THEME_ID, rgbToHex, hexToRgb } from "~/lib/themes";
 
 export const meta: MetaFunction = () => {
   return [
@@ -11,7 +12,7 @@ export const meta: MetaFunction = () => {
 };
 
 export default function AppSettings() {
-  const { isDarkMode, toggleDarkMode } = useDarkMode();
+  const { theme, themeId, setTheme, setCustomColors } = useTheme();
 
   return (
     <Layout showOrgNavigation={false}>
@@ -225,31 +226,158 @@ export default function AppSettings() {
                       <option>German</option>
                     </select>
                   </div>
-                  <div className="flex items-start">
-                    <div className="flex items-center h-5">
-                      <input
-                        id="dark-mode"
-                        name="dark-mode"
-                        type="checkbox"
-                        checked={isDarkMode}
-                        onChange={toggleDarkMode}
-                        className="focus:ring-blue-500 h-4 w-4 text-blue-600 border-gray-300 rounded"
-                      />
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
+                      Theme
+                    </label>
+                    <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
+                      Choose a color theme for the interface. This applies to your account across all organizations.
+                    </p>
+                    <div className="grid grid-cols-3 gap-3">
+                      {THEME_LIST.map((preset) => {
+                        const isActive = themeId === preset.id;
+                        const bg = `rgb(${preset.colors.sidebar})`;
+                        const primary = `rgb(${preset.colors.primary})`;
+                        const accent = `rgb(${preset.colors.accent})`;
+                        const text = `rgb(${preset.colors.sidebarText})`;
+                        return (
+                          <button
+                            key={preset.id}
+                            type="button"
+                            onClick={() => setTheme(preset.id)}
+                            className={`relative rounded-lg border-2 p-3 text-left transition-all ${
+                              isActive
+                                ? 'border-blue-500 ring-2 ring-blue-500/20'
+                                : 'border-gray-200 dark:border-gray-600 hover:border-gray-300 dark:hover:border-gray-500'
+                            }`}
+                          >
+                            {/* Color preview */}
+                            <div className="flex items-center space-x-1.5 mb-2">
+                              <div className="w-5 h-5 rounded-full border border-gray-200 dark:border-gray-600" style={{ backgroundColor: primary }} />
+                              <div className="w-5 h-5 rounded-full border border-gray-200 dark:border-gray-600" style={{ backgroundColor: accent }} />
+                              <div className="w-5 h-5 rounded-full border border-gray-200 dark:border-gray-600" style={{ backgroundColor: bg }} />
+                            </div>
+                            {/* Miniature sidebar preview */}
+                            <div className="rounded overflow-hidden border border-gray-200 dark:border-gray-600 mb-2" style={{ height: '40px' }}>
+                              <div className="h-full flex">
+                                <div style={{ backgroundColor: bg, width: '30%', padding: '4px' }}>
+                                  <div style={{ backgroundColor: primary, height: '4px', borderRadius: '2px', marginBottom: '3px', opacity: 0.8 }} />
+                                  <div style={{ backgroundColor: text, height: '3px', borderRadius: '2px', marginBottom: '2px', opacity: 0.3 }} />
+                                  <div style={{ backgroundColor: text, height: '3px', borderRadius: '2px', opacity: 0.3 }} />
+                                </div>
+                                <div style={{ backgroundColor: preset.dark ? '#111827' : '#ffffff', flex: 1 }} />
+                              </div>
+                            </div>
+                            <span className="text-xs font-medium text-gray-900 dark:text-gray-100">{preset.name}</span>
+                            {preset.dark && (
+                              <span className="ml-1.5 text-xs text-gray-400">dark</span>
+                            )}
+                            {isActive && (
+                              <div className="absolute top-1.5 right-1.5 w-4 h-4 bg-blue-500 rounded-full flex items-center justify-center">
+                                <svg className="w-2.5 h-2.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                                  <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                                </svg>
+                              </div>
+                            )}
+                          </button>
+                        );
+                      })}
+                      {/* Custom theme card */}
+                      {(() => {
+                        const isActive = themeId === CUSTOM_THEME_ID;
+                        const customColors = theme.colors;
+                        const bg = `rgb(${customColors.sidebar})`;
+                        const primary = `rgb(${customColors.primary})`;
+                        const accent = `rgb(${customColors.accent})`;
+                        const text = `rgb(${customColors.sidebarText})`;
+                        return (
+                          <button
+                            type="button"
+                            onClick={() => setTheme(CUSTOM_THEME_ID)}
+                            className={`relative rounded-lg border-2 p-3 text-left transition-all ${
+                              isActive
+                                ? 'border-blue-500 ring-2 ring-blue-500/20'
+                                : 'border-dashed border-gray-300 dark:border-gray-600 hover:border-gray-400 dark:hover:border-gray-500'
+                            }`}
+                          >
+                            <div className="flex items-center space-x-1.5 mb-2">
+                              <div className="w-5 h-5 rounded-full border border-gray-200 dark:border-gray-600" style={{ backgroundColor: isActive ? primary : '#9ca3af' }} />
+                              <div className="w-5 h-5 rounded-full border border-gray-200 dark:border-gray-600" style={{ backgroundColor: isActive ? accent : '#d1d5db' }} />
+                              <div className="w-5 h-5 rounded-full border border-gray-200 dark:border-gray-600" style={{ backgroundColor: isActive ? bg : '#e5e7eb' }} />
+                            </div>
+                            <div className="rounded overflow-hidden border border-gray-200 dark:border-gray-600 mb-2" style={{ height: '40px' }}>
+                              <div className="h-full flex items-center justify-center" style={{ backgroundColor: '#f3f4f6' }}>
+                                <span className="text-xs text-gray-400">Custom</span>
+                              </div>
+                            </div>
+                            <span className="text-xs font-medium text-gray-900 dark:text-gray-100">Custom</span>
+                            {isActive && (
+                              <div className="absolute top-1.5 right-1.5 w-4 h-4 bg-blue-500 rounded-full flex items-center justify-center">
+                                <svg className="w-2.5 h-2.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                                  <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                                </svg>
+                              </div>
+                            )}
+                          </button>
+                        );
+                      })()}
                     </div>
-                    <div className="ml-3 text-sm">
-                      <label htmlFor="dark-mode" className="font-medium text-gray-700 dark:text-gray-300">
-                        Dark mode
-                      </label>
-                      <p className="text-gray-500 dark:text-gray-400">Use dark theme for the interface.</p>
-                    </div>
-                  </div>
-                  <div className="flex justify-end">
-                    <button
-                      type="button"
-                      className="bg-blue-600 border border-transparent rounded shadow-sm py-2 px-4 inline-flex justify-center text-sm font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-                    >
-                      Save Preferences
-                    </button>
+
+                    {/* Custom color editor — shown when custom theme is active */}
+                    {themeId === CUSTOM_THEME_ID && (
+                      <div className="mt-6 border border-gray-200 dark:border-gray-600 rounded-lg p-4">
+                        <h4 className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-1">Customize Colors</h4>
+                        <p className="text-xs text-gray-500 dark:text-gray-400 mb-4">Pick colors for each part of the interface. Changes apply immediately.</p>
+
+                        <div className="mb-4">
+                          <label className="flex items-center space-x-2 cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={theme.dark}
+                              onChange={(e) => setCustomColors({}, e.target.checked)}
+                              className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                            />
+                            <span className="text-sm text-gray-700 dark:text-gray-300">Dark mode base</span>
+                          </label>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4">
+                          {([
+                            ['primary', 'Primary'],
+                            ['primaryHover', 'Primary Hover'],
+                            ['secondary', 'Secondary'],
+                            ['accent', 'Accent'],
+                            ['sidebar', 'Sidebar Background'],
+                            ['sidebarText', 'Sidebar Text'],
+                            ['sidebarActive', 'Sidebar Active'],
+                            ['sidebarHover', 'Sidebar Hover'],
+                          ] as const).map(([key, label]) => (
+                            <div key={key}>
+                              <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">{label}</label>
+                              <div className="flex items-center space-x-2">
+                                <input
+                                  type="color"
+                                  value={rgbToHex(theme.colors[key])}
+                                  onChange={(e) => setCustomColors({ [key]: hexToRgb(e.target.value) })}
+                                  className="h-8 w-8 rounded border border-gray-300 dark:border-gray-600 cursor-pointer"
+                                />
+                                <input
+                                  type="text"
+                                  value={rgbToHex(theme.colors[key])}
+                                  onChange={(e) => {
+                                    if (/^#[0-9a-fA-F]{6}$/.test(e.target.value)) {
+                                      setCustomColors({ [key]: hexToRgb(e.target.value) });
+                                    }
+                                  }}
+                                  className="flex-1 border border-gray-300 dark:border-gray-600 rounded px-2 py-1 text-xs bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 font-mono"
+                                  placeholder="#000000"
+                                />
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>

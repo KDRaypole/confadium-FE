@@ -124,7 +124,7 @@ export default function CustomSelect({
         disabled={disabled}
         className={`
           relative w-full cursor-pointer rounded-md border bg-white dark:bg-gray-700 text-left shadow-sm
-          focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500
+          focus:border-brand-primary focus:outline-none focus:ring-1 focus:ring-brand-primary
           ${sizeClasses[size]}
           ${error 
             ? 'border-red-300 dark:border-red-600' 
@@ -134,7 +134,7 @@ export default function CustomSelect({
             ? 'cursor-not-allowed bg-gray-50 dark:bg-gray-800 text-gray-500 dark:text-gray-400' 
             : 'hover:border-gray-400 dark:hover:border-gray-500'
           }
-          ${isOpen ? 'ring-1 ring-blue-500 border-blue-500' : ''}
+          ${isOpen ? 'ring-1 ring-brand-primary border-brand-primary' : ''}
         `}
       >
         <span className={`block truncate ${!value && !multiple ? 'text-gray-500 dark:text-gray-400' : 'text-gray-900 dark:text-gray-100'}`}>
@@ -161,7 +161,7 @@ export default function CustomSelect({
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 placeholder="Search options..."
-                className="w-full px-2 py-1 text-sm border-gray-300 dark:border-gray-600 rounded border bg-white dark:bg-gray-600 text-gray-900 dark:text-gray-100 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none"
+                className="w-full px-2 py-1 text-sm border-gray-300 dark:border-gray-600 rounded border bg-white dark:bg-gray-600 text-gray-900 dark:text-gray-100 focus:border-brand-primary focus:ring-1 focus:ring-brand-primary focus:outline-none"
               />
             </div>
           )}
@@ -193,7 +193,7 @@ export default function CustomSelect({
                       ${option.disabled
                         ? 'cursor-not-allowed text-gray-400 dark:text-gray-500'
                         : isSelected
-                        ? 'bg-blue-600 text-white'
+                        ? 'bg-brand-primary text-white'
                         : 'text-gray-900 dark:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-600'
                       }
                     `}
@@ -219,7 +219,7 @@ export default function CustomSelect({
               <button
                 type="button"
                 onClick={() => onMultipleChange && onMultipleChange([])}
-                className="text-xs text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300"
+                className="text-xs text-brand-primary hover:text-brand-primary-hover"
               >
                 Clear all
               </button>

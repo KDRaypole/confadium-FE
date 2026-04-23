@@ -58,7 +58,7 @@ export default function ContactsTable() {
       case "warm":
         return "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200";
       case "cold":
-        return "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200";
+        return "bg-brand-primary/10 text-brand-primary";
       default:
         return "bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200";
     }
@@ -120,7 +120,7 @@ export default function ContactsTable() {
       </div>
       <div className="px-6 py-3 border-t border-gray-200 dark:border-gray-700">
         <div className="text-sm">
-          <a href="/contacts" className="font-medium text-blue-600 hover:text-blue-500 dark:text-blue-400 dark:hover:text-blue-300">
+          <a href="/contacts" className="font-medium text-brand-primary hover:text-brand-primary-hover">
             View all contacts →
           </a>
         </div>

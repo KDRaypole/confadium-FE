@@ -56,11 +56,11 @@ export default function RecentActivity() {
   const getActivityColor = (type: Activity["type"]) => {
     switch (type) {
       case "call":
-        return "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200";
+        return "bg-brand-primary/10 text-brand-primary";
       case "email":
         return "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200";
       case "meeting":
-        return "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200";
+        return "bg-brand-accent/10 text-brand-accent";
       case "deal":
         return "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200";
       default:
@@ -100,7 +100,7 @@ export default function RecentActivity() {
       </div>
       <div className="px-6 py-3 border-t border-gray-200 dark:border-gray-700">
         <div className="text-sm">
-          <a href="/activities" className="font-medium text-blue-600 hover:text-blue-500 dark:text-blue-400 dark:hover:text-blue-300">
+          <a href="/activities" className="font-medium text-brand-primary hover:text-brand-primary-hover">
             View all activity →
           </a>
         </div>

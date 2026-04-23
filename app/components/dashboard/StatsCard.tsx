@@ -33,7 +33,7 @@ export default function StatsCard({
             {title}
           </h3>
           {icon && (
-            <div className="h-5 w-5 text-blue-500 dark:text-blue-400">
+            <div className="h-5 w-5 text-brand-primary">
               {icon}
             </div>
           )}

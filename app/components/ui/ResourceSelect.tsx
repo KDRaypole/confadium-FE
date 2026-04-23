@@ -30,7 +30,7 @@ export default function ResourceSelect({ resource, value, onChange, size = 'sm',
           value={value}
           onChange={(e) => onChange(e.target.value)}
           placeholder={`Enter ${resource} ID...`}
-          className="block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-sm"
+          className="block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-brand-primary focus:border-brand-primary text-sm"
         />
       );
   }

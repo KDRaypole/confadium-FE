@@ -12,7 +12,7 @@ import { useState } from 'react';
 import "./tailwind.css";
 import "react-grid-layout/css/styles.css";
 import "react-resizable/css/styles.css";
-import { DarkModeProvider } from "~/contexts/DarkModeContext";
+import { ThemeProvider } from "~/contexts/ThemeContext";
 import { AuthProvider } from "~/contexts/AuthContext";
 
 export const links: LinksFunction = () => [
@@ -73,11 +73,11 @@ export default function App() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <DarkModeProvider>
+      <ThemeProvider>
         <AuthProvider>
           <Outlet />
         </AuthProvider>
-      </DarkModeProvider>
+      </ThemeProvider>
     </QueryClientProvider>
   );
 }
