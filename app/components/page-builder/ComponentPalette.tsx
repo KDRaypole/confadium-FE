@@ -15,6 +15,7 @@ import {
   RectangleGroupIcon,
   PlusIcon,
   CheckIcon,
+  ViewColumnsIcon,
 } from "@heroicons/react/24/outline";
 
 /** Content items that go INSIDE sections (via grid) */
@@ -30,6 +31,7 @@ const CONTENT_ITEMS = [
   { type: 'Box', label: 'Box', icon: Square2StackIcon, description: 'Container with background' },
   { type: 'FormEmbed', label: 'Form', icon: DocumentTextIcon, description: 'Embed a CRM form' },
   { type: 'ProductEmbed', label: 'Product', icon: CubeIcon, description: 'Embed a product card' },
+  { type: 'Carousel', label: 'Carousel', icon: ViewColumnsIcon, description: 'Image & text carousel slider' },
 ];
 
 export default function ComponentPalette() {

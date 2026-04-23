@@ -84,6 +84,8 @@ function renderEditor(
       return <NavigationEditor node={node} onChange={update} />;
     case 'Footer':
       return <FooterEditor node={node} onChange={update} />;
+    case 'Carousel':
+      return <CarouselEditor node={node} onChange={update} />;
     case 'FormEmbed':
       return <FormEmbedEditor node={node} onChange={update} />;
     case 'ProductEmbed':
@@ -485,6 +487,122 @@ function FooterEditor({ node, onChange }: { node: PageComponentNode; onChange: (
       <Field label="Text Color">
         <ColorInput value={p.textColor || ''} onChange={(v) => onChange({ textColor: v })} />
       </Field>
+    </div>
+  );
+}
+
+function CarouselEditor({ node, onChange }: { node: PageComponentNode; onChange: (c: Record<string, unknown>) => void }) {
+  const p = node.props as Record<string, unknown>;
+  const items = (p.items as { image_url?: string; text?: string }[]) || [];
+  const visibleCount = (p.visibleCount as number) || 1;
+  const infinite = (p.infinite as boolean) ?? true;
+
+  const updateItem = (index: number, field: string, value: string) => {
+    const updated = [...items];
+    updated[index] = { ...updated[index], [field]: value };
+    onChange({ items: updated });
+  };
+
+  const addItem = () => {
+    onChange({ items: [...items, { image_url: '', text: `Slide ${items.length + 1}` }] });
+  };
+
+  const removeItem = (index: number) => {
+    onChange({ items: items.filter((_, i) => i !== index) });
+  };
+
+  const moveItem = (index: number, direction: 'up' | 'down') => {
+    const newIndex = direction === 'up' ? index - 1 : index + 1;
+    if (newIndex < 0 || newIndex >= items.length) return;
+    const updated = [...items];
+    [updated[index], updated[newIndex]] = [updated[newIndex], updated[index]];
+    onChange({ items: updated });
+  };
+
+  return (
+    <div className="space-y-3">
+      <Field label="Visible Items">
+        <div className="flex items-center space-x-2">
+          <input
+            type="range"
+            min="1"
+            max={Math.max(items.length, 1)}
+            value={visibleCount}
+            onChange={(e) => onChange({ visibleCount: parseInt(e.target.value, 10) })}
+            className="flex-1"
+          />
+          <span className="text-xs text-gray-500 tabular-nums w-6 text-right">{visibleCount}</span>
+        </div>
+      </Field>
+
+      <Field label="Infinite Loop">
+        <label className="flex items-center space-x-2 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={infinite}
+            onChange={(e) => onChange({ infinite: e.target.checked })}
+            className="rounded border-gray-300 text-purple-600 focus:ring-purple-500"
+          />
+          <span className="text-sm text-gray-700 dark:text-gray-300">Loop back to start</span>
+        </label>
+      </Field>
+
+      <div className="border-t border-gray-200 dark:border-gray-700 pt-3">
+        <div className="flex items-center justify-between mb-2">
+          <span className="text-xs font-medium text-gray-600 dark:text-gray-400">Slides ({items.length})</span>
+          <button onClick={addItem} className="text-xs text-purple-600 hover:text-purple-700 dark:text-purple-400">
+            + Add slide
+          </button>
+        </div>
+
+        <div className="space-y-3">
+          {items.map((item, i) => (
+            <div key={i} className="border border-gray-200 dark:border-gray-600 rounded-md p-2 space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-medium text-gray-500 dark:text-gray-400">Slide {i + 1}</span>
+                <div className="flex items-center gap-1">
+                  <button
+                    onClick={() => moveItem(i, 'up')}
+                    disabled={i === 0}
+                    className="text-xs text-gray-400 hover:text-gray-600 disabled:opacity-30"
+                    title="Move up"
+                  >
+                    &uarr;
+                  </button>
+                  <button
+                    onClick={() => moveItem(i, 'down')}
+                    disabled={i === items.length - 1}
+                    className="text-xs text-gray-400 hover:text-gray-600 disabled:opacity-30"
+                    title="Move down"
+                  >
+                    &darr;
+                  </button>
+                  <button
+                    onClick={() => removeItem(i)}
+                    className="text-xs text-red-500 hover:text-red-700 px-1"
+                  >
+                    &times;
+                  </button>
+                </div>
+              </div>
+              <input
+                type="text"
+                value={item.image_url || ''}
+                onChange={(e) => updateItem(i, 'image_url', e.target.value)}
+                placeholder="Image URL"
+                className="block w-full border border-gray-300 dark:border-gray-600 rounded px-2 py-1 text-xs bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+              />
+              <input
+                type="text"
+                value={item.text || ''}
+                onChange={(e) => updateItem(i, 'text', e.target.value)}
+                placeholder="Slide text"
+                className="block w-full border border-gray-300 dark:border-gray-600 rounded px-2 py-1 text-xs bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+              />
+            </div>
+          ))}
+        </div>
+      </div>
     </div>
   );
 }

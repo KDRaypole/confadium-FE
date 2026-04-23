@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { usePageBuilder } from "./PageBuilderContext";
 import SectionGrid from "./SectionGrid";
 import EmbeddedForm from "./EmbeddedForm";
@@ -171,6 +172,8 @@ export default function ComponentRenderer({ node, depth = 0 }: ComponentRenderer
         return <ListComponent node={node} />;
       case 'ContentAccordion':
         return <AccordionComponent node={node} />;
+      case 'Carousel':
+        return <CarouselComponent node={node} />;
       case 'FormEmbed':
         return <FormEmbedComponent node={node} />;
       case 'ProductEmbed':
@@ -771,6 +774,159 @@ function FooterComponent({ node }: { node: PageComponentNode }) {
         {text || '\u00A9 2026 Your Company. All rights reserved.'}
       </div>
     </footer>
+  );
+}
+
+function CarouselComponent({ node }: { node: PageComponentNode }) {
+  const { theme, editMode } = usePageBuilder();
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const palette = theme.colorPalette;
+
+  const items = (node.props.items as { image_url?: string; text?: string }[]) || [];
+  const visibleCount = (node.props.visibleCount as number) || 1;
+  const infinite = (node.props.infinite as boolean) ?? true;
+
+  if (items.length === 0) {
+    return (
+      <div style={{
+        border: `2px dashed ${palette?.color1 || '#7c3aed'}40`,
+        borderRadius: '0.5rem',
+        padding: '1.5rem',
+        backgroundColor: `${palette?.color1 || '#7c3aed'}08`,
+      }}>
+        <div style={{ textAlign: 'center' }}>
+          <span style={{
+            display: 'inline-flex', alignItems: 'center',
+            padding: '0.25rem 0.5rem', borderRadius: '0.25rem',
+            fontSize: '0.75rem', fontWeight: 500,
+            backgroundColor: `${palette?.color1 || '#7c3aed'}20`,
+            color: palette?.color1 || '#7c3aed',
+            marginBottom: '0.5rem',
+          }}>
+            Carousel
+          </span>
+          <p style={{ fontSize: '0.875rem', color: palette?.color4 || '#6b7280', ...paragraphFontStyle(theme) }}>
+            No slides added &mdash; click to configure
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  const maxIndex = infinite
+    ? items.length - 1
+    : Math.max(0, items.length - visibleCount);
+
+  const handlePrev = () => {
+    setCurrentIndex((prev) => {
+      if (prev <= 0) return infinite ? items.length - visibleCount : 0;
+      return prev - 1;
+    });
+  };
+
+  const handleNext = () => {
+    setCurrentIndex((prev) => {
+      if (prev >= maxIndex) return infinite ? 0 : maxIndex;
+      return prev + 1;
+    });
+  };
+
+  const visibleItems = items.slice(currentIndex, currentIndex + visibleCount);
+  // Handle wrapping for infinite mode
+  if (infinite && visibleItems.length < visibleCount) {
+    const remaining = visibleCount - visibleItems.length;
+    visibleItems.push(...items.slice(0, remaining));
+  }
+
+  const accentColor = palette?.color1 || '#7c3aed';
+
+  return (
+    <div style={{ position: 'relative', overflow: 'hidden', borderRadius: '0.5rem' }}>
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: `repeat(${visibleCount}, 1fr)`,
+        gap: '0.75rem',
+      }}>
+        {visibleItems.map((item, i) => (
+          <div key={`${currentIndex}-${i}`} style={{
+            borderRadius: '0.5rem',
+            overflow: 'hidden',
+            backgroundColor: palette?.color3 || '#f3f4f6',
+          }}>
+            {item.image_url ? (
+              <img
+                src={item.image_url}
+                alt={item.text || `Slide ${currentIndex + i + 1}`}
+                style={{ width: '100%', height: '12rem', objectFit: 'cover' }}
+              />
+            ) : (
+              <div style={{
+                width: '100%', height: '12rem', display: 'flex',
+                alignItems: 'center', justifyContent: 'center',
+                backgroundColor: palette?.color3 || '#f3f4f6',
+              }}>
+                <span style={{ color: '#9ca3af', fontSize: '0.875rem' }}>No image</span>
+              </div>
+            )}
+            {item.text && (
+              <div style={{
+                padding: '0.75rem',
+                fontSize: '0.875rem',
+                color: palette?.color4 || '#374151',
+                textAlign: 'center',
+                ...paragraphFontStyle(theme),
+              }}>
+                {item.text}
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+
+      {/* Navigation arrows */}
+      {items.length > visibleCount && (
+        <>
+          <button
+            onClick={(e) => { e.stopPropagation(); handlePrev(); }}
+            style={{
+              position: 'absolute', left: '0.5rem', top: '50%', transform: 'translateY(-50%)',
+              width: '2rem', height: '2rem', borderRadius: '50%',
+              backgroundColor: 'rgba(255,255,255,0.9)', border: `1px solid ${accentColor}30`,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              cursor: 'pointer', color: accentColor, fontSize: '1rem', fontWeight: 'bold',
+            }}
+          >
+            &#8249;
+          </button>
+          <button
+            onClick={(e) => { e.stopPropagation(); handleNext(); }}
+            style={{
+              position: 'absolute', right: '0.5rem', top: '50%', transform: 'translateY(-50%)',
+              width: '2rem', height: '2rem', borderRadius: '50%',
+              backgroundColor: 'rgba(255,255,255,0.9)', border: `1px solid ${accentColor}30`,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              cursor: 'pointer', color: accentColor, fontSize: '1rem', fontWeight: 'bold',
+            }}
+          >
+            &#8250;
+          </button>
+        </>
+      )}
+
+      {/* Dot indicators */}
+      <div style={{ display: 'flex', justifyContent: 'center', gap: '0.375rem', paddingTop: '0.75rem' }}>
+        {Array.from({ length: Math.ceil(items.length / visibleCount) }).map((_, i) => (
+          <button
+            key={i}
+            onClick={(e) => { e.stopPropagation(); setCurrentIndex(i * visibleCount); }}
+            style={{
+              width: '0.5rem', height: '0.5rem', borderRadius: '50%', border: 'none', cursor: 'pointer', padding: 0,
+              backgroundColor: Math.floor(currentIndex / visibleCount) === i ? accentColor : `${accentColor}30`,
+            }}
+          />
+        ))}
+      </div>
+    </div>
   );
 }
 

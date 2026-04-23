@@ -105,6 +105,7 @@ const DEFAULT_GRID_SIZES: Record<string, { lg: { w: number; h: number; minW?: nu
   BoxItem:           { lg: { w: 8,  h: 4, minW: 4, minH: 2 }, sm: { w: 6, h: 4 } },
   FormEmbed:         { lg: { w: 12, h: 6 },              sm: { w: 8, h: 6 } },
   ProductEmbed:      { lg: { w: 12, h: 6 },              sm: { w: 8, h: 6 } },
+  Carousel:          { lg: { w: 12, h: 8, minW: 6, minH: 4 }, sm: { w: 8, h: 6 } },
 };
 
 const DEFAULT_COMPONENTS: Record<string, Partial<PageComponentNode>> = {
@@ -119,6 +120,19 @@ const DEFAULT_COMPONENTS: Record<string, Partial<PageComponentNode>> = {
   Box: { node: false, type: 'BoxItem', props: { color: '#f3f4f6', radiusType: 'rounded', children: [] } },
   FormEmbed: { node: false, type: 'FormEmbed', props: { formId: '', formName: '' } },
   ProductEmbed: { node: false, type: 'ProductEmbed', props: { productId: '', productName: '' } },
+  Carousel: {
+    node: false,
+    type: 'Carousel',
+    props: {
+      items: [
+        { image_url: '', text: 'Slide 1' },
+        { image_url: '', text: 'Slide 2' },
+        { image_url: '', text: 'Slide 3' },
+      ],
+      visibleCount: 1,
+      infinite: true,
+    },
+  },
   Section: {
     node: false,
     type: 'Section',
