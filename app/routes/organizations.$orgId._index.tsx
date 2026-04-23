@@ -1,5 +1,7 @@
 import type { MetaFunction } from "@remix-run/node";
 import { useParams } from "@remix-run/react";
+import { useQuery } from "@tanstack/react-query";
+import { organizationsAPI } from "~/lib/api/organizations";
 import Layout from "~/components/layout/Layout";
 import StatsCard from "~/components/dashboard/StatsCard";
 import RecentActivity from "~/components/dashboard/RecentActivity";
@@ -20,11 +22,15 @@ export const meta: MetaFunction = () => {
 
 export default function OrganizationHome() {
   const { orgId } = useParams();
-  
-  const orgName = orgId === 'acme-corp' ? 'Acme Corporation' : 
-                  orgId === 'startup-division' ? 'Startup Division' : 
-                  orgId === 'international' ? 'International Operations' : 
-                  orgId;
+
+  const { data: org } = useQuery({
+    queryKey: ['organization', orgId],
+    queryFn: () => organizationsAPI.getOrganizationById(orgId!),
+    select: (data) => data.data,
+    enabled: !!orgId,
+  });
+
+  const orgName = org?.attributes?.name || 'Organization';
 
   return (
     <Layout>
