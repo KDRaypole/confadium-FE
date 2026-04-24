@@ -1,0 +1,8 @@
+.git
+node_modules
+build
+.cache
+.env
+.env.*
+*.md
+fly.toml
