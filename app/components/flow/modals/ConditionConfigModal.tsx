@@ -2,10 +2,12 @@ import React, { useState, useEffect } from 'react';
 import { Dialog, Transition } from '@headlessui/react';
 import { XMarkIcon, FunnelIcon, PlusIcon, TrashIcon, InformationCircleIcon } from '@heroicons/react/24/outline';
 import SimpleSelect from '~/components/ui/SimpleSelect';
+import ResourceSelect from '~/components/ui/ResourceSelect';
 import { getTagColorClass } from '~/components/tags/TagsData';
 import { useDarkMode } from '~/contexts/DarkModeContext';
 import { useTags } from '~/hooks/useTags';
 import { formsApi, type FormField } from '~/lib/api/forms';
+import type { TriggerableConditionOperator } from '~/lib/api/types';
 
 export interface Condition {
   id: string;
@@ -27,6 +29,7 @@ export interface CrmFieldConfig {
   label: string;
   type: string;
   options?: string[];
+  operators?: TriggerableConditionOperator[];
 }
 
 interface ConditionConfigModalProps {
@@ -60,29 +63,92 @@ const getBaseCrmFields = (): CrmFieldConfig[] => [
   { value: "activity.status", label: "Activity Status", type: "select", options: ["completed", "scheduled", "overdue"] }
 ];
 
-const operators = [
-  { value: "equals", label: "equals", types: ["text", "email", "select", "checkbox"] },
-  { value: "not_equals", label: "does not equal", types: ["text", "email", "select", "checkbox"] },
-  { value: "contains", label: "contains", types: ["text", "email"] },
-  { value: "not_contains", label: "does not contain", types: ["text", "email"] },
-  { value: "starts_with", label: "starts with", types: ["text", "email"] },
-  { value: "ends_with", label: "ends with", types: ["text", "email"] },
-  { value: "is_empty", label: "is empty", types: ["text", "email"] },
-  { value: "not_empty", label: "is not empty", types: ["text", "email"] },
-  { value: "greater_than", label: "greater than", types: ["number"] },
-  { value: "less_than", label: "less than", types: ["number"] },
-  { value: "greater_equal", label: "greater than or equal", types: ["number"] },
-  { value: "less_equal", label: "less than or equal", types: ["number"] },
-  { value: "between", label: "between", types: ["number", "date"] },
-  { value: "before", label: "before", types: ["date"] },
-  { value: "after", label: "after", types: ["date"] },
-  { value: "older_than", label: "older than", types: ["date"] },
-  { value: "newer_than", label: "newer than", types: ["date"] },
-  { value: "has_tag", label: "has tag", types: ["tag"] },
-  { value: "not_has_tag", label: "does not have tag", types: ["tag"] },
-  { value: "is_checked", label: "is checked", types: ["checkbox"] },
-  { value: "is_unchecked", label: "is unchecked", types: ["checkbox"] }
-];
+// Human-friendly labels for operators
+const OPERATOR_LABELS: Record<string, string> = {
+  equals: "equals",
+  not_equals: "does not equal",
+  contains: "contains",
+  not_contains: "does not contain",
+  starts_with: "starts with",
+  ends_with: "ends with",
+  is_empty: "is empty",
+  not_empty: "is not empty",
+  greater_than: "greater than",
+  less_than: "less than",
+  greater_equal: "greater than or equal",
+  less_equal: "less than or equal",
+  between: "between",
+  before: "before",
+  after: "after",
+  in_past: "is in the past",
+  in_future: "is in the future",
+  within_days: "is within N days",
+  more_than_days_ago: "is more than N days ago",
+  older_than: "older than",
+  newer_than: "newer than",
+  has_tag: "has tag",
+  not_has_tag: "does not have tag",
+  is_checked: "is checked",
+  is_unchecked: "is unchecked",
+};
+
+// Fallback operators by field type (used when schema doesn't provide them)
+const FALLBACK_OPERATORS: Record<string, { value: string; label: string }[]> = {
+  text: [
+    { value: "equals", label: "equals" },
+    { value: "not_equals", label: "does not equal" },
+    { value: "contains", label: "contains" },
+    { value: "not_contains", label: "does not contain" },
+    { value: "starts_with", label: "starts with" },
+    { value: "ends_with", label: "ends with" },
+    { value: "is_empty", label: "is empty" },
+    { value: "not_empty", label: "is not empty" },
+  ],
+  email: [
+    { value: "equals", label: "equals" },
+    { value: "not_equals", label: "does not equal" },
+    { value: "contains", label: "contains" },
+    { value: "not_contains", label: "does not contain" },
+    { value: "starts_with", label: "starts with" },
+    { value: "ends_with", label: "ends with" },
+    { value: "is_empty", label: "is empty" },
+    { value: "not_empty", label: "is not empty" },
+  ],
+  select: [
+    { value: "equals", label: "equals" },
+    { value: "not_equals", label: "does not equal" },
+    { value: "is_empty", label: "is empty" },
+    { value: "not_empty", label: "is not empty" },
+  ],
+  number: [
+    { value: "equals", label: "equals" },
+    { value: "not_equals", label: "does not equal" },
+    { value: "greater_than", label: "greater than" },
+    { value: "less_than", label: "less than" },
+    { value: "greater_equal", label: "greater than or equal" },
+    { value: "less_equal", label: "less than or equal" },
+  ],
+  date: [
+    { value: "before", label: "before" },
+    { value: "after", label: "after" },
+    { value: "older_than", label: "older than" },
+    { value: "newer_than", label: "newer than" },
+    { value: "between", label: "between" },
+  ],
+  tag: [
+    { value: "has_tag", label: "has tag" },
+    { value: "not_has_tag", label: "does not have tag" },
+    { value: "is_empty", label: "is empty" },
+    { value: "not_empty", label: "is not empty" },
+  ],
+  checkbox: [
+    { value: "is_checked", label: "is checked" },
+    { value: "is_unchecked", label: "is unchecked" },
+  ],
+};
+
+// Operators that don't require a value input
+const VALUE_LESS_OPERATORS = ["is_empty", "not_empty", "is_checked", "is_unchecked", "in_past", "in_future"];
 
 const ConditionConfigModal: React.FC<ConditionConfigModalProps> = ({
   isOpen,
@@ -184,17 +250,20 @@ const ConditionConfigModal: React.FC<ConditionConfigModalProps> = ({
   };
 
   // Combine base CRM fields with form fields
-  const crmFields = [...resolvedCrmFields, ...getFormFieldOptions()];
+  const crmFields: CrmFieldConfig[] = [...resolvedCrmFields, ...getFormFieldOptions()];
 
-  const getFieldType = (fieldValue: string) => {
-    const field = crmFields.find(f => f.value === fieldValue);
-    return field?.type || "text";
+  const getField = (fieldValue: string) => {
+    return crmFields.find(f => f.value === fieldValue);
   };
 
-  const getFieldOptions = (fieldValue: string) => {
-    const field = crmFields.find(f => f.value === fieldValue);
+  const getFieldType = (fieldValue: string) => {
+    return getField(fieldValue)?.type || "text";
+  };
+
+  const getFieldOptions = (fieldValue: string): (string | { value: string; label: string })[] => {
+    const field = getField(fieldValue);
     if (field?.type === 'tag') {
-      return tags.map(tag => ({ value: tag.id, label: tag.name }));
+      return tags.map(tag => ({ value: tag.id, label: tag.attributes?.name || tag.id }));
     }
     if (field?.type === 'checkbox') {
       return [
@@ -205,9 +274,27 @@ const ConditionConfigModal: React.FC<ConditionConfigModalProps> = ({
     return field?.options || [];
   };
 
-  const getAvailableOperators = (fieldValue: string) => {
-    const fieldType = getFieldType(fieldValue);
-    return operators.filter(op => op.types.includes(fieldType));
+  const getAvailableOperators = (fieldValue: string): { value: string; label: string; resource?: string }[] => {
+    const field = getField(fieldValue);
+
+    // If the field has schema-provided operators, use those
+    if (field?.operators?.length) {
+      return field.operators.map(op => ({
+        value: op.name,
+        label: op.description || OPERATOR_LABELS[op.name] || op.name.replace(/_/g, ' '),
+        resource: op.resource,
+      }));
+    }
+
+    // Fall back to hardcoded operators by field type
+    const fieldType = field?.type || "text";
+    return FALLBACK_OPERATORS[fieldType] || FALLBACK_OPERATORS.text;
+  };
+
+  const getOperatorResource = (fieldValue: string, operatorValue: string): string | undefined => {
+    const field = getField(fieldValue);
+    const op = field?.operators?.find(o => o.name === operatorValue);
+    return op?.resource;
   };
 
   const addCondition = () => {
@@ -254,7 +341,7 @@ const ConditionConfigModal: React.FC<ConditionConfigModalProps> = ({
         newErrors[`operator-${index}`] = 'Operator is required';
         hasError = true;
       }
-      if (!condition.value && !["is_empty", "not_empty", "is_checked", "is_unchecked"].includes(condition.operator)) {
+      if (!condition.value && !VALUE_LESS_OPERATORS.includes(condition.operator)) {
         newErrors[`value-${index}`] = 'Value is required';
         hasError = true;
       }
@@ -275,22 +362,22 @@ const ConditionConfigModal: React.FC<ConditionConfigModalProps> = ({
 
   const formatConditionsPreview = () => {
     if (formConditions.length === 0) return 'No conditions';
-    
+
     return formConditions.map((condition, index) => {
       if (!condition.field || !condition.operator) return '';
-      
+
       const field = crmFields.find(f => f.value === condition.field);
-      const operator = operators.find(o => o.value === condition.operator);
-      
-      let conditionText = `${field?.label || condition.field} ${operator?.label || condition.operator}`;
-      if (condition.value && !["is_empty", "not_empty", "is_checked", "is_unchecked"].includes(condition.operator)) {
+      const operatorLabel = OPERATOR_LABELS[condition.operator] || condition.operator.replace(/_/g, ' ');
+
+      let conditionText = `${field?.label || condition.field} ${operatorLabel}`;
+      if (condition.value && !VALUE_LESS_OPERATORS.includes(condition.operator)) {
         conditionText += ` "${condition.value}"`;
       }
-      
+
       if (index > 0 && condition.logicOperator) {
         conditionText = `${condition.logicOperator} ${conditionText}`;
       }
-      
+
       return conditionText;
     }).filter(Boolean).join(' ');
   };
@@ -444,63 +531,109 @@ const ConditionConfigModal: React.FC<ConditionConfigModalProps> = ({
                           {/* Value Input */}
                           <div>
                             <label className="block text-xs font-medium mb-1">Value</label>
-                            {getFieldType(condition.field) === "select" || getFieldType(condition.field) === "checkbox" ? (
-                              <SimpleSelect
-                                options={[
-                                  { value: "", label: "Select value..." },
-                                  ...getFieldOptions(condition.field).map(option => 
-                                    typeof option === 'string' 
-                                      ? ({ value: option, label: option })
-                                      : ({ value: option.value, label: option.label })
-                                  )
-                                ]}
-                                value={condition.value}
-                                onChange={(value) => updateCondition(condition.id, { value })}
-                                size="sm"
-                                disabled={["is_empty", "not_empty", "is_checked", "is_unchecked"].includes(condition.operator)}
-                              />
-                            ) : getFieldType(condition.field) === "tag" ? (
-                              <div className="space-y-2">
-                                <SimpleSelect
-                                  options={[
-                                    { value: "", label: "Select tag..." },
-                                    ...getFieldOptions(condition.field).map(option => 
-                                      typeof option === 'string' 
-                                        ? ({ value: option, label: option })
-                                        : ({ value: option.value, label: option.label })
-                                    )
-                                  ]}
+                            {(() => {
+                              const isDisabled = VALUE_LESS_OPERATORS.includes(condition.operator);
+                              const operatorResource = getOperatorResource(condition.field, condition.operator);
+                              const fieldType = getFieldType(condition.field);
+
+                              // 1. Operator specifies a resource — use ResourceSelect
+                              if (operatorResource && !isDisabled) {
+                                return (
+                                  <div className="space-y-2">
+                                    <ResourceSelect
+                                      resource={operatorResource}
+                                      value={condition.value}
+                                      onChange={(value) => updateCondition(condition.id, { value })}
+                                      size="sm"
+                                    />
+                                    {condition.value && operatorResource === 'tag' && (() => {
+                                      const selectedTag = getTagById(condition.value);
+                                      return selectedTag ? (
+                                        <div className="flex items-center space-x-2">
+                                          <span className="text-xs text-gray-500 dark:text-gray-400">Selected:</span>
+                                          <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getTagColorClass(selectedTag.attributes?.color || '')}`}>
+                                            {selectedTag.attributes?.name}
+                                          </span>
+                                        </div>
+                                      ) : null;
+                                    })()}
+                                  </div>
+                                );
+                              }
+
+                              // 2. Tag field type — use tag picker (fallback when schema not available)
+                              if (fieldType === "tag" && !isDisabled) {
+                                return (
+                                  <div className="space-y-2">
+                                    <ResourceSelect
+                                      resource="tag"
+                                      value={condition.value}
+                                      onChange={(value) => updateCondition(condition.id, { value })}
+                                      size="sm"
+                                    />
+                                    {condition.value && (() => {
+                                      const selectedTag = getTagById(condition.value);
+                                      return selectedTag ? (
+                                        <div className="flex items-center space-x-2">
+                                          <span className="text-xs text-gray-500 dark:text-gray-400">Selected:</span>
+                                          <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getTagColorClass(selectedTag.attributes?.color || '')}`}>
+                                            {selectedTag.attributes?.name}
+                                          </span>
+                                        </div>
+                                      ) : null;
+                                    })()}
+                                  </div>
+                                );
+                              }
+
+                              // 3. Select or checkbox field — show options dropdown
+                              if (fieldType === "select" || fieldType === "checkbox") {
+                                return (
+                                  <SimpleSelect
+                                    options={[
+                                      { value: "", label: "Select value..." },
+                                      ...getFieldOptions(condition.field).map(option =>
+                                        typeof option === 'string'
+                                          ? ({ value: option, label: option })
+                                          : ({ value: option.value, label: option.label })
+                                      )
+                                    ]}
+                                    value={condition.value}
+                                    onChange={(value) => updateCondition(condition.id, { value })}
+                                    size="sm"
+                                    disabled={isDisabled}
+                                  />
+                                );
+                              }
+
+                              // 4. Valueless operators — disabled placeholder
+                              if (isDisabled) {
+                                return (
+                                  <input
+                                    type="text"
+                                    value=""
+                                    disabled
+                                    className="block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 text-sm disabled:opacity-50"
+                                    placeholder="No value needed"
+                                  />
+                                );
+                              }
+
+                              // 5. Default — text/number/date input
+                              return (
+                                <input
+                                  type={
+                                    fieldType === "number" ? "number" :
+                                    fieldType === "date" ? "date" : "text"
+                                  }
                                   value={condition.value}
-                                  onChange={(value) => updateCondition(condition.id, { value })}
-                                  size="sm"
-                                  disabled={["is_empty", "not_empty", "is_checked", "is_unchecked"].includes(condition.operator)}
+                                  onChange={(e) => updateCondition(condition.id, { value: e.target.value })}
+                                  className="block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-sm"
+                                  placeholder="Enter value..."
                                 />
-                                {condition.value && (() => {
-                                  const selectedTag = getTagById(condition.value);
-                                  return selectedTag ? (
-                                    <div className="flex items-center space-x-2">
-                                      <span className="text-xs text-gray-500 dark:text-gray-400">Selected:</span>
-                                      <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getTagColorClass(selectedTag.color)}`}>
-                                        {selectedTag.name}
-                                      </span>
-                                    </div>
-                                  ) : null;
-                                })()}
-                              </div>
-                            ) : (
-                              <input
-                                type={
-                                  getFieldType(condition.field) === "number" ? "number" : 
-                                  getFieldType(condition.field) === "date" ? "date" : "text"
-                                }
-                                value={condition.value}
-                                onChange={(e) => updateCondition(condition.id, { value: e.target.value })}
-                                disabled={["is_empty", "not_empty", "is_checked", "is_unchecked"].includes(condition.operator)}
-                                className="block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-sm disabled:opacity-50"
-                                placeholder="Enter value..."
-                              />
-                            )}
-                            
+                              );
+                            })()}
+
                             {errors[`value-${index}`] && (
                               <p className="mt-1 text-xs text-red-600 dark:text-red-400">
                                 {errors[`value-${index}`]}

@@ -252,11 +252,25 @@ export interface ModuleConfigurationAttributes extends Timestamps {
 
 // ── Triggerable Schema ──────────────────────────────────────
 
+export interface TriggerableConditionOperator {
+  name: string;
+  description?: string;
+  resource?: string;
+}
+
+export interface TriggerableConditionPreset {
+  name: string;
+  class_name: string | null;
+  description: string | null;
+  operators: TriggerableConditionOperator[];
+}
+
 export interface TriggerableConditionField {
   name: string;
   type: 'string' | 'select' | 'number' | 'date' | 'tag' | 'boolean';
   options?: string[];
   description?: string;
+  condition?: TriggerableConditionPreset;
 }
 
 export interface TriggerableActionParam {
@@ -292,8 +306,8 @@ export interface TriggerableModel {
 export interface TriggerableSchema {
   models: TriggerableModel[];
   action_presets: TriggerableActionPreset[];
+  condition_presets: TriggerableConditionPreset[];
   lifecycle_events: string[];
-  condition_operators: string[];
 }
 
 // ── Tag ─────────────────────────────────────────────────────
