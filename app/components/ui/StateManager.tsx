@@ -11,6 +11,7 @@ const STATE_CONFIG: Record<string, { bg: string; text: string; label: string }> 
   draft:     { bg: 'bg-yellow-100 dark:bg-yellow-900', text: 'text-yellow-800 dark:text-yellow-200', label: 'Draft' },
   published: { bg: 'bg-green-100 dark:bg-green-900',  text: 'text-green-800 dark:text-green-200',  label: 'Published' },
   active:    { bg: 'bg-green-100 dark:bg-green-900',  text: 'text-green-800 dark:text-green-200',  label: 'Active' },
+  inactive:  { bg: 'bg-red-100 dark:bg-red-900',      text: 'text-red-800 dark:text-red-200',      label: 'Inactive' },
   archived:  { bg: 'bg-gray-100 dark:bg-gray-800',    text: 'text-gray-800 dark:text-gray-200',    label: 'Archived' },
 };
 
@@ -22,7 +23,7 @@ interface StateManagerProps {
   /** Current stateful attributes from the entity */
   stateAttrs: StatefulAttributes;
   /** React Query cache keys to invalidate after a transition */
-  invalidateKeys?: readonly unknown[][];
+  invalidateKeys?: readonly (readonly unknown[])[];
   /** Optional callback after successful transition */
   onTransition?: () => void;
   /** Layout: 'inline' for compact row, 'full' for card-style */
