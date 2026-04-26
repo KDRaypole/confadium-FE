@@ -2,6 +2,7 @@ import type { MetaFunction } from "@remix-run/node";
 import { Link, useParams, useNavigate } from "@remix-run/react";
 import Layout from "~/components/layout/Layout";
 import { useModules, type Module } from "~/hooks/useModules";
+import { StateBadge } from "~/components/ui/StateManager";
 import { 
   CogIcon, 
   BellIcon, 
@@ -63,32 +64,6 @@ export default function ModulesIndex() {
         return "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200";
       default:
         return "bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200";
-    }
-  };
-
-  const getStatusColor = (status: Module["status"]) => {
-    switch (status) {
-      case "active":
-        return "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200";
-      case "configured":
-        return "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200";
-      case "inactive":
-        return "bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200";
-      default:
-        return "bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200";
-    }
-  };
-
-  const getStatusIcon = (status: Module["status"]) => {
-    switch (status) {
-      case "active":
-        return "●";
-      case "configured":
-        return "◐";
-      case "inactive":
-        return "○";
-      default:
-        return "○";
     }
   };
 
@@ -231,12 +206,7 @@ export default function ModulesIndex() {
                         {getIcon(module.attributes?.icon || '')}
                       </div>
                     </div>
-                    <div className="flex items-center space-x-2">
-                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(module.attributes?.state?.action)}`}>
-                        <span className="mr-1">{getStatusIcon(module.attributes?.state?.action)}</span>
-                        {module.attributes?.state?.action || ''}
-                      </span>
-                    </div>
+                    <StateBadge state={module.attributes?.state ?? null} />
                   </div>
 
                   {/* Module Info */}

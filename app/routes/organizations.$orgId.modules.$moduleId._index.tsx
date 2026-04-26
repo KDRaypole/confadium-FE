@@ -5,7 +5,7 @@ import Layout from "~/components/layout/Layout";
 import WorkflowGraph from "~/components/modules/WorkflowGraph";
 import ConfigurationFlowOverview from "~/components/flow/ConfigurationFlowOverview";
 import CompactFlowPreview from "~/components/flow/CompactFlowPreview";
-import { useModule, useModuleConfigurations, type Configuration } from "~/hooks/useModules";
+import { useModule, useModules, useModuleConfigurations, type Configuration } from "~/hooks/useModules";
 import { 
   CogIcon, 
   BellIcon, 
@@ -18,12 +18,14 @@ import {
   GlobeAltIcon,
   ArrowLeftIcon,
   PencilIcon,
-  PlayIcon,
-  PauseIcon,
   TrashIcon,
-  EyeIcon
+  EyeIcon,
+  CheckIcon,
+  XMarkIcon
 } from "@heroicons/react/24/outline";
 import { useDarkMode } from "~/contexts/DarkModeContext";
+import StateManager, { StateBadge } from "~/components/ui/StateManager";
+import { MODULES_QUERY_KEYS } from "~/hooks/useModules";
 
 export const meta: MetaFunction = () => {
   return [
@@ -40,6 +42,34 @@ export default function ModuleDetail() {
   const [expandedConfigId, setExpandedConfigId] = useState<string | null>(null);
   
   const { module, loading: moduleLoading, error: moduleError } = useModule(moduleId);
+  const { updateModule } = useModules();
+  const [isEditingModule, setIsEditingModule] = useState(false);
+  const [editName, setEditName] = useState('');
+  const [editDescription, setEditDescription] = useState('');
+  const [isSavingModule, setIsSavingModule] = useState(false);
+
+  const startEditingModule = () => {
+    setEditName(module?.attributes?.name || '');
+    setEditDescription(module?.attributes?.description || '');
+    setIsEditingModule(true);
+  };
+
+  const cancelEditingModule = () => {
+    setIsEditingModule(false);
+  };
+
+  const saveModule = async () => {
+    if (!moduleId || !editName.trim()) return;
+    setIsSavingModule(true);
+    try {
+      await updateModule({ id: moduleId, attrs: { name: editName.trim(), description: editDescription.trim() || null } });
+      setIsEditingModule(false);
+    } catch (err) {
+      console.error('Failed to update module:', err);
+    } finally {
+      setIsSavingModule(false);
+    }
+  };
   const { 
     configurations, 
     loading: configsLoading, 
@@ -71,12 +101,12 @@ export default function ModuleDetail() {
     }
   };
 
-  const getStatusColor = (status: Configuration["status"]) => {
-    switch (status) {
+  const getStatusColor = (stateAction?: string) => {
+    switch (stateAction) {
       case "active":
         return "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200";
       case "inactive":
-        return "bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200";
+        return "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200";
       case "draft":
         return "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200";
       default:
@@ -202,21 +232,71 @@ export default function ModuleDetail() {
                       {getIcon(module.attributes?.icon || '')}
                     </div>
                   </div>
-                  <div>
-                    <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">{module.attributes?.name || ''}</h1>
-                    <p className="text-gray-600 dark:text-gray-400 mt-1">{module.attributes?.description || ''}</p>
-                  </div>
+                  {isEditingModule ? (
+                    <div className="flex-1 space-y-2">
+                      <input
+                        type="text"
+                        value={editName}
+                        onChange={(e) => setEditName(e.target.value)}
+                        className="block w-full text-xl font-bold px-3 py-1.5 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        placeholder="Module name"
+                      />
+                      <input
+                        type="text"
+                        value={editDescription}
+                        onChange={(e) => setEditDescription(e.target.value)}
+                        className="block w-full text-sm px-3 py-1.5 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-600 dark:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        placeholder="Description (optional)"
+                      />
+                    </div>
+                  ) : (
+                    <div>
+                      <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">{module.attributes?.name || ''}</h1>
+                      <p className="text-gray-600 dark:text-gray-400 mt-1">{module.attributes?.description || ''}</p>
+                    </div>
+                  )}
                 </div>
-                <div className="flex items-center space-x-3">
-                  <Link
-                    to={`/organizations/${orgId}/modules/${moduleId}/edit`}
-                    className="inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-md shadow-sm text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  >
-                    <PencilIcon className="-ml-1 mr-2 h-4 w-4" aria-hidden="true" />
-                    Edit Module
-                  </Link>
+                <div className="flex items-center space-x-2">
+                  {isEditingModule ? (
+                    <>
+                      <button
+                        onClick={saveModule}
+                        disabled={isSavingModule || !editName.trim()}
+                        className="inline-flex items-center px-3 py-2 text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50"
+                      >
+                        <CheckIcon className="h-4 w-4 mr-1" />
+                        {isSavingModule ? 'Saving...' : 'Save'}
+                      </button>
+                      <button
+                        onClick={cancelEditingModule}
+                        className="inline-flex items-center px-3 py-2 text-sm font-medium rounded-md border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700"
+                      >
+                        <XMarkIcon className="h-4 w-4 mr-1" />
+                        Cancel
+                      </button>
+                    </>
+                  ) : (
+                    <button
+                      onClick={startEditingModule}
+                      className="inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-md shadow-sm text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                      <PencilIcon className="-ml-1 mr-2 h-4 w-4" />
+                      Edit Module
+                    </button>
+                  )}
                 </div>
               </div>
+              {module.attributes && (
+                <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+                  <StateManager
+                    entityType="automation_modules"
+                    entityId={module.id}
+                    stateAttrs={module.attributes}
+                    invalidateKeys={[MODULES_QUERY_KEYS.all, MODULES_QUERY_KEYS.detail(moduleId!)]}
+                    layout="inline"
+                  />
+                </div>
+              )}
             </div>
           </div>
 
@@ -242,7 +322,7 @@ export default function ModuleDetail() {
               <div className="p-5">
                 <div className="flex items-center">
                   <div className="flex-shrink-0">
-                    <PlayIcon className="h-6 w-6 text-green-600 dark:text-green-500" aria-hidden="true" />
+                    <ChartBarIcon className="h-6 w-6 text-green-600 dark:text-green-500" aria-hidden="true" />
                   </div>
                   <div className="ml-5 w-0 flex-1">
                     <dl>
@@ -308,7 +388,7 @@ export default function ModuleDetail() {
                   allConfigurations={configurations.map(c => ({
                     id: c.id,
                     name: c.attributes?.name || '',
-                    status: c.attributes?.status || '',
+                    status: c.attributes?.state?.action || '',
                     trigger: c.attributes?.trigger || { entityType: '', action: '' },
                     conditions: c.attributes?.conditions || [],
                     actions: c.attributes?.actions || [],
@@ -393,9 +473,7 @@ export default function ModuleDetail() {
                         <h4 className="text-lg font-medium text-gray-900 dark:text-gray-100">
                           {config.attributes?.name || ''}
                         </h4>
-                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(config.attributes?.state?.action)}`}>
-                          {config.attributes?.state?.action || ''}
-                        </span>
+                        <StateBadge state={config.attributes?.state ?? null} />
                       </div>
                       
                       <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
@@ -416,9 +494,19 @@ export default function ModuleDetail() {
                         </div>
                       </div>
 
-                      {/* Stats */}
+                      {/* State & Stats */}
+                      {config.attributes && (
+                        <div className="mb-3">
+                          <StateManager
+                            entityType="module_configurations"
+                            entityId={config.id!}
+                            stateAttrs={config.attributes}
+                            invalidateKeys={[MODULES_QUERY_KEYS.configs(moduleId!), MODULES_QUERY_KEYS.all]}
+                            layout="inline"
+                          />
+                        </div>
+                      )}
                       <div className="flex items-center space-x-6 text-sm text-gray-500 dark:text-gray-400">
-                        <span>Status: {config.attributes?.state?.action || ''}</span>
                         <span>Created: {new Date(config.attributes?.created_at || '').toLocaleDateString()}</span>
                         <span>Updated: {new Date(config.attributes?.updated_at || '').toLocaleDateString()}</span>
                       </div>
@@ -440,22 +528,7 @@ export default function ModuleDetail() {
                       >
                         <PencilIcon className="h-4 w-4" />
                       </Link>
-                      {config.attributes?.state?.action === "active" ? (
-                        <button 
-                          className="p-2 text-gray-400 hover:text-yellow-600 dark:hover:text-yellow-400"
-                          title="Pause automation"
-                        >
-                          <PauseIcon className="h-4 w-4" />
-                        </button>
-                      ) : (
-                        <button 
-                          className="p-2 text-gray-400 hover:text-green-600 dark:hover:text-green-400"
-                          title="Activate automation"
-                        >
-                          <PlayIcon className="h-4 w-4" />
-                        </button>
-                      )}
-                      <button 
+                      <button
                         onClick={() => handleDeleteConfiguration(config.id!)}
                         disabled={isDeleting}
                         className="p-2 text-gray-400 hover:text-red-600 dark:hover:text-red-400 disabled:opacity-50"

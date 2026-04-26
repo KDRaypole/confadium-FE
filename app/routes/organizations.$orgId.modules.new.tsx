@@ -121,7 +121,6 @@ export default function CreateModule() {
         category: formData.category,
         icon: formData.icon,
         trigger_types: formData.trigger_types,
-        status: activate ? "active" : "inactive",
       });
 
       if (result?.data) {

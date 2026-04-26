@@ -207,18 +207,14 @@ export interface EmailTemplateAttributes extends Timestamps {
 // ── Automation Module ───────────────────────────────────────
 
 export type ModuleCategory = 'automation' | 'integration' | 'notification' | 'workflow';
-export type ModuleStatus = 'active' | 'inactive' | 'configured';
 
-export interface AutomationModuleAttributes extends Timestamps {
+export interface AutomationModuleAttributes extends StatefulAttributes, Timestamps {
   name: string;
   description: string | null;
   category: ModuleCategory;
-  status: ModuleStatus | null;
   icon: string | null;
   trigger_types: string[];
 }
-
-export type ConfigurationStatus = 'active' | 'inactive' | 'draft';
 
 export interface TriggerConfig {
   entityType?: string;
@@ -241,13 +237,12 @@ export interface ActionConfig {
   parameters?: Record<string, unknown>;
 }
 
-export interface ModuleConfigurationAttributes extends Timestamps {
+export interface ModuleConfigurationAttributes extends StatefulAttributes, Timestamps {
   name: string;
   description: string | null;
   trigger: TriggerConfig;
   conditions: ConditionConfig[];
   actions: ActionConfig[];
-  status: ConfigurationStatus | null;
 }
 
 // ── Triggerable Schema ──────────────────────────────────────
