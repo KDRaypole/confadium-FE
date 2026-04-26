@@ -53,23 +53,30 @@ interface SectionGridProps {
 
 export default function SectionGrid({ node }: SectionGridProps) {
   const {
-    editMode, device, updateGridPosition, select, selectedSelector, showGrid, theme,
+    editMode, device, updateGridPosition, select, selectedSelector, showGrid, theme, manipulate,
   } = usePageBuilder();
 
   const children = (node.props.children as PageComponentNode[]) || [];
   const palette = theme.colorPalette;
   const sectionBg = (node.props.backgroundColor as string) || palette?.color5 || '#ffffff';
-  const rows = (node.props.rows as { lg: number; sm: number }) || { lg: 12, sm: 12 };
-  const paddingX = (node.props.paddingX as number) ?? 32;
-  const paddingY = (node.props.paddingY as number) ?? 24;
-  const gapX = (node.props.gridGapX as number) ?? 8;
-  const gapY = (node.props.gridGapY as number) ?? 8;
+
+  // Read breakpoint-specific layout values (supports both legacy single numbers and { lg, sm } objects)
+  const bpVal = (prop: unknown, fallback: number, bp: string): number => {
+    if (typeof prop === 'number') return prop;
+    if (prop && typeof prop === 'object') return (prop as Record<string, number>)[bp] ?? fallback;
+    return fallback;
+  };
+
+  const breakpoint = device === 'mobile' ? 'sm' : 'lg';
+  const rows = bpVal(node.props.rows, 12, breakpoint);
+  const paddingX = bpVal(node.props.paddingX, 32, breakpoint);
+  const paddingY = bpVal(node.props.paddingY, 24, breakpoint);
+  const gapX = bpVal(node.props.gridGapX, 8, breakpoint);
+  const gapY = bpVal(node.props.gridGapY, 8, breakpoint);
 
   const gridAreaRef = useRef<HTMLDivElement>(null);
   const [gridAreaWidth, setGridAreaWidth] = useState(0);
   const [heightOverrides, setHeightOverrides] = useState<Record<string, number>>({});
-
-  const breakpoint = device === 'mobile' ? 'sm' : 'lg';
 
   // Reset height overrides when breakpoint changes (content reflows at different widths)
   useEffect(() => {
@@ -161,7 +168,7 @@ export default function SectionGrid({ node }: SectionGridProps) {
   );
 
   const maxY = useMemo(() => {
-    const minRows = rows[breakpoint] || 6;
+    const minRows = rows || 6;
     if (children.length === 0) return minRows;
     let contentMax = 0;
     children.forEach((child) => {
@@ -219,6 +226,7 @@ export default function SectionGrid({ node }: SectionGridProps) {
           </div>
         ) : (
           <Responsive
+            key={`grid-${gapX}-${gapY}-${rows}-${breakpoint}`}
             className={`page-builder-grid${editMode ? ' edit-mode' : ''}`}
             layouts={layouts}
             breakpoints={{ lg: 996, sm: 0 }}
@@ -275,6 +283,21 @@ export default function SectionGrid({ node }: SectionGridProps) {
         )}
       </div>
 
+      {/* Row resize handle */}
+      {editMode && isSectionSelected && (
+        <SectionRowHandle
+          rows={rows}
+          maxY={maxY}
+          onResize={(newRows) => {
+            const stored = node.props.rows;
+            const current = typeof stored === 'object' && stored
+              ? stored as Record<string, number>
+              : { lg: rows, sm: rows };
+            manipulate(node.selector, { rows: { ...current, [breakpoint]: newRows } });
+          }}
+        />
+      )}
+
       {editMode && children.length > 0 && isSectionSelected && (
         <div style={{ display: 'flex', justifyContent: 'center', padding: '0.5rem 0 0' }}>
           <span style={{ fontSize: '0.6875rem', color: '#9ca3af' }}>
@@ -282,6 +305,84 @@ export default function SectionGrid({ node }: SectionGridProps) {
           </span>
         </div>
       )}
+    </div>
+  );
+}
+
+/** Draggable handle at bottom of section to add/remove rows */
+function SectionRowHandle({ rows, maxY, onResize }: {
+  rows: number;
+  maxY: number;
+  onResize: (newRows: number) => void;
+}) {
+  const [dragging, setDragging] = useState(false);
+  const startY = useRef(0);
+  const startRows = useRef(rows);
+  const lastEmitted = useRef(rows);
+  const onResizeRef = useRef(onResize);
+  const maxYRef = useRef(maxY);
+  onResizeRef.current = onResize;
+  maxYRef.current = maxY;
+
+  useEffect(() => {
+    if (!dragging) return;
+
+    const handleMouseMove = (e: MouseEvent) => {
+      const deltaY = e.clientY - startY.current;
+      const deltaRows = Math.round(deltaY / 45);
+      const newRows = Math.max(maxYRef.current, Math.max(1, startRows.current + deltaRows));
+      if (newRows !== lastEmitted.current) {
+        lastEmitted.current = newRows;
+        onResizeRef.current(newRows);
+      }
+    };
+
+    const handleMouseUp = () => {
+      setDragging(false);
+    };
+
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [dragging]);
+
+  const handleMouseDown = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    startY.current = e.clientY;
+    startRows.current = rows;
+    lastEmitted.current = rows;
+    setDragging(true);
+  };
+
+  return (
+    <div
+      onMouseDown={handleMouseDown}
+      style={{
+        position: 'absolute',
+        bottom: 0,
+        left: 0,
+        right: 0,
+        height: '16px',
+        cursor: 'ns-resize',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        zIndex: 10,
+        backgroundColor: dragging ? 'rgba(124,58,237,0.1)' : 'transparent',
+      }}
+      title={`${rows} rows (drag to resize)`}
+    >
+      <div style={{
+        width: '40px',
+        height: '4px',
+        borderTop: '2px solid rgba(124,58,237,0.4)',
+        borderBottom: '2px solid rgba(124,58,237,0.4)',
+        borderRadius: '2px',
+      }} />
     </div>
   );
 }

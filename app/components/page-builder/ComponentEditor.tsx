@@ -302,10 +302,30 @@ function BoxEditor({ node, onChange }: { node: PageComponentNode; onChange: (c: 
 
 function SectionEditor({ node, onChange }: { node: PageComponentNode; onChange: (c: Record<string, unknown>) => void }) {
   const p = node.props as Record<string, unknown>;
-  const paddingX = (p.paddingX as number) ?? 32;
-  const paddingY = (p.paddingY as number) ?? 24;
-  const gridGapX = (p.gridGapX as number) ?? 8;
-  const gridGapY = (p.gridGapY as number) ?? 8;
+  const { device } = usePageBuilder();
+  const bp = device === 'mobile' ? 'sm' : 'lg';
+
+  // Layout props are now per-breakpoint: { lg: value, sm: value }
+  const getVal = (key: string, fallback: number) => {
+    const stored = p[key] as { lg?: number; sm?: number } | number | undefined;
+    if (typeof stored === 'number') return stored; // Legacy: single number
+    if (stored && typeof stored === 'object') return stored[bp] ?? fallback;
+    return fallback;
+  };
+
+  const setVal = (key: string, value: number) => {
+    const stored = p[key] as { lg?: number; sm?: number } | number | undefined;
+    const current = typeof stored === 'object' && stored ? stored : { lg: getVal(key, value), sm: getVal(key, value) };
+    onChange({ [key]: { ...current, [bp]: value } });
+  };
+
+  const paddingX = getVal('paddingX', 32);
+  const paddingY = getVal('paddingY', 24);
+  const gridGapX = getVal('gridGapX', 8);
+  const gridGapY = getVal('gridGapY', 8);
+  const rowCount = getVal('rows', 12);
+
+  const deviceLabel = bp === 'lg' ? 'Desktop' : 'Mobile';
 
   return (
     <div className="space-y-3">
@@ -313,32 +333,20 @@ function SectionEditor({ node, onChange }: { node: PageComponentNode; onChange: 
         <ColorInput value={(p.backgroundColor as string) || ''} onChange={(v) => onChange({ backgroundColor: v })} />
       </Field>
 
+      <div className="px-2 py-1 bg-gray-100 dark:bg-gray-700 rounded text-xs text-center text-gray-500 dark:text-gray-400">
+        Editing layout for <span className="font-medium text-gray-700 dark:text-gray-200">{deviceLabel}</span>
+      </div>
+
       <div className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider pt-2">Padding</div>
       <Field label="Horizontal">
         <div className="flex items-center space-x-2">
-          <input
-            type="range"
-            min="0"
-            max="120"
-            step="4"
-            value={paddingX}
-            onChange={(e) => onChange({ paddingX: parseInt(e.target.value, 10) })}
-            className="flex-1"
-          />
+          <input type="range" min="0" max="120" step="4" value={paddingX} onChange={(e) => setVal('paddingX', parseInt(e.target.value, 10))} className="flex-1" />
           <span className="text-xs text-gray-500 tabular-nums w-10 text-right">{paddingX}px</span>
         </div>
       </Field>
       <Field label="Vertical">
         <div className="flex items-center space-x-2">
-          <input
-            type="range"
-            min="0"
-            max="120"
-            step="4"
-            value={paddingY}
-            onChange={(e) => onChange({ paddingY: parseInt(e.target.value, 10) })}
-            className="flex-1"
-          />
+          <input type="range" min="0" max="120" step="4" value={paddingY} onChange={(e) => setVal('paddingY', parseInt(e.target.value, 10))} className="flex-1" />
           <span className="text-xs text-gray-500 tabular-nums w-10 text-right">{paddingY}px</span>
         </div>
       </Field>
@@ -346,29 +354,13 @@ function SectionEditor({ node, onChange }: { node: PageComponentNode; onChange: 
       <div className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider pt-2">Grid Gap</div>
       <Field label="Column Gap">
         <div className="flex items-center space-x-2">
-          <input
-            type="range"
-            min="0"
-            max="32"
-            step="2"
-            value={gridGapX}
-            onChange={(e) => onChange({ gridGapX: parseInt(e.target.value, 10) })}
-            className="flex-1"
-          />
+          <input type="range" min="0" max="32" step="2" value={gridGapX} onChange={(e) => setVal('gridGapX', parseInt(e.target.value, 10))} className="flex-1" />
           <span className="text-xs text-gray-500 tabular-nums w-10 text-right">{gridGapX}px</span>
         </div>
       </Field>
       <Field label="Row Gap">
         <div className="flex items-center space-x-2">
-          <input
-            type="range"
-            min="0"
-            max="32"
-            step="2"
-            value={gridGapY}
-            onChange={(e) => onChange({ gridGapY: parseInt(e.target.value, 10) })}
-            className="flex-1"
-          />
+          <input type="range" min="0" max="32" step="2" value={gridGapY} onChange={(e) => setVal('gridGapY', parseInt(e.target.value, 10))} className="flex-1" />
           <span className="text-xs text-gray-500 tabular-nums w-10 text-right">{gridGapY}px</span>
         </div>
       </Field>
@@ -376,20 +368,8 @@ function SectionEditor({ node, onChange }: { node: PageComponentNode; onChange: 
       <div className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider pt-2">Size</div>
       <Field label="Min Rows (height)">
         <div className="flex items-center space-x-2">
-          <input
-            type="range"
-            min="4"
-            max="40"
-            value={parseInt(((p.rows as { lg: number })?.lg ?? 12).toString(), 10)}
-            onChange={(e) => {
-              const val = parseInt(e.target.value, 10);
-              onChange({ rows: { lg: val, sm: val } });
-            }}
-            className="flex-1"
-          />
-          <span className="text-xs text-gray-500 tabular-nums w-6 text-right">
-            {(p.rows as { lg: number })?.lg || 12}
-          </span>
+          <input type="range" min="4" max="40" value={rowCount} onChange={(e) => setVal('rows', parseInt(e.target.value, 10))} className="flex-1" />
+          <span className="text-xs text-gray-500 tabular-nums w-6 text-right">{rowCount}</span>
         </div>
       </Field>
     </div>

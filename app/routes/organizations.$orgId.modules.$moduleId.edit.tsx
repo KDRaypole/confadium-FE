@@ -291,12 +291,19 @@ export default function ModuleEdit() {
     const trigger = model.triggers.find(t => t.event === event);
     if (!trigger) return undefined;
 
-    return trigger.conditions.map(c => ({
-      value: `${selectedEntity}.${c.name}`,
-      label: c.name.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
-      type: c.type === 'select' ? 'select' : c.type === 'tag' ? 'tag' : c.type === 'number' ? 'number' : c.type === 'date' ? 'date' : 'text',
-      ...(c.options ? { options: c.options } : {}),
-    }));
+    return trigger.conditions.map(c => {
+      // Resolve operators: prefer inline condition operators, fall back to matching condition_preset by type
+      const operators = c.condition?.operators
+        ?? schema.condition_presets?.find(p => p.name === c.type)?.operators;
+
+      return {
+        value: `${selectedEntity}.${c.name}`,
+        label: c.name.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
+        type: c.type === 'select' ? 'select' : c.type === 'tag' ? 'tag' : c.type === 'number' ? 'number' : c.type === 'date' ? 'date' : 'text',
+        ...(c.options ? { options: c.options } : {}),
+        ...(operators ? { operators } : {}),
+      };
+    });
   }, [schema, configuration.trigger.entityType, configuration.trigger.action]);
 
   // Build action types from schema — only show actions defined in the DSL
@@ -426,7 +433,19 @@ export default function ModuleEdit() {
   };
 
   const getAvailableOperators = (fieldValue: string) => {
-    const fieldType = getFieldType(fieldValue);
+    const field = resolvedCrmFields.find(f => f.value === fieldValue);
+
+    // Use schema-provided operators when available
+    if (field?.operators?.length) {
+      return field.operators.map(op => ({
+        value: op.name,
+        label: op.description || op.name.replace(/_/g, ' '),
+        resource: op.resource,
+      }));
+    }
+
+    // Fall back to hardcoded operators filtered by type
+    const fieldType = field?.type || "text";
     return operators.filter(op => op.types.includes(fieldType));
   };
 
