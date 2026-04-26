@@ -39,7 +39,7 @@ primary_region = "ord"
     interval = 15000
     grace_period = "5s"
     method = "GET"
-    path = "/"
+    path = "/login"
     protocol = "http"
     timeout = 5000
 

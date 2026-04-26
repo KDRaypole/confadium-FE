@@ -6,3 +6,4 @@ build
 .env.*
 *.md
 fly.toml
+package-lock.json

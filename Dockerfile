@@ -6,8 +6,8 @@ FROM node:20-slim AS build
 RUN apt-get update -qq && apt-get install --no-install-recommends -y python3 make g++ && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
-COPY package.json package-lock.json ./
-RUN npm ci --include=dev
+COPY package.json ./
+RUN npm install
 
 COPY . .
 
@@ -23,8 +23,8 @@ ENV NODE_ENV=production
 WORKDIR /app
 
 COPY --from=build /app/build ./build
-COPY --from=build /app/package.json /app/package-lock.json ./
-RUN npm ci --omit=dev
+COPY --from=build /app/package.json ./
+RUN npm install --omit=dev
 
 EXPOSE 3000
 CMD ["npm", "run", "start"]
