@@ -12,6 +12,7 @@ import {
   FunnelIcon,
 } from "@heroicons/react/24/outline";
 import { useWebsites } from "~/hooks/useWebsites";
+import { useOptionalNodeContext } from "~/contexts/NodeContext";
 import { StateBadge } from "~/components/ui/StateManager";
 import ShareLinkButton from "~/components/ui/ShareLinkButton";
 
@@ -26,6 +27,7 @@ type StatusFilter = 'all' | 'published' | 'draft' | 'archived';
 
 export default function WebsitesIndex() {
   const { orgId } = useParams();
+  const nodeCtx = useOptionalNodeContext();
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const { websites, loading, error, deleteWebsite } = useWebsites();
@@ -128,7 +130,7 @@ export default function WebsitesIndex() {
               {filtered.map((site) => (
                 <Link
                   key={site.id}
-                  to={`/organizations/${orgId}/websites/${site.id}`}
+                  to={nodeCtx?.buildDetailPath('websites', site.id) ?? `/organizations/${orgId}/websites/${site.id}`}
                   className="bg-white dark:bg-gray-800 shadow rounded-lg border border-gray-200 dark:border-gray-700 hover:shadow-md transition-shadow block"
                 >
                   <div className="p-6">
@@ -153,7 +155,7 @@ export default function WebsitesIndex() {
                           title="Share Website"
                         />
                       )}
-                      <Link to={`/organizations/${orgId}/websites/${site.id}/edit`} className="text-gray-600 hover:text-gray-700 dark:text-gray-400">
+                      <Link to={nodeCtx?.buildDetailPath('websites', site.id, 'edit') ?? `/organizations/${orgId}/websites/${site.id}/edit`} className="text-gray-600 hover:text-gray-700 dark:text-gray-400">
                         <PencilIcon className="h-4 w-4" />
                       </Link>
                       <button onClick={() => handleDelete(site.id)} className="text-red-600 hover:text-red-700 dark:text-red-400">

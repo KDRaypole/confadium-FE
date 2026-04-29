@@ -16,6 +16,7 @@ import {
 } from "@heroicons/react/24/outline";
 import { usePages } from "~/hooks/usePages";
 import { useWebsites } from "~/hooks/useWebsites";
+import { useOptionalNodeContext } from "~/contexts/NodeContext";
 import { StateBadge } from "~/components/ui/StateManager";
 import ShareLinkButton from "~/components/ui/ShareLinkButton";
 
@@ -31,6 +32,7 @@ type StatusFilter = 'all' | 'published' | 'draft' | 'archived';
 
 export default function PagesIndex() {
   const { orgId } = useParams();
+  const nodeCtx = useOptionalNodeContext();
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [viewMode, setViewMode] = useState<ViewMode>("grid");
@@ -223,10 +225,10 @@ export default function PagesIndex() {
                     </div>
                     <div className="flex justify-between items-center">
                       <div className="flex space-x-2">
-                        <Link to={`/organizations/${orgId}/pages/${page.id}`} className="text-purple-600 hover:text-purple-700 dark:text-purple-400">
+                        <Link to={nodeCtx?.buildDetailPath('pages', page.id) ?? `/organizations/${orgId}/pages/${page.id}`} className="text-purple-600 hover:text-purple-700 dark:text-purple-400">
                           <EyeIcon className="h-4 w-4" />
                         </Link>
-                        <Link to={`/organizations/${orgId}/pages/${page.id}/edit`} className="text-gray-600 hover:text-gray-700 dark:text-gray-400">
+                        <Link to={nodeCtx?.buildDetailPath('pages', page.id, 'edit') ?? `/organizations/${orgId}/pages/${page.id}/edit`} className="text-gray-600 hover:text-gray-700 dark:text-gray-400">
                           <PencilIcon className="h-4 w-4" />
                         </Link>
                         {(() => {
@@ -270,8 +272,8 @@ export default function PagesIndex() {
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{new Date(page.attributes.updated_at).toLocaleDateString()}</td>
                       <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                         <div className="flex justify-end space-x-2">
-                          <Link to={`/organizations/${orgId}/pages/${page.id}`} className="text-purple-600 hover:text-purple-700"><EyeIcon className="h-4 w-4" /></Link>
-                          <Link to={`/organizations/${orgId}/pages/${page.id}/edit`} className="text-gray-600 hover:text-gray-700"><PencilIcon className="h-4 w-4" /></Link>
+                          <Link to={nodeCtx?.buildDetailPath('pages', page.id) ?? `/organizations/${orgId}/pages/${page.id}`} className="text-purple-600 hover:text-purple-700"><EyeIcon className="h-4 w-4" /></Link>
+                          <Link to={nodeCtx?.buildDetailPath('pages', page.id, 'edit') ?? `/organizations/${orgId}/pages/${page.id}/edit`} className="text-gray-600 hover:text-gray-700"><PencilIcon className="h-4 w-4" /></Link>
                           {(() => {
                             const publicUrl = getPagePublicUrl(page);
                             return publicUrl ? <ShareLinkButton url={publicUrl} title="Share Page" /> : null;

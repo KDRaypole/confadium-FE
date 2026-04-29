@@ -2,6 +2,7 @@ import type { MetaFunction } from "@remix-run/node";
 import { useState } from "react";
 import { Link, useParams } from "@remix-run/react";
 import Layout from "~/components/layout/Layout";
+import { useNodeContext } from "~/contexts/NodeContext";
 import {
   ArrowLeftIcon,
   PlusIcon,
@@ -23,6 +24,7 @@ export const meta: MetaFunction = () => {
 
 export default function SchedulingSettings() {
   const { orgId } = useParams();
+  const { buildListPath } = useNodeContext();
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [editingCalendar, setEditingCalendar] = useState<ReturnType<typeof useCalendar>['calendars'][number] | null>(null);
   const [newCalendarData, setNewCalendarData] = useState({
@@ -114,7 +116,7 @@ export default function SchedulingSettings() {
           <div className="mb-8">
             <div className="flex items-center space-x-4 mb-4">
               <Link
-                to={`/organizations/${orgId}/scheduling`}
+                to={buildListPath('scheduling')}
                 className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 rounded-md"
               >
                 <ArrowLeftIcon className="h-5 w-5" />

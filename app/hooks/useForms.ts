@@ -3,7 +3,7 @@ import { useParams } from '@remix-run/react';
 import { formsApi } from '~/lib/api/forms';
 import type { FormAttributes, FormFieldAttributes } from '~/lib/api/types';
 import type { Resource } from '~/lib/api/client';
-import { useNodeFilter, useNodeCacheKey } from './useNodeFilter';
+import { useNodeFilter, useNodeCacheKey, useNodeAttrs } from './useNodeFilter';
 
 export type Form = Resource<FormAttributes>;
 export type FormField = Resource<FormFieldAttributes>;
@@ -21,6 +21,7 @@ export const useForms = () => {
   const queryClient = useQueryClient();
   const nodeFilter = useNodeFilter();
   const nodeKey = useNodeCacheKey();
+  const nodeAttrs = useNodeAttrs();
 
   const query = useQuery({
     queryKey: FORMS_QUERY_KEYS.list(orgId, nodeKey),
@@ -34,7 +35,7 @@ export const useForms = () => {
   const invalidate = () => queryClient.invalidateQueries({ queryKey: FORMS_QUERY_KEYS.all });
 
   const createMutation = useMutation({
-    mutationFn: (attrs: Partial<FormAttributes>) => formsApi.createForm(orgId, attrs),
+    mutationFn: (attrs: Partial<FormAttributes>) => formsApi.createForm(orgId, { ...nodeAttrs, ...attrs }),
     onSuccess: invalidate,
   });
 

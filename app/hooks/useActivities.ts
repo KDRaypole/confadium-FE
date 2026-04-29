@@ -3,7 +3,7 @@ import { useParams } from '@remix-run/react';
 import { activitiesAPI } from '~/lib/api/activities';
 import type { ActivityAttributes, ContactAttributes, DealAttributes } from '~/lib/api/types';
 import type { Resource } from '~/lib/api/client';
-import { useNodeFilter, useNodeCacheKey } from './useNodeFilter';
+import { useNodeFilter, useNodeCacheKey, useNodeAttrs } from './useNodeFilter';
 
 export type Activity = Resource<ActivityAttributes>;
 
@@ -18,6 +18,7 @@ export const useActivities = () => {
   const queryClient = useQueryClient();
   const nodeFilter = useNodeFilter();
   const nodeKey = useNodeCacheKey();
+  const nodeAttrs = useNodeAttrs();
 
   const query = useQuery({
     queryKey: ACTIVITIES_QUERY_KEYS.list(orgId, nodeKey),
@@ -32,7 +33,7 @@ export const useActivities = () => {
 
   const createMutation = useMutation({
     mutationFn: (attrs: Partial<ActivityAttributes> & { contact_id?: string; deal_id?: string }) =>
-      activitiesAPI.createActivity(orgId, attrs),
+      activitiesAPI.createActivity(orgId, { ...nodeAttrs, ...attrs }),
     onSuccess: invalidate,
   });
 

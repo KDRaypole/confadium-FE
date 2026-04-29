@@ -2,6 +2,7 @@ import type { MetaFunction } from "@remix-run/node";
 import { Link, useParams } from "@remix-run/react";
 import Layout from "~/components/layout/Layout";
 import { usePage } from "~/hooks/usePages";
+import { useNodeContext } from "~/contexts/NodeContext";
 import { ComponentRenderer } from "~/components/page-builder";
 import { PageBuilderProvider } from "~/components/page-builder";
 import type { PageComponentNode } from "~/lib/api/types";
@@ -20,6 +21,7 @@ export const meta: MetaFunction = () => {
 
 export default function PagePreview() {
   const { orgId, pageId = "" } = useParams();
+  const { buildListPath } = useNodeContext();
   const { page, loading } = usePage(pageId);
 
   if (loading) {
@@ -55,7 +57,7 @@ export default function PagePreview() {
             <Link
               to={attrs.website_id
                 ? `/organizations/${orgId}/websites/${attrs.website_id}`
-                : `/organizations/${orgId}/pages`
+                : buildListPath('pages')
               }
               className="inline-flex items-center text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 mb-4"
             >

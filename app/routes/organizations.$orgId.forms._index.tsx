@@ -14,6 +14,7 @@ import {
   ListBulletIcon
 } from "@heroicons/react/24/outline";
 import { useForms } from "~/hooks/useForms";
+import { useOptionalNodeContext } from "~/contexts/NodeContext";
 import { StateBadge } from "~/components/ui/StateManager";
 import ShareFormButton from "~/components/forms/ShareFormButton";
 
@@ -29,6 +30,7 @@ type StatusFilter = 'all' | 'published' | 'draft' | 'archived';
 
 export default function FormsIndex() {
   const { orgId } = useParams();
+  const nodeCtx = useOptionalNodeContext();
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [viewMode, setViewMode] = useState<ViewMode>("grid");
@@ -252,13 +254,13 @@ export default function FormsIndex() {
                     <div className="flex justify-between items-center">
                       <div className="flex space-x-2">
                         <Link
-                          to={`/organizations/${orgId}/forms/${form.id}`}
+                          to={nodeCtx?.buildDetailPath('forms', form.id) ?? `/organizations/${orgId}/forms/${form.id}`}
                           className="text-purple-600 hover:text-purple-700 dark:text-purple-400 dark:hover:text-purple-300"
                         >
                           <EyeIcon className="h-4 w-4" />
                         </Link>
                         <Link
-                          to={`/organizations/${orgId}/forms/${form.id}/edit`}
+                          to={nodeCtx?.buildDetailPath('forms', form.id, 'edit') ?? `/organizations/${orgId}/forms/${form.id}/edit`}
                           className="text-gray-600 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
                         >
                           <PencilIcon className="h-4 w-4" />
@@ -315,13 +317,13 @@ export default function FormsIndex() {
                         <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                           <div className="flex justify-end space-x-2">
                             <Link
-                              to={`/organizations/${orgId}/forms/${form.id}`}
+                              to={nodeCtx?.buildDetailPath('forms', form.id) ?? `/organizations/${orgId}/forms/${form.id}`}
                               className="text-purple-600 hover:text-purple-700 dark:text-purple-400 dark:hover:text-purple-300"
                             >
                               <EyeIcon className="h-4 w-4" />
                             </Link>
                             <Link
-                              to={`/organizations/${orgId}/forms/${form.id}/edit`}
+                              to={nodeCtx?.buildDetailPath('forms', form.id, 'edit') ?? `/organizations/${orgId}/forms/${form.id}/edit`}
                               className="text-gray-600 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
                             >
                               <PencilIcon className="h-4 w-4" />

@@ -27,8 +27,12 @@ interface NodeContextValue {
   loading: boolean;
   /** Whether the org has any level definitions configured */
   hasStructure: boolean;
-  /** Build a path scoped to the current node context */
+  /** Build a path scoped to the current node context (path-based: /nodes/$nodeId/subpath) */
   buildNodePath: (subpath: string) => string;
+  /** Build a list path preserving node query param (query-based: /resource?node=$nodeId) */
+  buildListPath: (resource: string) => string;
+  /** Build a detail path preserving node query param (query-based: /resource/$id[/subpath]?node=$nodeId) */
+  buildDetailPath: (resource: string, id: string, subpath?: string) => string;
   /** Get the back navigation target */
   backPath: string;
   /** Label for the back button */
@@ -99,6 +103,25 @@ export function NodeProvider({ children }: NodeProviderProps) {
     return `/organizations/${orgId}/${subpath}`;
   };
 
+  const buildListPath = (resource: string) => {
+    const base = `/organizations/${orgId}/${resource}`;
+    if (nodeId) {
+      return `${base}?node=${nodeId}`;
+    }
+    return base;
+  };
+
+  const buildDetailPath = (resource: string, id: string, subpath?: string) => {
+    let base = `/organizations/${orgId}/${resource}/${id}`;
+    if (subpath) {
+      base = `${base}/${subpath}`;
+    }
+    if (nodeId) {
+      return `${base}?node=${nodeId}`;
+    }
+    return base;
+  };
+
   const backPath = useMemo(() => {
     if (!activeNode) return `/organizations`;
     // Go to parent node, or org level if this is a root node
@@ -132,6 +155,8 @@ export function NodeProvider({ children }: NodeProviderProps) {
     loading: nodesLoading || levelsLoading,
     hasStructure: levels.length > 0,
     buildNodePath,
+    buildListPath,
+    buildDetailPath,
     backPath,
     backLabel,
   };

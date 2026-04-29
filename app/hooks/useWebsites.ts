@@ -3,7 +3,7 @@ import { useParams } from '@remix-run/react';
 import { websitesApi } from '~/lib/api/websites';
 import type { WebsiteAttributes, PageAttributes } from '~/lib/api/types';
 import type { Resource } from '~/lib/api/client';
-import { useNodeFilter, useNodeCacheKey } from './useNodeFilter';
+import { useNodeFilter, useNodeCacheKey, useNodeAttrs } from './useNodeFilter';
 
 export type Website = Resource<WebsiteAttributes>;
 
@@ -19,6 +19,7 @@ export const useWebsites = () => {
   const queryClient = useQueryClient();
   const nodeFilter = useNodeFilter();
   const nodeKey = useNodeCacheKey();
+  const nodeAttrs = useNodeAttrs();
 
   const query = useQuery({
     queryKey: WEBSITES_QUERY_KEYS.list(orgId, nodeKey),
@@ -32,7 +33,7 @@ export const useWebsites = () => {
   const invalidate = () => queryClient.invalidateQueries({ queryKey: WEBSITES_QUERY_KEYS.all });
 
   const createMutation = useMutation({
-    mutationFn: (attrs: Partial<WebsiteAttributes>) => websitesApi.createWebsite(orgId, attrs),
+    mutationFn: (attrs: Partial<WebsiteAttributes>) => websitesApi.createWebsite(orgId, { ...nodeAttrs, ...attrs }),
     onSuccess: invalidate,
   });
 

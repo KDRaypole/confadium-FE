@@ -4,6 +4,7 @@ import { useState } from "react";
 import Layout from "~/components/layout/Layout";
 import { getTagColorClass, getTagPriorityClass } from "~/components/tags/TagsData";
 import { useTags } from "~/hooks/useTags";
+import { useOptionalNodeContext } from "~/contexts/NodeContext";
 import {
   PlusIcon,
   MagnifyingGlassIcon,
@@ -24,6 +25,7 @@ export const meta: MetaFunction = () => {
 
 export default function TagsIndex() {
   const { orgId } = useParams();
+  const nodeCtx = useOptionalNodeContext();
   const { tags, loading, error, deleteTag } = useTags();
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("all");
@@ -255,7 +257,7 @@ export default function TagsIndex() {
                       </span>
                       <div className="flex items-center space-x-1">
                         <Link
-                          to={`/organizations/${orgId}/tags/${tag.id}/edit`}
+                          to={nodeCtx?.buildDetailPath('tags', tag.id, 'edit') ?? `/organizations/${orgId}/tags/${tag.id}/edit`}
                           className="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
                         >
                           <PencilIcon className="h-4 w-4" />
@@ -361,7 +363,7 @@ export default function TagsIndex() {
                       <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                         <div className="flex items-center space-x-2">
                           <Link
-                            to={`/organizations/${orgId}/tags/${tag.id}/edit`}
+                            to={nodeCtx?.buildDetailPath('tags', tag.id, 'edit') ?? `/organizations/${orgId}/tags/${tag.id}/edit`}
                             className="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300"
                           >
                             Edit

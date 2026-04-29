@@ -19,3 +19,14 @@ export function useNodeCacheKey(): string | null {
   const ctx = useOptionalNodeContext();
   return ctx?.activeNodeId ?? null;
 }
+
+/**
+ * Returns { org_node_id } to merge into create/update attrs so new records
+ * are automatically assigned to the active node.
+ */
+export function useNodeAttrs(): Record<string, string> {
+  const ctx = useOptionalNodeContext();
+  if (!ctx?.activeNodeId) return {};
+
+  return { org_node_id: ctx.activeNodeId };
+}

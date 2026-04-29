@@ -4,7 +4,7 @@ import { useParams } from '@remix-run/react';
 import { emailTemplatesAPI } from '~/lib/api/emailTemplates';
 import type { EmailTemplateAttributes, EmailTemplateCategory } from '~/lib/api/types';
 import type { Resource } from '~/lib/api/client';
-import { useNodeFilter, useNodeCacheKey } from './useNodeFilter';
+import { useNodeFilter, useNodeCacheKey, useNodeAttrs } from './useNodeFilter';
 
 export type EmailTemplate = Resource<EmailTemplateAttributes>;
 
@@ -32,6 +32,7 @@ export const useEmailTemplates = () => {
   const queryClient = useQueryClient();
   const nodeFilter = useNodeFilter();
   const nodeKey = useNodeCacheKey();
+  const nodeAttrs = useNodeAttrs();
 
   const listQuery = useQuery({
     queryKey: [...EMAIL_TEMPLATES_QUERY_KEYS.list(orgId), nodeKey],
@@ -47,7 +48,7 @@ export const useEmailTemplates = () => {
 
   const createMutation = useMutation({
     mutationFn: (attrs: Partial<EmailTemplateAttributes>) =>
-      emailTemplatesAPI.createTemplate(orgId, attrs),
+      emailTemplatesAPI.createTemplate(orgId, { ...nodeAttrs, ...attrs }),
     onSuccess: invalidate,
   });
 

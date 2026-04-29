@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from "react";
 import SimpleSelect from "~/components/ui/SimpleSelect";
 import { useContact } from "~/hooks/useContacts";
 import { useTags } from "~/hooks/useTags";
+import { useNodeContext } from "~/contexts/NodeContext";
 import { getTagColorClass } from "~/components/tags/TagsData";
 import type { ContactAttributes } from "~/lib/api/types";
 import {
@@ -41,6 +42,7 @@ const statusColors: Record<string, string> = {
 export default function ContactShow() {
   const { orgId, contactId } = useParams();
   const navigate = useNavigate();
+  const { buildListPath } = useNodeContext();
   const { contact, deals, activities, contactTags, loading, updateContact, deleteContact, addTag, removeTag } = useContact(contactId);
   const { tags: allTags } = useTags();
 
@@ -79,7 +81,7 @@ export default function ContactShow() {
     if (window.confirm('Are you sure you want to delete this contact? This action cannot be undone.')) {
       try {
         await deleteContact();
-        navigate(`/organizations/${orgId}/contacts`);
+        navigate(buildListPath('contacts'));
       } catch (error) {
         console.error('Failed to delete contact:', error);
       }
@@ -154,7 +156,7 @@ export default function ContactShow() {
         <div className="w-full px-4 sm:px-6 lg:px-8">
           <div className="text-center py-12">
             <p className="text-gray-500 dark:text-gray-400">Contact not found.</p>
-            <Link to={`/organizations/${orgId}/contacts`} className="mt-4 inline-flex items-center text-blue-600 hover:text-blue-800">
+            <Link to={buildListPath('contacts')} className="mt-4 inline-flex items-center text-blue-600 hover:text-blue-800">
               <ArrowLeftIcon className="h-4 w-4 mr-1" />
               Back to Contacts
             </Link>
@@ -231,7 +233,7 @@ export default function ContactShow() {
         {/* Header */}
         <div className="mb-6">
           <nav className="flex items-center space-x-2 text-sm text-gray-500 dark:text-gray-400 mb-4">
-            <Link to={`/organizations/${orgId}/contacts`} className="hover:text-gray-700 dark:hover:text-gray-200">
+            <Link to={buildListPath('contacts')} className="hover:text-gray-700 dark:hover:text-gray-200">
               Contacts
             </Link>
             <span>/</span>
@@ -241,7 +243,7 @@ export default function ContactShow() {
           <div className="flex items-center justify-between">
             <div className="flex items-center">
               <Link
-                to={`/organizations/${orgId}/contacts`}
+                to={buildListPath('contacts')}
                 className="mr-4 inline-flex items-center text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
               >
                 <ArrowLeftIcon className="h-4 w-4 mr-1" />

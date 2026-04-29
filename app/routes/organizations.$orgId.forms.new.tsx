@@ -4,6 +4,7 @@ import { useState } from "react";
 import Layout from "~/components/layout/Layout";
 import DynamicFormEditor from "~/components/forms/DynamicFormEditor";
 import { useForms } from "~/hooks/useForms";
+import { useNodeContext } from "~/contexts/NodeContext";
 import { type FormField, type FormTheme, type FormSettings } from "~/lib/api/forms";
 import { ArrowLeftIcon, CheckIcon } from "@heroicons/react/24/outline";
 
@@ -57,6 +58,7 @@ const defaultSettings: FormSettings = {
 export default function NewForm() {
   const { orgId } = useParams();
   const navigate = useNavigate();
+  const { buildListPath } = useNodeContext();
   const { createForm } = useForms();
   const [saving, setSaving] = useState(false);
   const [formData, setFormData] = useState<FormData>({
@@ -108,7 +110,7 @@ export default function NewForm() {
           <div className="mb-8">
             <div className="flex items-center space-x-4 mb-4">
               <Link
-                to={`/organizations/${orgId}/forms`}
+                to={buildListPath('forms')}
                 className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 rounded-md"
               >
                 <ArrowLeftIcon className="h-5 w-5" />

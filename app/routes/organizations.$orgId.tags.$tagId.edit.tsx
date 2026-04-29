@@ -5,6 +5,7 @@ import Layout from "~/components/layout/Layout";
 import { tagColors, tagPriorities, getTagColorClass, getTagPriorityClass } from "~/components/tags/TagsData";
 import SimpleSelect from "~/components/ui/SimpleSelect";
 import { useTag } from "~/hooks/useTags";
+import { useNodeContext } from "~/contexts/NodeContext";
 import { 
   ArrowLeftIcon,
   CheckIcon,
@@ -36,6 +37,7 @@ export default function EditTag() {
   const params = useParams();
   const navigate = useNavigate();
   const { orgId, tagId } = params;
+  const { buildListPath } = useNodeContext();
   const { tag: originalTag, loading, error: tagError, updateTag: updateTagAPI } = useTag(tagId!);
   
   const [tagData, setTagData] = useState<EditableTag>({
@@ -111,7 +113,7 @@ export default function EditTag() {
       if (updatedTag) {
         console.log("Tag updated successfully:", updatedTag);
         // Navigate back to tags list
-        navigate(`/organizations/${orgId}/tags`);
+        navigate(buildListPath('tags'));
       } else {
         alert("Failed to update tag. Please try again.");
       }
@@ -124,7 +126,7 @@ export default function EditTag() {
   };
 
   const handleCancel = () => {
-    navigate(`/organizations/${orgId}/tags`);
+    navigate(buildListPath('tags'));
   };
 
   const updateField = <K extends keyof EditableTag>(field: K, value: EditableTag[K]) => {
@@ -183,7 +185,7 @@ export default function EditTag() {
               <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Error Loading Tag</h1>
               <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">{tagError}</p>
               <Link
-                to={`/organizations/${orgId}/tags`}
+                to={buildListPath('tags')}
                 className="mt-4 inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700"
               >
                 Back to Tags
@@ -206,7 +208,7 @@ export default function EditTag() {
                 The tag you're looking for doesn't exist or has been deleted.
               </p>
               <Link
-                to={`/organizations/${orgId}/tags`}
+                to={buildListPath('tags')}
                 className="mt-4 inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700"
               >
                 Back to Tags
@@ -225,7 +227,7 @@ export default function EditTag() {
           {/* Header */}
           <div className="mb-6">
             <nav className="flex items-center space-x-2 text-sm text-gray-500 dark:text-gray-400 mb-4">
-              <Link to={`/organizations/${orgId}/tags`} className="hover:text-gray-700 dark:hover:text-gray-200">
+              <Link to={buildListPath('tags')} className="hover:text-gray-700 dark:hover:text-gray-200">
                 Tags
               </Link>
               <span>/</span>
@@ -235,7 +237,7 @@ export default function EditTag() {
             <div className="flex items-center justify-between">
               <div className="flex items-center">
                 <Link
-                  to={`/organizations/${orgId}/tags`}
+                  to={buildListPath('tags')}
                   className="mr-4 inline-flex items-center text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
                 >
                   <ArrowLeftIcon className="h-4 w-4 mr-1" />

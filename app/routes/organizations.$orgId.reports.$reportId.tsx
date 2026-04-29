@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { getTagColorClass } from "~/components/tags/TagsData";
 import { useTags, type Tag } from "~/hooks/useTags";
 import { useDarkMode } from "~/contexts/DarkModeContext";
+import { useNodeContext } from "~/contexts/NodeContext";
 import D3Chart, { type ChartData } from "~/components/charts/D3Chart";
 import { 
   ArrowLeftIcon,
@@ -133,6 +134,7 @@ const generateMockData = (category: string, count: number = 50): EntityData[] =>
 export default function ReportShow() {
   const params = useParams();
   const { orgId, reportId } = params;
+  const { buildListPath } = useNodeContext();
   const { isDarkMode } = useDarkMode();
   
   const [report] = useState<ReportData | null>(mockReports[reportId || ""] || null);
@@ -206,7 +208,7 @@ export default function ReportShow() {
     return (
       <div className="text-center">
         <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Report Not Found</h1>
-        <Link to={`/organizations/${orgId}/reports`} className="text-blue-600 hover:text-blue-500">
+        <Link to={buildListPath('reports')} className="text-blue-600 hover:text-blue-500">
           Back to Reports
         </Link>
       </div>
@@ -218,7 +220,7 @@ export default function ReportShow() {
           {/* Header */}
           <div className="mb-6">
             <nav className="flex items-center space-x-2 text-sm text-gray-500 dark:text-gray-400 mb-4">
-              <Link to={`/organizations/${orgId}/reports`} className="hover:text-gray-700 dark:hover:text-gray-200">
+              <Link to={buildListPath('reports')} className="hover:text-gray-700 dark:hover:text-gray-200">
                 Reports
               </Link>
               <span>/</span>
@@ -228,7 +230,7 @@ export default function ReportShow() {
             <div className="flex items-center justify-between">
               <div className="flex items-center">
                 <Link
-                  to={`/organizations/${orgId}/reports`}
+                  to={buildListPath('reports')}
                   className="mr-4 inline-flex items-center text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
                 >
                   <ArrowLeftIcon className="h-4 w-4 mr-1" />

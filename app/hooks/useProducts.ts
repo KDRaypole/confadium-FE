@@ -3,7 +3,7 @@ import { useParams } from '@remix-run/react';
 import { productsApi } from '~/lib/api/products';
 import type { ProductAttributes, ProductVariantAttributes } from '~/lib/api/types';
 import type { Resource } from '~/lib/api/client';
-import { useNodeFilter, useNodeCacheKey } from './useNodeFilter';
+import { useNodeFilter, useNodeCacheKey, useNodeAttrs } from './useNodeFilter';
 
 export type Product = Resource<ProductAttributes>;
 export type ProductVariant = Resource<ProductVariantAttributes>;
@@ -20,6 +20,7 @@ export const useProducts = () => {
   const queryClient = useQueryClient();
   const nodeFilter = useNodeFilter();
   const nodeKey = useNodeCacheKey();
+  const nodeAttrs = useNodeAttrs();
 
   const query = useQuery({
     queryKey: PRODUCTS_QUERY_KEYS.list(orgId, nodeKey),
@@ -33,7 +34,7 @@ export const useProducts = () => {
   const invalidate = () => queryClient.invalidateQueries({ queryKey: PRODUCTS_QUERY_KEYS.all });
 
   const createMutation = useMutation({
-    mutationFn: (attrs: Partial<ProductAttributes>) => productsApi.createProduct(orgId, attrs),
+    mutationFn: (attrs: Partial<ProductAttributes>) => productsApi.createProduct(orgId, { ...nodeAttrs, ...attrs }),
     onSuccess: invalidate,
   });
 

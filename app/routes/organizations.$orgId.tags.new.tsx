@@ -5,6 +5,7 @@ import Layout from "~/components/layout/Layout";
 import { tagColors, tagPriorities, getTagColorClass, getTagPriorityClass } from "~/components/tags/TagsData";
 import SimpleSelect from "~/components/ui/SimpleSelect";
 import { useTags, type TagCreateData } from "~/hooks/useTags";
+import { useNodeContext } from "~/contexts/NodeContext";
 import { 
   ArrowLeftIcon,
   CheckIcon,
@@ -29,6 +30,7 @@ export default function CreateTag() {
   const params = useParams();
   const navigate = useNavigate();
   const { orgId } = params;
+  const { buildListPath } = useNodeContext();
   const { createTag, loading: apiLoading } = useTags();
   
   const [tagData, setTagData] = useState<NewTag>({
@@ -90,7 +92,7 @@ export default function CreateTag() {
       if (newTag) {
         console.log("Tag created successfully:", newTag);
         // Navigate back to tags list
-        navigate(`/organizations/${orgId}/tags`);
+        navigate(buildListPath('tags'));
       } else {
         alert("Failed to create tag. Please try again.");
       }
@@ -103,7 +105,7 @@ export default function CreateTag() {
   };
 
   const handleCancel = () => {
-    navigate(`/organizations/${orgId}/tags`);
+    navigate(buildListPath('tags'));
   };
 
   const updateField = <K extends keyof NewTag>(field: K, value: NewTag[K]) => {
@@ -145,7 +147,7 @@ export default function CreateTag() {
           {/* Header */}
           <div className="mb-6">
             <nav className="flex items-center space-x-2 text-sm text-gray-500 dark:text-gray-400 mb-4">
-              <Link to={`/organizations/${orgId}/tags`} className="hover:text-gray-700 dark:hover:text-gray-200">
+              <Link to={buildListPath('tags')} className="hover:text-gray-700 dark:hover:text-gray-200">
                 Tags
               </Link>
               <span>/</span>
@@ -155,7 +157,7 @@ export default function CreateTag() {
             <div className="flex items-center justify-between">
               <div className="flex items-center">
                 <Link
-                  to={`/organizations/${orgId}/tags`}
+                  to={buildListPath('tags')}
                   className="mr-4 inline-flex items-center text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
                 >
                   <ArrowLeftIcon className="h-4 w-4 mr-1" />

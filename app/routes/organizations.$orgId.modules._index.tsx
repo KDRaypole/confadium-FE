@@ -2,6 +2,7 @@ import type { MetaFunction } from "@remix-run/node";
 import { Link, useParams, useNavigate } from "@remix-run/react";
 import Layout from "~/components/layout/Layout";
 import { useModules, type Module } from "~/hooks/useModules";
+import { useOptionalNodeContext } from "~/contexts/NodeContext";
 import { StateBadge } from "~/components/ui/StateManager";
 import { 
   CogIcon, 
@@ -27,6 +28,7 @@ export default function ModulesIndex() {
   const params = useParams();
   const orgId = params.orgId;
   const navigate = useNavigate();
+  const nodeCtx = useOptionalNodeContext();
   const { modules, loading, error, isDeleting, deleteModule } = useModules();
 
   const getIcon = (iconType: string) => {
@@ -195,7 +197,7 @@ export default function ModulesIndex() {
             {modules.map((module) => (
               <Link
                 key={module.id}
-                to={`/organizations/${orgId}/modules/${module.id}`}
+                to={nodeCtx?.buildDetailPath('modules', module.id) ?? `/organizations/${orgId}/modules/${module.id}`}
                 className="group relative bg-white dark:bg-gray-800 p-6 focus-within:ring-2 focus-within:ring-inset focus-within:ring-blue-500 rounded-lg shadow hover:shadow-md transition-shadow duration-200 border border-gray-200 dark:border-gray-700"
               >
                 <div>

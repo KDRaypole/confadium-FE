@@ -53,6 +53,7 @@ export interface ContactAttributes extends Timestamps {
   status: ContactStatus | null;
   source: string | null;
   notes: string | null;
+  org_node_id: string | null;
   alerted: boolean;
 }
 

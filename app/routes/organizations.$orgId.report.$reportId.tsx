@@ -2,6 +2,7 @@ import type { MetaFunction } from "@remix-run/node";
 import { Link, useParams } from "@remix-run/react";
 import { useState } from "react";
 import Layout from "~/components/layout/Layout";
+import { useNodeContext } from "~/contexts/NodeContext";
 import { 
   ArrowLeftIcon,
   CalendarIcon,
@@ -68,7 +69,8 @@ const getReportData = (reportId: string): ReportData => {
 export default function ReportShow() {
   const params = useParams();
   const { orgId, reportId } = params;
-  
+  const { buildListPath } = useNodeContext();
+
   const reportData = getReportData(reportId!);
 
   const formatCurrency = (amount: number) => {
@@ -121,7 +123,7 @@ export default function ReportShow() {
           {/* Breadcrumb and Back Navigation */}
           <div className="mb-6">
             <nav className="flex items-center space-x-2 text-sm text-gray-500 dark:text-gray-400 mb-4">
-              <Link to={`/organizations/${orgId}/reports`} className="hover:text-gray-700 dark:hover:text-gray-200">
+              <Link to={buildListPath('reports')} className="hover:text-gray-700 dark:hover:text-gray-200">
                 Reports
               </Link>
               <span>/</span>
@@ -130,7 +132,7 @@ export default function ReportShow() {
             
             <div className="flex items-center">
               <Link
-                to={`/organizations/${orgId}/reports`}
+                to={buildListPath('reports')}
                 className="mr-4 inline-flex items-center text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
               >
                 <ArrowLeftIcon className="h-4 w-4 mr-1" />

@@ -3,7 +3,7 @@ import { useParams } from '@remix-run/react';
 import { pagesApi } from '~/lib/api/pages';
 import type { PageAttributes, PageTemplateAttributes } from '~/lib/api/types';
 import type { Resource } from '~/lib/api/client';
-import { useNodeFilter, useNodeCacheKey } from './useNodeFilter';
+import { useNodeFilter, useNodeCacheKey, useNodeAttrs } from './useNodeFilter';
 
 export type Page = Resource<PageAttributes>;
 export type PageTemplate = Resource<PageTemplateAttributes>;
@@ -21,6 +21,7 @@ export const usePages = () => {
   const queryClient = useQueryClient();
   const nodeFilter = useNodeFilter();
   const nodeKey = useNodeCacheKey();
+  const nodeAttrs = useNodeAttrs();
 
   const query = useQuery({
     queryKey: PAGES_QUERY_KEYS.list(orgId, nodeKey),
@@ -34,7 +35,7 @@ export const usePages = () => {
   const invalidate = () => queryClient.invalidateQueries({ queryKey: PAGES_QUERY_KEYS.all });
 
   const createMutation = useMutation({
-    mutationFn: (attrs: Partial<PageAttributes>) => pagesApi.createPage(orgId, attrs),
+    mutationFn: (attrs: Partial<PageAttributes>) => pagesApi.createPage(orgId, { ...nodeAttrs, ...attrs }),
     onSuccess: invalidate,
   });
 

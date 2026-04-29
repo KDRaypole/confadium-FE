@@ -6,6 +6,7 @@ import WorkflowGraph from "~/components/modules/WorkflowGraph";
 import ConfigurationFlowOverview from "~/components/flow/ConfigurationFlowOverview";
 import CompactFlowPreview from "~/components/flow/CompactFlowPreview";
 import { useModule, useModules, useModuleConfigurations, type Configuration } from "~/hooks/useModules";
+import { useNodeContext } from "~/contexts/NodeContext";
 import { 
   CogIcon, 
   BellIcon, 
@@ -37,6 +38,7 @@ export const meta: MetaFunction = () => {
 export default function ModuleDetail() {
   const params = useParams();
   const { orgId, moduleId } = params;
+  const { buildListPath } = useNodeContext();
   const { isDarkMode } = useDarkMode();
   const [workflowChanges, setWorkflowChanges] = useState<any[]>([]);
   const [expandedConfigId, setExpandedConfigId] = useState<string | null>(null);
@@ -181,7 +183,7 @@ export default function ModuleDetail() {
           <div className="w-full px-4 sm:px-6 lg:px-8">
             <div className="text-center">
               <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Module Not Found</h1>
-              <Link to={`/organizations/${orgId}/modules`} className="text-blue-600 hover:text-blue-500">
+              <Link to={buildListPath('modules')} className="text-blue-600 hover:text-blue-500">
                 Back to Modules
               </Link>
             </div>
@@ -204,7 +206,7 @@ export default function ModuleDetail() {
           {/* Breadcrumb and Back Navigation */}
           <div className="mb-6">
             <nav className="flex items-center space-x-2 text-sm text-gray-500 dark:text-gray-400 mb-4">
-              <Link to={`/organizations/${orgId}/modules`} className="hover:text-gray-700 dark:hover:text-gray-200">
+              <Link to={buildListPath('modules')} className="hover:text-gray-700 dark:hover:text-gray-200">
                 Modules
               </Link>
               <span>/</span>
@@ -213,7 +215,7 @@ export default function ModuleDetail() {
             
             <div className="flex items-center">
               <Link
-                to={`/organizations/${orgId}/modules`}
+                to={buildListPath('modules')}
                 className="mr-4 inline-flex items-center text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
               >
                 <ArrowLeftIcon className="h-4 w-4 mr-1" />

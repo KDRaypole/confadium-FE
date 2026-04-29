@@ -3,7 +3,7 @@ import { useParams } from '@remix-run/react';
 import { tagsAPI } from '~/lib/api/tags';
 import type { TagAttributes } from '~/lib/api/types';
 import type { Resource } from '~/lib/api/client';
-import { useNodeFilter, useNodeCacheKey } from './useNodeFilter';
+import { useNodeFilter, useNodeCacheKey, useNodeAttrs } from './useNodeFilter';
 
 export type Tag = Resource<TagAttributes>;
 
@@ -19,6 +19,7 @@ export const useTags = () => {
   const queryClient = useQueryClient();
   const nodeFilter = useNodeFilter();
   const nodeKey = useNodeCacheKey();
+  const nodeAttrs = useNodeAttrs();
 
   const query = useQuery({
     queryKey: TAGS_QUERY_KEYS.list(orgId, nodeKey),
@@ -32,7 +33,7 @@ export const useTags = () => {
   const invalidate = () => queryClient.invalidateQueries({ queryKey: TAGS_QUERY_KEYS.all });
 
   const createMutation = useMutation({
-    mutationFn: (attrs: Partial<TagAttributes>) => tagsAPI.createTag(orgId, attrs),
+    mutationFn: (attrs: Partial<TagAttributes>) => tagsAPI.createTag(orgId, { ...nodeAttrs, ...attrs }),
     onSuccess: invalidate,
   });
 

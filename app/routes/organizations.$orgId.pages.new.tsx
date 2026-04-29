@@ -4,6 +4,7 @@ import { useState } from "react";
 import Layout from "~/components/layout/Layout";
 import { TemplateSelector } from "~/components/page-builder";
 import { usePages } from "~/hooks/usePages";
+import { useNodeContext } from "~/contexts/NodeContext";
 import type { PageComponentNode, PageTheme } from "~/lib/api/types";
 
 export const meta: MetaFunction = () => {
@@ -13,6 +14,7 @@ export const meta: MetaFunction = () => {
 export default function NewPage() {
   const { orgId } = useParams();
   const navigate = useNavigate();
+  const { buildListPath } = useNodeContext();
   const { createPage } = usePages();
   const [step, setStep] = useState<'template' | 'details'>('template');
   const [selectedStructure, setSelectedStructure] = useState<PageComponentNode | null>(null);
@@ -121,7 +123,7 @@ export default function NewPage() {
               <div className="flex justify-end space-x-3">
                 <button
                   type="button"
-                  onClick={() => navigate(`/organizations/${orgId}/pages`)}
+                  onClick={() => navigate(buildListPath('pages'))}
                   className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600"
                 >
                   Cancel

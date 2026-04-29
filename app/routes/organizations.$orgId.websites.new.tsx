@@ -3,6 +3,7 @@ import { useNavigate, useParams } from "@remix-run/react";
 import { useState } from "react";
 import Layout from "~/components/layout/Layout";
 import { useWebsites } from "~/hooks/useWebsites";
+import { useNodeContext } from "~/contexts/NodeContext";
 import { ThemeEditor } from "~/components/page-builder";
 import { PageBuilderProvider } from "~/components/page-builder";
 import type { PageTheme } from "~/lib/api/types";
@@ -20,6 +21,7 @@ const DEFAULT_THEME: PageTheme = {
 export default function NewWebsite() {
   const { orgId } = useParams();
   const navigate = useNavigate();
+  const { buildListPath } = useNodeContext();
   const { createWebsite } = useWebsites();
   const [name, setName] = useState("");
   const [slug, setSlug] = useState("");
@@ -101,7 +103,7 @@ export default function NewWebsite() {
 
             {/* Actions */}
             <div className="flex justify-end space-x-3">
-              <button type="button" onClick={() => navigate(`/organizations/${orgId}/websites`)} className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600">
+              <button type="button" onClick={() => navigate(buildListPath('websites'))} className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600">
                 Cancel
               </button>
               <button type="submit" disabled={saving || !name || !slug} className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-purple-600 hover:bg-purple-700 disabled:opacity-50">

@@ -5,6 +5,7 @@ import Layout from "~/components/layout/Layout";
 import SimpleSelect from "~/components/ui/SimpleSelect";
 import { useActivities } from "~/hooks/useActivities";
 import { useContacts } from "~/hooks/useContacts";
+import { useOptionalNodeContext } from "~/contexts/NodeContext";
 import type { ActivityAttributes } from "~/lib/api/types";
 import {
   PlusIcon,
@@ -66,6 +67,7 @@ const emptyForm: Partial<ActivityAttributes> & { contact_id?: string; deal_id?: 
 export default function Activities() {
   const { orgId } = useParams();
   const location = useLocation();
+  const nodeCtx = useOptionalNodeContext();
   const { activities, loading, createActivity } = useActivities();
   const { contacts } = useContacts();
 
@@ -309,7 +311,7 @@ export default function Activities() {
                   return (
                     <Link
                       key={activity.id}
-                      to={`/organizations/${orgId}/activities/${activity.id}`}
+                      to={nodeCtx?.buildDetailPath('activities', activity.id) ?? `/organizations/${orgId}/activities/${activity.id}`}
                       className="block px-6 py-4 hover:bg-gray-50 dark:hover:bg-gray-700"
                     >
                       <div className="flex items-start space-x-4">
