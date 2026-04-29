@@ -3,22 +3,27 @@ import { useParams } from '@remix-run/react';
 import { activitiesAPI } from '~/lib/api/activities';
 import type { ActivityAttributes, ContactAttributes, DealAttributes } from '~/lib/api/types';
 import type { Resource } from '~/lib/api/client';
+import { useNodeFilter, useNodeCacheKey } from './useNodeFilter';
 
 export type Activity = Resource<ActivityAttributes>;
 
 export const ACTIVITIES_QUERY_KEYS = {
   all: ['activities'] as const,
-  list: (orgId: string) => [...ACTIVITIES_QUERY_KEYS.all, 'list', orgId] as const,
+  list: (orgId: string, nodeKey?: string | null) => [...ACTIVITIES_QUERY_KEYS.all, 'list', orgId, nodeKey] as const,
   detail: (id: string) => [...ACTIVITIES_QUERY_KEYS.all, 'detail', id] as const,
 };
 
 export const useActivities = () => {
   const { orgId = '' } = useParams();
   const queryClient = useQueryClient();
+  const nodeFilter = useNodeFilter();
+  const nodeKey = useNodeCacheKey();
 
   const query = useQuery({
-    queryKey: ACTIVITIES_QUERY_KEYS.list(orgId),
-    queryFn: () => activitiesAPI.getActivities(orgId),
+    queryKey: ACTIVITIES_QUERY_KEYS.list(orgId, nodeKey),
+    queryFn: () => activitiesAPI.getActivities(orgId, {
+      ...(Object.keys(nodeFilter).length ? { filter: nodeFilter } : {}),
+    }),
     select: (data) => data.data,
     enabled: !!orgId,
   });

@@ -3,12 +3,13 @@ import { useParams } from '@remix-run/react';
 import { websitesApi } from '~/lib/api/websites';
 import type { WebsiteAttributes, PageAttributes } from '~/lib/api/types';
 import type { Resource } from '~/lib/api/client';
+import { useNodeFilter, useNodeCacheKey } from './useNodeFilter';
 
 export type Website = Resource<WebsiteAttributes>;
 
 export const WEBSITES_QUERY_KEYS = {
   all: ['websites'] as const,
-  list: (orgId: string) => [...WEBSITES_QUERY_KEYS.all, 'list', orgId] as const,
+  list: (orgId: string, nodeKey?: string | null) => [...WEBSITES_QUERY_KEYS.all, 'list', orgId, nodeKey] as const,
   detail: (id: string) => [...WEBSITES_QUERY_KEYS.all, 'detail', id] as const,
   pages: (websiteId: string) => [...WEBSITES_QUERY_KEYS.all, 'pages', websiteId] as const,
 };
@@ -16,10 +17,14 @@ export const WEBSITES_QUERY_KEYS = {
 export const useWebsites = () => {
   const { orgId = '' } = useParams();
   const queryClient = useQueryClient();
+  const nodeFilter = useNodeFilter();
+  const nodeKey = useNodeCacheKey();
 
   const query = useQuery({
-    queryKey: WEBSITES_QUERY_KEYS.list(orgId),
-    queryFn: () => websitesApi.getWebsites(orgId),
+    queryKey: WEBSITES_QUERY_KEYS.list(orgId, nodeKey),
+    queryFn: () => websitesApi.getWebsites(orgId, {
+      ...(Object.keys(nodeFilter).length ? { filter: nodeFilter } : {}),
+    }),
     select: (data) => data.data,
     enabled: !!orgId,
   });

@@ -3,13 +3,14 @@ import { useParams } from '@remix-run/react';
 import { pagesApi } from '~/lib/api/pages';
 import type { PageAttributes, PageTemplateAttributes } from '~/lib/api/types';
 import type { Resource } from '~/lib/api/client';
+import { useNodeFilter, useNodeCacheKey } from './useNodeFilter';
 
 export type Page = Resource<PageAttributes>;
 export type PageTemplate = Resource<PageTemplateAttributes>;
 
 export const PAGES_QUERY_KEYS = {
   all: ['pages'] as const,
-  list: (orgId: string) => [...PAGES_QUERY_KEYS.all, 'list', orgId] as const,
+  list: (orgId: string, nodeKey?: string | null) => [...PAGES_QUERY_KEYS.all, 'list', orgId, nodeKey] as const,
   detail: (id: string) => [...PAGES_QUERY_KEYS.all, 'detail', id] as const,
   templates: (orgId: string) => [...PAGES_QUERY_KEYS.all, 'templates', orgId] as const,
   templateDetail: (id: string) => [...PAGES_QUERY_KEYS.all, 'template', id] as const,
@@ -18,10 +19,14 @@ export const PAGES_QUERY_KEYS = {
 export const usePages = () => {
   const { orgId = '' } = useParams();
   const queryClient = useQueryClient();
+  const nodeFilter = useNodeFilter();
+  const nodeKey = useNodeCacheKey();
 
   const query = useQuery({
-    queryKey: PAGES_QUERY_KEYS.list(orgId),
-    queryFn: () => pagesApi.getPages(orgId),
+    queryKey: PAGES_QUERY_KEYS.list(orgId, nodeKey),
+    queryFn: () => pagesApi.getPages(orgId, {
+      ...(Object.keys(nodeFilter).length ? { filter: nodeFilter } : {}),
+    }),
     select: (data) => data.data,
     enabled: !!orgId,
   });

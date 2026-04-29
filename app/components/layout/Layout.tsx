@@ -15,7 +15,7 @@ export default function Layout({ children, showOrgNavigation = true }: LayoutPro
     <ProtectedRoute>
       <div className="h-screen flex">
         <Sidebar showOrgNavigation={showOrgNavigation} />
-        
+
         {/* Mobile menu overlay */}
         {mobileMenuOpen && (
           <div className="fixed inset-0 z-50 md:hidden">

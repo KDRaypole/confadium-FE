@@ -3,12 +3,13 @@ import { useParams } from '@remix-run/react';
 import { tagsAPI } from '~/lib/api/tags';
 import type { TagAttributes } from '~/lib/api/types';
 import type { Resource } from '~/lib/api/client';
+import { useNodeFilter, useNodeCacheKey } from './useNodeFilter';
 
 export type Tag = Resource<TagAttributes>;
 
 export const TAGS_QUERY_KEYS = {
   all: ['tags'] as const,
-  list: (orgId: string) => [...TAGS_QUERY_KEYS.all, 'list', orgId] as const,
+  list: (orgId: string, nodeKey?: string | null) => [...TAGS_QUERY_KEYS.all, 'list', orgId, nodeKey] as const,
   detail: (id: string) => [...TAGS_QUERY_KEYS.all, 'detail', id] as const,
   search: (orgId: string, query: string) => [...TAGS_QUERY_KEYS.all, 'search', orgId, query] as const,
 };
@@ -16,10 +17,14 @@ export const TAGS_QUERY_KEYS = {
 export const useTags = () => {
   const { orgId = '' } = useParams();
   const queryClient = useQueryClient();
+  const nodeFilter = useNodeFilter();
+  const nodeKey = useNodeCacheKey();
 
   const query = useQuery({
-    queryKey: TAGS_QUERY_KEYS.list(orgId),
-    queryFn: () => tagsAPI.getTags(orgId),
+    queryKey: TAGS_QUERY_KEYS.list(orgId, nodeKey),
+    queryFn: () => tagsAPI.getTags(orgId, {
+      ...(Object.keys(nodeFilter).length ? { filter: nodeFilter } : {}),
+    }),
     select: (data) => data.data,
     enabled: !!orgId,
   });

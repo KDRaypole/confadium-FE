@@ -3,6 +3,7 @@ import { useParams } from '@remix-run/react';
 import { modulesAPI } from '~/lib/api/modules';
 import type { AutomationModuleAttributes, ModuleConfigurationAttributes, ModuleCategory } from '~/lib/api/types';
 import type { Resource } from '~/lib/api/client';
+import { useNodeFilter, useNodeCacheKey } from './useNodeFilter';
 
 export type AutomationModule = Resource<AutomationModuleAttributes>;
 export type ModuleConfiguration = Resource<ModuleConfigurationAttributes>;
@@ -22,10 +23,14 @@ export const MODULES_QUERY_KEYS = {
 export const useModules = () => {
   const { orgId = '' } = useParams();
   const queryClient = useQueryClient();
+  const nodeFilter = useNodeFilter();
+  const nodeKey = useNodeCacheKey();
 
   const query = useQuery({
-    queryKey: MODULES_QUERY_KEYS.list(orgId),
-    queryFn: () => modulesAPI.getModules(orgId),
+    queryKey: [...MODULES_QUERY_KEYS.list(orgId), nodeKey],
+    queryFn: () => modulesAPI.getModules(orgId, {
+      ...(Object.keys(nodeFilter).length ? { filter: nodeFilter } : {}),
+    }),
     select: (data) => data.data,
     enabled: !!orgId,
   });
