@@ -3,8 +3,9 @@ import { Link, useParams, Outlet, useLocation } from "@remix-run/react";
 import { useState } from "react";
 import Layout from "~/components/layout/Layout";
 import SimpleSelect from "~/components/ui/SimpleSelect";
-import { PlusIcon, MagnifyingGlassIcon, XMarkIcon, ChevronLeftIcon, ChevronRightIcon } from "@heroicons/react/24/outline";
+import { PlusIcon, MagnifyingGlassIcon, XMarkIcon, ChevronLeftIcon, ChevronRightIcon, MapPinIcon } from "@heroicons/react/24/outline";
 import { useContacts } from "~/hooks/useContacts";
+import { useOptionalNodeContext } from "~/contexts/NodeContext";
 import type { ContactAttributes, ContactStatus } from "~/lib/api/types";
 
 export const meta: MetaFunction = () => {
@@ -36,6 +37,14 @@ const emptyForm: Partial<ContactAttributes> = {
 export default function Contacts() {
   const { orgId } = useParams();
   const location = useLocation();
+  const nodeCtx = useOptionalNodeContext();
+
+  const getNodeLabel = (orgNodeId: string | null | undefined) => {
+    if (!orgNodeId || !nodeCtx?.nodes?.length) return null;
+    const node = nodeCtx.nodes.find(n => n.id === orgNodeId);
+    if (!node) return null;
+    return { id: node.id, levelName: node.attributes.level_name, name: node.attributes.name };
+  };
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [currentPage, setCurrentPage] = useState(1);
@@ -207,6 +216,11 @@ export default function Contacts() {
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                         Source
                       </th>
+                      {nodeCtx?.hasStructure && (
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                          Organization Entity
+                        </th>
+                      )}
                       <th className="relative px-6 py-3">
                         <span className="sr-only">Actions</span>
                       </th>
@@ -218,7 +232,7 @@ export default function Contacts() {
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div>
                             <Link
-                              to={`/organizations/${orgId}/contacts/${contact.id}`}
+                              to={nodeCtx?.buildDetailPath('contacts', contact.id) ?? `/organizations/${orgId}/contacts/${contact.id}`}
                               className="text-sm font-medium text-gray-900 dark:text-gray-100 hover:text-blue-600 dark:hover:text-blue-400"
                             >
                               {`${contact.attributes?.first_name || ''} ${contact.attributes?.last_name || ''}`.trim()}
@@ -253,9 +267,27 @@ export default function Contacts() {
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
                           {contact.attributes?.source || '-'}
                         </td>
+                        {nodeCtx?.hasStructure && (() => {
+                          const nodeLabel = getNodeLabel(contact.attributes?.org_node_id);
+                          return (
+                            <td className="px-6 py-4 whitespace-nowrap text-sm">
+                              {nodeLabel ? (
+                                <Link
+                                  to={`/organizations/${orgId}/nodes/${nodeLabel.id}`}
+                                  className="inline-flex items-center space-x-1.5 text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
+                                >
+                                  <MapPinIcon className="h-3.5 w-3.5" />
+                                  <span>{nodeLabel.levelName}: {nodeLabel.name}</span>
+                                </Link>
+                              ) : (
+                                <span className="text-gray-400">-</span>
+                              )}
+                            </td>
+                          );
+                        })()}
                         <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                           <Link
-                            to={`/organizations/${orgId}/contacts/${contact.id}`}
+                            to={nodeCtx?.buildDetailPath('contacts', contact.id) ?? `/organizations/${orgId}/contacts/${contact.id}`}
                             className="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300 text-sm font-medium"
                           >
                             View

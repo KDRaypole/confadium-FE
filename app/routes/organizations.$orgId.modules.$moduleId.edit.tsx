@@ -18,7 +18,8 @@ import TriggerConfigModal, { type TriggerConfig, type EntityTypeConfig } from "~
 import ConditionConfigModal, { type Condition, type CrmFieldConfig } from "~/components/flow/modals/ConditionConfigModal";
 import ActionConfigModal, { type ActionConfig, type ActionTypeConfig } from "~/components/flow/modals/ActionConfigModal";
 import { useTriggerableSchema } from "~/hooks/useTriggerableSchema";
-import { 
+import { useNodeContext } from "~/contexts/NodeContext";
+import {
   ArrowLeftIcon,
   PlusIcon,
   TrashIcon,
@@ -216,6 +217,7 @@ export default function ModuleEdit() {
   const params = useParams();
   const [searchParams] = useSearchParams();
   const { orgId, moduleId } = params;
+  const { buildListPath } = useNodeContext();
   const configId = searchParams.get("configId");
 
   // Hooks
@@ -701,7 +703,7 @@ export default function ModuleEdit() {
           <div className="w-full px-4 sm:px-6 lg:px-8">
             <div className="text-center">
               <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Module Not Found</h1>
-              <Link to={`/organizations/${orgId}/modules`} className="text-blue-600 hover:text-blue-500">
+              <Link to={buildListPath('modules')} className="text-blue-600 hover:text-blue-500">
                 Back to Modules
               </Link>
             </div>
@@ -718,7 +720,7 @@ export default function ModuleEdit() {
           {/* Header */}
           <div className="mb-6">
             <nav className="flex items-center space-x-2 text-sm text-gray-500 dark:text-gray-400 mb-4">
-              <Link to={`/organizations/${orgId}/modules`} className="hover:text-gray-700 dark:hover:text-gray-200">
+              <Link to={buildListPath('modules')} className="hover:text-gray-700 dark:hover:text-gray-200">
                 Modules
               </Link>
               <span>/</span>

@@ -15,6 +15,7 @@ import {
   CurrencyDollarIcon,
 } from "@heroicons/react/24/outline";
 import { useProducts } from "~/hooks/useProducts";
+import { useOptionalNodeContext } from "~/contexts/NodeContext";
 import { StateBadge } from "~/components/ui/StateManager";
 
 export const meta: MetaFunction = () => {
@@ -29,6 +30,7 @@ type StatusFilter = 'all' | 'active' | 'draft' | 'archived';
 
 export default function ProductsIndex() {
   const { orgId } = useParams();
+  const nodeCtx = useOptionalNodeContext();
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [viewMode, setViewMode] = useState<ViewMode>("grid");
@@ -224,10 +226,10 @@ export default function ProductsIndex() {
                         {product.attributes.category && <span className="px-2 py-0.5 bg-gray-100 dark:bg-gray-700 rounded">{product.attributes.category}</span>}
                       </div>
                       <div className="flex space-x-2">
-                        <Link to={`/organizations/${orgId}/products/${product.id}`} className="text-purple-600 hover:text-purple-700 dark:text-purple-400">
+                        <Link to={nodeCtx?.buildDetailPath('products', product.id) ?? `/organizations/${orgId}/products/${product.id}`} className="text-purple-600 hover:text-purple-700 dark:text-purple-400">
                           <EyeIcon className="h-4 w-4" />
                         </Link>
-                        <Link to={`/organizations/${orgId}/products/${product.id}/edit`} className="text-gray-600 hover:text-gray-700 dark:text-gray-400">
+                        <Link to={nodeCtx?.buildDetailPath('products', product.id, 'edit') ?? `/organizations/${orgId}/products/${product.id}/edit`} className="text-gray-600 hover:text-gray-700 dark:text-gray-400">
                           <PencilIcon className="h-4 w-4" />
                         </Link>
                         <button onClick={() => handleDelete(product.id)} className="text-red-600 hover:text-red-700 dark:text-red-400">
@@ -265,8 +267,8 @@ export default function ProductsIndex() {
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">{product.attributes.category || "-"}</td>
                       <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                         <div className="flex justify-end space-x-2">
-                          <Link to={`/organizations/${orgId}/products/${product.id}`} className="text-purple-600 hover:text-purple-700 dark:text-purple-400"><EyeIcon className="h-4 w-4" /></Link>
-                          <Link to={`/organizations/${orgId}/products/${product.id}/edit`} className="text-gray-600 hover:text-gray-700 dark:text-gray-400"><PencilIcon className="h-4 w-4" /></Link>
+                          <Link to={nodeCtx?.buildDetailPath('products', product.id) ?? `/organizations/${orgId}/products/${product.id}`} className="text-purple-600 hover:text-purple-700 dark:text-purple-400"><EyeIcon className="h-4 w-4" /></Link>
+                          <Link to={nodeCtx?.buildDetailPath('products', product.id, 'edit') ?? `/organizations/${orgId}/products/${product.id}/edit`} className="text-gray-600 hover:text-gray-700 dark:text-gray-400"><PencilIcon className="h-4 w-4" /></Link>
                           <button onClick={() => handleDelete(product.id)} className="text-red-600 hover:text-red-700 dark:text-red-400"><TrashIcon className="h-4 w-4" /></button>
                         </div>
                       </td>

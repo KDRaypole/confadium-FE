@@ -3,6 +3,7 @@ import { useNavigate, useParams } from "@remix-run/react";
 import Layout from "~/components/layout/Layout";
 import ProductEditor from "~/components/products/ProductEditor";
 import { useProducts } from "~/hooks/useProducts";
+import { useNodeContext } from "~/contexts/NodeContext";
 import { useState } from "react";
 
 export const meta: MetaFunction = () => {
@@ -14,6 +15,7 @@ export const meta: MetaFunction = () => {
 export default function NewProduct() {
   const { orgId } = useParams();
   const navigate = useNavigate();
+  const { buildListPath } = useNodeContext();
   const { createProduct } = useProducts();
   const [saving, setSaving] = useState(false);
 
@@ -39,7 +41,7 @@ export default function NewProduct() {
           </div>
           <ProductEditor
             onSave={handleSave}
-            onCancel={() => navigate(`/organizations/${orgId}/products`)}
+            onCancel={() => navigate(buildListPath('products'))}
             saving={saving}
           />
         </div>

@@ -6,6 +6,7 @@ import type {
   TimeSlotAttributes, CalendarIntegrationAttributes,
 } from '~/lib/api/types';
 import type { Resource, QueryParams } from '~/lib/api/client';
+import { useNodeFilter, useNodeCacheKey, useNodeAttrs } from './useNodeFilter';
 
 export type Calendar = Resource<CalendarAttributes>;
 export type CalendarEvent = Resource<CalendarEventAttributes>;
@@ -25,10 +26,15 @@ export const CALENDAR_QUERY_KEYS = {
 export const useCalendar = () => {
   const { orgId = '' } = useParams();
   const queryClient = useQueryClient();
+  const nodeFilter = useNodeFilter();
+  const nodeKey = useNodeCacheKey();
+  const nodeAttrs = useNodeAttrs();
 
   const query = useQuery({
-    queryKey: CALENDAR_QUERY_KEYS.calendars(orgId),
-    queryFn: () => calendarAPI.getCalendars(orgId),
+    queryKey: [...CALENDAR_QUERY_KEYS.calendars(orgId), nodeKey],
+    queryFn: () => calendarAPI.getCalendars(orgId, {
+      ...(Object.keys(nodeFilter).length ? { filter: nodeFilter } : {}),
+    }),
     select: (data) => data.data,
     enabled: !!orgId,
   });
@@ -36,7 +42,7 @@ export const useCalendar = () => {
   const invalidate = () => queryClient.invalidateQueries({ queryKey: CALENDAR_QUERY_KEYS.all });
 
   const createMutation = useMutation({
-    mutationFn: (attrs: Partial<CalendarAttributes>) => calendarAPI.createCalendar(orgId, attrs),
+    mutationFn: (attrs: Partial<CalendarAttributes>) => calendarAPI.createCalendar(orgId, { ...nodeAttrs, ...attrs }),
     onSuccess: invalidate,
   });
 

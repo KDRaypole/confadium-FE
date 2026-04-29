@@ -19,6 +19,26 @@ export interface OrganizationAttributes extends Timestamps {
   slug: string;
 }
 
+// ── Org Node Levels & Nodes ────────────────────────────────
+
+export interface OrgNodeLevelAttributes extends Timestamps {
+  depth: number;
+  name: string;
+  plural: string;
+}
+
+export interface OrgNodeAttributes extends Timestamps {
+  name: string;
+  parent_id: string | null;
+  slug: string;
+  depth: number;
+  position: number;
+  path: string;
+  directed: boolean;
+  metadata: Record<string, unknown>;
+  level_name: string;
+}
+
 // ── Contact ─────────────────────────────────────────────────
 
 export type ContactStatus = 'lead' | 'prospect' | 'customer' | 'churned';
@@ -33,6 +53,7 @@ export interface ContactAttributes extends Timestamps {
   status: ContactStatus | null;
   source: string | null;
   notes: string | null;
+  org_node_id: string | null;
   alerted: boolean;
 }
 

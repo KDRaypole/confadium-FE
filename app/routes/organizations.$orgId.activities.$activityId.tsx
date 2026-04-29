@@ -3,6 +3,7 @@ import { Link, useParams, useNavigate } from "@remix-run/react";
 import { useState } from "react";
 import SimpleSelect from "~/components/ui/SimpleSelect";
 import { useActivity } from "~/hooks/useActivities";
+import { useNodeContext } from "~/contexts/NodeContext";
 import type { ActivityAttributes } from "~/lib/api/types";
 import {
   ArrowLeftIcon,
@@ -58,6 +59,7 @@ function getActivityStatus(attrs: ActivityAttributes): { label: string; color: s
 export default function ActivityShow() {
   const { orgId, activityId } = useParams();
   const navigate = useNavigate();
+  const { buildListPath, buildDetailPath } = useNodeContext();
   const { activity, contact, deal, loading, updateActivity, deleteActivity } = useActivity(activityId);
 
   const [isEditing, setIsEditing] = useState(false);
@@ -92,7 +94,7 @@ export default function ActivityShow() {
     if (window.confirm('Are you sure you want to delete this activity?')) {
       try {
         await deleteActivity();
-        navigate(`/organizations/${orgId}/activities`);
+        navigate(buildListPath('activities'));
       } catch (error) {
         console.error('Failed to delete activity:', error);
       }
@@ -143,7 +145,7 @@ export default function ActivityShow() {
         <div className="w-full px-4 sm:px-6 lg:px-8">
           <div className="text-center py-12">
             <p className="text-gray-500 dark:text-gray-400">Activity not found.</p>
-            <Link to={`/organizations/${orgId}/activities`} className="mt-4 inline-flex items-center text-blue-600 hover:text-blue-800">
+            <Link to={buildListPath('activities')} className="mt-4 inline-flex items-center text-blue-600 hover:text-blue-800">
               <ArrowLeftIcon className="h-4 w-4 mr-1" />
               Back to Activities
             </Link>
@@ -163,7 +165,7 @@ export default function ActivityShow() {
         {/* Header */}
         <div className="mb-6">
           <nav className="flex items-center space-x-2 text-sm text-gray-500 dark:text-gray-400 mb-4">
-            <Link to={`/organizations/${orgId}/activities`} className="hover:text-gray-700 dark:hover:text-gray-200">
+            <Link to={buildListPath('activities')} className="hover:text-gray-700 dark:hover:text-gray-200">
               Activities
             </Link>
             <span>/</span>
@@ -173,7 +175,7 @@ export default function ActivityShow() {
           <div className="flex items-center justify-between">
             <div className="flex items-center">
               <Link
-                to={`/organizations/${orgId}/activities`}
+                to={buildListPath('activities')}
                 className="mr-4 inline-flex items-center text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
               >
                 <ArrowLeftIcon className="h-4 w-4 mr-1" />
@@ -363,7 +365,7 @@ export default function ActivityShow() {
                 {contact ? (
                   <div>
                     <Link
-                      to={`/organizations/${orgId}/contacts/${contact.id}`}
+                      to={buildDetailPath('contacts', contact.id)}
                       className="text-sm font-medium text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
                     >
                       {`${contact.attributes?.first_name || ''} ${contact.attributes?.last_name || ''}`.trim()}

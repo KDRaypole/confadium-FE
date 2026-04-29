@@ -2,6 +2,7 @@ import type { MetaFunction } from "@remix-run/node";
 import { Link, useParams } from "@remix-run/react";
 import Layout from "~/components/layout/Layout";
 import { useProduct, useProductVariants } from "~/hooks/useProducts";
+import { useNodeContext } from "~/contexts/NodeContext";
 import VariantEditor from "~/components/products/VariantEditor";
 import {
   PencilIcon,
@@ -17,6 +18,7 @@ export const meta: MetaFunction = () => {
 
 export default function ProductDetail() {
   const { orgId, productId = "" } = useParams();
+  const { buildListPath } = useNodeContext();
   const { product, loading } = useProduct(productId);
   const { variants, createVariant, updateVariant, deleteVariant } = useProductVariants(productId);
 
@@ -54,7 +56,7 @@ export default function ProductDetail() {
         <div className="w-full px-4 sm:px-6 lg:px-8 max-w-4xl">
           {/* Header */}
           <div className="mb-8">
-            <Link to={`/organizations/${orgId}/products`} className="inline-flex items-center text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 mb-4">
+            <Link to={buildListPath('products')} className="inline-flex items-center text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 mb-4">
               <ArrowLeftIcon className="h-4 w-4 mr-1" /> Back to Products
             </Link>
             <div className="flex items-center justify-between">

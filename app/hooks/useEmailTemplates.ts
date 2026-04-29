@@ -4,6 +4,7 @@ import { useParams } from '@remix-run/react';
 import { emailTemplatesAPI } from '~/lib/api/emailTemplates';
 import type { EmailTemplateAttributes, EmailTemplateCategory } from '~/lib/api/types';
 import type { Resource } from '~/lib/api/client';
+import { useNodeFilter, useNodeCacheKey, useNodeAttrs } from './useNodeFilter';
 
 export type EmailTemplate = Resource<EmailTemplateAttributes>;
 
@@ -29,10 +30,15 @@ const errorMessage = (err: unknown): string | null =>
 export const useEmailTemplates = () => {
   const { orgId = '' } = useParams();
   const queryClient = useQueryClient();
+  const nodeFilter = useNodeFilter();
+  const nodeKey = useNodeCacheKey();
+  const nodeAttrs = useNodeAttrs();
 
   const listQuery = useQuery({
-    queryKey: EMAIL_TEMPLATES_QUERY_KEYS.list(orgId),
-    queryFn: () => emailTemplatesAPI.getTemplates(orgId),
+    queryKey: [...EMAIL_TEMPLATES_QUERY_KEYS.list(orgId), nodeKey],
+    queryFn: () => emailTemplatesAPI.getTemplates(orgId, {
+      ...(Object.keys(nodeFilter).length ? { filter: nodeFilter } : {}),
+    }),
     select: (data) => data.data,
     enabled: !!orgId,
   });
@@ -42,7 +48,7 @@ export const useEmailTemplates = () => {
 
   const createMutation = useMutation({
     mutationFn: (attrs: Partial<EmailTemplateAttributes>) =>
-      emailTemplatesAPI.createTemplate(orgId, attrs),
+      emailTemplatesAPI.createTemplate(orgId, { ...nodeAttrs, ...attrs }),
     onSuccess: invalidate,
   });
 

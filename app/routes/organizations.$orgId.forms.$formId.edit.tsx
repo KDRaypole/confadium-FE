@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import Layout from "~/components/layout/Layout";
 import DynamicFormEditor from "~/components/forms/DynamicFormEditor";
 import { useForm } from "~/hooks/useForms";
+import { useNodeContext } from "~/contexts/NodeContext";
 import { ArrowLeftIcon, CheckIcon, EyeIcon } from "@heroicons/react/24/outline";
 import type { FormData } from './new';
 
@@ -17,6 +18,7 @@ export const meta: MetaFunction = () => {
 export default function EditForm() {
   const { orgId, formId } = useParams();
   const navigate = useNavigate();
+  const { buildListPath } = useNodeContext();
   const { form, loading, error, updateForm } = useForm(formId || null);
   const [formData, setFormData] = useState<FormData | null>(null);
   const [saving, setSaving] = useState(false);
@@ -95,7 +97,7 @@ export default function EditForm() {
                   {error || "The requested form could not be found."}
                 </p>
                 <Link
-                  to={`/organizations/${orgId}/forms`}
+                  to={buildListPath('forms')}
                   className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-purple-600 hover:bg-purple-700"
                 >
                   <ArrowLeftIcon className="h-4 w-4 mr-2" />
@@ -118,7 +120,7 @@ export default function EditForm() {
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-4">
                 <Link
-                  to={`/organizations/${orgId}/forms`}
+                  to={buildListPath('forms')}
                   className="inline-flex items-center text-sm font-medium text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
                 >
                   <ArrowLeftIcon className="h-4 w-4 mr-1" />

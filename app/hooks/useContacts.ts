@@ -4,6 +4,7 @@ import { contactsAPI } from '~/lib/api/contacts';
 import { tagsAPI } from '~/lib/api/tags';
 import type { ContactAttributes, DealAttributes, ActivityAttributes, TagAttributes } from '~/lib/api/types';
 import type { Resource } from '~/lib/api/client';
+import { useNodeFilter, useNodeCacheKey, useNodeAttrs } from './useNodeFilter';
 
 export type Contact = Resource<ContactAttributes>;
 
@@ -33,13 +34,18 @@ export const useContacts = (options: UseContactsOptions = {}) => {
   const { page = 1, pageSize = 25, search, filter } = options;
   const { orgId = '' } = useParams();
   const queryClient = useQueryClient();
+  const nodeFilter = useNodeFilter();
+  const nodeKey = useNodeCacheKey();
+  const nodeAttrs = useNodeAttrs();
+
+  const mergedFilter = { ...filter, ...nodeFilter };
 
   const query = useQuery({
-    queryKey: CONTACTS_QUERY_KEYS.list(orgId, page, pageSize, search, filter),
+    queryKey: [...CONTACTS_QUERY_KEYS.list(orgId, page, pageSize, search, filter), nodeKey],
     queryFn: () => contactsAPI.getContacts(orgId, {
       page: { number: page, size: pageSize },
       ...(search ? { search } : {}),
-      ...(filter ? { filter } : {}),
+      ...(Object.keys(mergedFilter).length ? { filter: mergedFilter } : {}),
     }),
     enabled: !!orgId,
   });
@@ -47,7 +53,7 @@ export const useContacts = (options: UseContactsOptions = {}) => {
   const invalidate = () => queryClient.invalidateQueries({ queryKey: CONTACTS_QUERY_KEYS.all });
 
   const createMutation = useMutation({
-    mutationFn: (attrs: Partial<ContactAttributes>) => contactsAPI.createContact(orgId, attrs),
+    mutationFn: (attrs: Partial<ContactAttributes>) => contactsAPI.createContact(orgId, { ...nodeAttrs, ...attrs }),
     onSuccess: invalidate,
   });
 

@@ -3,6 +3,7 @@ import { Link, useParams, useNavigate } from "@remix-run/react";
 import { useState } from "react";
 import Layout from "~/components/layout/Layout";
 import { useModules } from "~/hooks/useModules";
+import { useNodeContext } from "~/contexts/NodeContext";
 import type { ModuleCategory } from "~/lib/api/types";
 import {
   ArrowLeftIcon,
@@ -79,6 +80,7 @@ const COMMON_TRIGGER_TYPES = [
 export default function CreateModule() {
   const { orgId } = useParams();
   const navigate = useNavigate();
+  const { buildListPath } = useNodeContext();
   const { createModule } = useModules();
 
   const [formData, setFormData] = useState<ModuleFormData>({
@@ -135,7 +137,7 @@ export default function CreateModule() {
   };
 
   const handleCancel = () => {
-    navigate(`/organizations/${orgId}/modules`);
+    navigate(buildListPath('modules'));
   };
 
   const updateField = <K extends keyof ModuleFormData>(field: K, value: ModuleFormData[K]) => {
@@ -185,7 +187,7 @@ export default function CreateModule() {
           {/* Header */}
           <div className="mb-6">
             <nav className="flex items-center space-x-2 text-sm text-gray-500 dark:text-gray-400 mb-4">
-              <Link to={`/organizations/${orgId}/modules`} className="hover:text-gray-700 dark:hover:text-gray-200">
+              <Link to={buildListPath('modules')} className="hover:text-gray-700 dark:hover:text-gray-200">
                 Modules
               </Link>
               <span>/</span>
@@ -195,7 +197,7 @@ export default function CreateModule() {
             <div className="flex items-center justify-between">
               <div className="flex items-center">
                 <Link
-                  to={`/organizations/${orgId}/modules`}
+                  to={buildListPath('modules')}
                   className="mr-4 inline-flex items-center text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
                 >
                   <ArrowLeftIcon className="h-4 w-4 mr-1" />
