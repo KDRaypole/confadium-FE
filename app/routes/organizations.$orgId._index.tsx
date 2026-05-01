@@ -1,16 +1,18 @@
 import type { MetaFunction } from "@remix-run/node";
-import { useParams } from "@remix-run/react";
+import { useParams, useNavigate } from "@remix-run/react";
 import { useQuery } from "@tanstack/react-query";
+import { useEffect } from "react";
 import { organizationsAPI } from "~/lib/api/organizations";
 import Layout from "~/components/layout/Layout";
 import StatsCard from "~/components/dashboard/StatsCard";
 import RecentActivity from "~/components/dashboard/RecentActivity";
 import ContactsTable from "~/components/dashboard/ContactsTable";
-import { 
-  UsersIcon, 
-  CurrencyDollarIcon, 
-  PhoneIcon, 
-  CalendarIcon 
+import { useAuth } from "~/contexts/AuthContext";
+import {
+  UsersIcon,
+  CurrencyDollarIcon,
+  PhoneIcon,
+  CalendarIcon
 } from "@heroicons/react/24/outline";
 
 export const meta: MetaFunction = () => {
@@ -22,6 +24,8 @@ export const meta: MetaFunction = () => {
 
 export default function OrganizationHome() {
   const { orgId } = useParams();
+  const navigate = useNavigate();
+  const { user } = useAuth();
 
   const { data: org } = useQuery({
     queryKey: ['organization', orgId],
@@ -30,7 +34,25 @@ export default function OrganizationHome() {
     enabled: !!orgId,
   });
 
+  // Redirect node-scoped users to their assigned node's home page
+  useEffect(() => {
+    if (user?.role === 'User' && user?.orgNodeId) {
+      navigate(`/organizations/${orgId}/nodes/${user.orgNodeId}`, { replace: true });
+    }
+  }, [user, orgId, navigate]);
+
   const orgName = org?.attributes?.name || 'Organization';
+
+  // Don't render org home for node-scoped users (they'll be redirected)
+  if (user?.role === 'User' && user?.orgNodeId) {
+    return (
+      <Layout>
+        <div className="flex items-center justify-center h-64">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600" />
+        </div>
+      </Layout>
+    );
+  }
 
   return (
     <Layout>

@@ -1,9 +1,10 @@
 import type { MetaFunction } from "@remix-run/node";
-import { Link } from "@remix-run/react";
+import { Link, useNavigate } from "@remix-run/react";
 import { useState, useEffect, useCallback, Fragment } from "react";
 import Layout from "~/components/layout/Layout";
 import { BuildingOfficeIcon, PlusIcon } from "@heroicons/react/24/outline";
 import { organizationsAPI } from "~/lib/api/organizations";
+import { useAuth } from "~/contexts/AuthContext";
 import type { OrganizationAttributes } from "~/lib/api/types";
 import type { Resource } from "~/lib/api/client";
 
@@ -17,12 +18,43 @@ export const meta: MetaFunction = () => {
 type Organization = Resource<OrganizationAttributes>;
 
 export default function OrganizationsIndex() {
+  const { user, isLoading: authLoading } = useAuth();
+  const navigate = useNavigate();
   const [organizations, setOrganizations] = useState<Organization[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showModal, setShowModal] = useState(false);
 
+  // Redirect non-administrators to their organization
+  useEffect(() => {
+    // Wait for auth to finish loading
+    if (authLoading) return;
+
+    if (user && user.role !== 'Administrator') {
+      // Debug: log user data to see what we have
+      console.log('Non-admin user on /organizations, redirecting...', {
+        role: user.role,
+        organizationId: user.organizationId,
+        orgNodeId: user.orgNodeId,
+      });
+
+      if (user.organizationId) {
+        if (user.orgNodeId) {
+          navigate(`/organizations/${user.organizationId}/nodes/${user.orgNodeId}`, { replace: true });
+        } else {
+          navigate(`/organizations/${user.organizationId}`, { replace: true });
+        }
+      } else {
+        // User doesn't have organizationId - this shouldn't happen for a valid User
+        console.error('User is missing organizationId:', user);
+      }
+    }
+  }, [user, authLoading, navigate]);
+
   const fetchOrganizations = useCallback(async () => {
+    // Don't fetch if user is not an admin (they'll be redirected)
+    if (user && user.role !== 'Administrator') return;
+
     setLoading(true);
     setError(null);
     try {
@@ -33,11 +65,49 @@ export default function OrganizationsIndex() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [user]);
 
+  // All hooks must be called before any conditional returns
   useEffect(() => {
     fetchOrganizations();
   }, [fetchOrganizations]);
+
+  // Show loading while auth is loading or non-admins are being redirected
+  if (authLoading) {
+    return (
+      <Layout showOrgNavigation={false}>
+        <div className="flex items-center justify-center h-64">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
+        </div>
+      </Layout>
+    );
+  }
+
+  // Non-admin users should be redirected - show loading while redirect happens
+  // or error if they're missing required data
+  if (user && user.role !== 'Administrator') {
+    // If user doesn't have organizationId, show error instead of infinite loading
+    if (!user.organizationId) {
+      return (
+        <Layout showOrgNavigation={false}>
+          <div className="flex flex-col items-center justify-center h-64 space-y-4">
+            <p className="text-red-600 dark:text-red-400">
+              Your account is not associated with an organization. Please contact an administrator.
+            </p>
+          </div>
+        </Layout>
+      );
+    }
+
+    // Show loading while redirect is in progress
+    return (
+      <Layout showOrgNavigation={false}>
+        <div className="flex items-center justify-center h-64">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
+        </div>
+      </Layout>
+    );
+  }
 
   const handleCreated = (org: Organization) => {
     setOrganizations((prev) => [...prev, org]);

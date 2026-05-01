@@ -7,12 +7,12 @@ import ConfigurationFlowOverview from "~/components/flow/ConfigurationFlowOvervi
 import CompactFlowPreview from "~/components/flow/CompactFlowPreview";
 import { useModule, useModules, useModuleConfigurations, type Configuration } from "~/hooks/useModules";
 import { useNodeContext } from "~/contexts/NodeContext";
-import { 
-  CogIcon, 
-  BellIcon, 
-  UserPlusIcon, 
-  EnvelopeIcon, 
-  PhoneIcon, 
+import {
+  CogIcon,
+  BellIcon,
+  UserPlusIcon,
+  EnvelopeIcon,
+  PhoneIcon,
   CalendarIcon,
   ChartBarIcon,
   ShieldCheckIcon,
@@ -22,7 +22,9 @@ import {
   TrashIcon,
   EyeIcon,
   CheckIcon,
-  XMarkIcon
+  XMarkIcon,
+  ChevronDownIcon,
+  ChevronRightIcon
 } from "@heroicons/react/24/outline";
 import { useDarkMode } from "~/contexts/DarkModeContext";
 import StateManager, { StateBadge } from "~/components/ui/StateManager";
@@ -42,6 +44,7 @@ export default function ModuleDetail() {
   const { isDarkMode } = useDarkMode();
   const [workflowChanges, setWorkflowChanges] = useState<any[]>([]);
   const [expandedConfigId, setExpandedConfigId] = useState<string | null>(null);
+  const [showOverview, setShowOverview] = useState(false);
   
   const { module, loading: moduleLoading, error: moduleError } = useModule(moduleId);
   const { updateModule } = useModules();
@@ -374,32 +377,44 @@ export default function ModuleDetail() {
           {/* Configuration Flow Visualization */}
           {configurations.length > 0 && (
             <div className="bg-white dark:bg-gray-800 shadow rounded-lg mb-6 border border-gray-200 dark:border-gray-700">
-              <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
-                <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">All Configurations Overview</h3>
-                <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
-                  Visual representation of all automation workflows in this module shown together
-                </p>
-              </div>
-              <div className="p-6">
-                <ConfigurationFlowOverview
-                  configuration={{
-                    trigger: undefined,
-                    conditions: [],
-                    actions: []
-                  }}
-                  allConfigurations={configurations.map(c => ({
-                    id: c.id,
-                    name: c.attributes?.name || '',
-                    status: c.attributes?.state?.action || '',
-                    trigger: c.attributes?.trigger || { entityType: '', action: '' },
-                    conditions: c.attributes?.conditions || [],
-                    actions: c.attributes?.actions || [],
-                  }))}
-                  height="500px"
-                  showControls={true}
-                  showBackground={true}
-                />
-              </div>
+              <button
+                onClick={() => setShowOverview(!showOverview)}
+                className="w-full px-6 py-4 flex items-center justify-between text-left border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+              >
+                <div>
+                  <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">All Configurations Overview</h3>
+                  <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
+                    Visual representation of all automation workflows in this module shown together
+                  </p>
+                </div>
+                {showOverview ? (
+                  <ChevronDownIcon className="h-5 w-5 text-gray-400 flex-shrink-0" />
+                ) : (
+                  <ChevronRightIcon className="h-5 w-5 text-gray-400 flex-shrink-0" />
+                )}
+              </button>
+              {showOverview && (
+                <div className="p-6">
+                  <ConfigurationFlowOverview
+                    configuration={{
+                      trigger: undefined,
+                      conditions: [],
+                      actions: []
+                    }}
+                    allConfigurations={configurations.map(c => ({
+                      id: c.id,
+                      name: c.attributes?.name || '',
+                      status: c.attributes?.state?.action || '',
+                      trigger: c.attributes?.trigger || { entityType: '', action: '' },
+                      conditions: c.attributes?.conditions || [],
+                      actions: c.attributes?.actions || [],
+                    }))}
+                    height="500px"
+                    showControls={true}
+                    showBackground={true}
+                  />
+                </div>
+              )}
             </div>
           )}
 

@@ -134,6 +134,7 @@ const CompactFlowPreview: React.FC<CompactFlowPreviewProps> = ({
       {/* Actions */}
       {configuration.actions.length > 0 && (
         <>
+          <div className="w-4" /> {/* Extra spacing before actions */}
           <ArrowRightIcon className="h-3 w-3 text-gray-400" />
           <div className="flex items-center space-x-1">
             {configuration.actions.slice(0, 2).map((action, index) => (

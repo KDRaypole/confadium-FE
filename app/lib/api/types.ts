@@ -39,6 +39,18 @@ export interface OrgNodeAttributes extends Timestamps {
   level_name: string;
 }
 
+// ── User ────────────────────────────────────────────────────
+
+export type UserStatus = 'pending' | 'active';
+
+export interface UserAttributes extends Timestamps {
+  email: string;
+  first_name: string | null;
+  last_name: string | null;
+  status: UserStatus;
+  org_node_id: string | null;
+}
+
 // ── Contact ─────────────────────────────────────────────────
 
 export type ContactStatus = 'lead' | 'prospect' | 'customer' | 'churned';
