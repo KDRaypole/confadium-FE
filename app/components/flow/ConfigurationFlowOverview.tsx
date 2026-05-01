@@ -104,7 +104,7 @@ const ConfigurationFlowOverview: React.FC<ConfigurationFlowOverviewProps> = ({
     if (allConfigurations && allConfigurations.length > 0) {
       let currentY = 100;
       const configSpacing = 300; // Vertical spacing between configurations
-      const nodeSpacing = 280; // Horizontal spacing between nodes in same config
+      const nodeSpacing = 380; // Horizontal spacing between nodes in same config
       
       allConfigurations.forEach((config, configIndex) => {
         let xPosition = 80;
@@ -185,7 +185,7 @@ const ConfigurationFlowOverview: React.FC<ConfigurationFlowOverviewProps> = ({
       // Single configuration display (original logic)
       let xPosition = 80;
       const yPosition = 150;
-      const nodeSpacing = 280;
+      const nodeSpacing = 380;
 
       // Trigger node
       if (configuration.trigger) {

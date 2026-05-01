@@ -10,6 +10,8 @@ interface User {
   initials: string;
   role: string;
   token: string;
+  organizationId: string | null;
+  orgNodeId: string | null;
 }
 
 interface AuthContextType {
@@ -91,15 +93,25 @@ export function AuthProvider({ children }: AuthProviderProps) {
       let name = email;
       let role = 'Member';
       let actorId = auth.id;
+      let organizationId: string | null = null;
+      let orgNodeId: string | null = null;
 
       if (meRes.ok) {
         const meBody = await meRes.json();
         const actor = meBody.data;
+        // Debug: log what we get from /me
+        console.log('/me API response:', actor);
+        console.log('Actor attributes:', actor.attributes);
         const firstName = actor.attributes.first_name || '';
         const lastName = actor.attributes.last_name || '';
         name = `${firstName} ${lastName}`.trim();
         role = actor.attributes.type || 'Member';
         actorId = actor.id;
+        organizationId = actor.attributes.organization_id || null;
+        orgNodeId = actor.attributes.org_node_id || null;
+        console.log('Extracted organizationId:', organizationId, 'orgNodeId:', orgNodeId);
+      } else {
+        console.error('/me API request failed:', meRes.status, await meRes.text());
       }
 
       const initials = name
@@ -116,6 +128,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
         initials,
         role,
         token,
+        organizationId,
+        orgNodeId,
       };
 
       setUser(userData);

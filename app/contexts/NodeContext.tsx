@@ -3,6 +3,7 @@ import { useParams, useSearchParams } from '@remix-run/react';
 import { useOrgNodes, useOrgNodeLevels, buildTree, type OrgNode, type OrgNodeTree } from '~/hooks/useOrgNodes';
 import type { OrgNodeLevelAttributes } from '~/lib/api/types';
 import type { Resource } from '~/lib/api/client';
+import { useAuth } from './AuthContext';
 
 interface NodeContextValue {
   /** Currently active node ID from URL, or null for org-level */
@@ -48,12 +49,32 @@ interface NodeProviderProps {
 export function NodeProvider({ children }: NodeProviderProps) {
   const params = useParams();
   const [searchParams] = useSearchParams();
+  const { user } = useAuth();
   const orgId = params.orgId || '';
   // Node ID comes from URL path param (node-specific pages) or query param (CRM pages)
   const nodeId = params.nodeId || searchParams.get('node') || null;
 
-  const { nodes, loading: nodesLoading } = useOrgNodes();
+  const { nodes: allNodes, loading: nodesLoading } = useOrgNodes();
   const { levels, loading: levelsLoading } = useOrgNodeLevels();
+
+  // Filter nodes based on user's scope
+  // Administrators and org-level users (no orgNodeId) see all nodes
+  // Node-scoped users only see their node and descendants
+  const nodes = useMemo(() => {
+    if (!user?.orgNodeId || user.role === 'Administrator') {
+      return allNodes;
+    }
+
+    const userNode = allNodes.find(n => n.id === user.orgNodeId);
+    if (!userNode) return allNodes;
+
+    // Filter to user's node and all descendants (nodes whose path starts with user's node path)
+    const userNodePath = userNode.attributes.path;
+    return allNodes.filter(n =>
+      n.attributes.path === userNodePath ||
+      n.attributes.path.startsWith(userNodePath + '/')
+    );
+  }, [allNodes, user?.orgNodeId, user?.role]);
 
   const tree = useMemo(() => buildTree(nodes), [nodes]);
 

@@ -2,6 +2,7 @@ import { Link, useLocation, useParams } from "@remix-run/react";
 import {
   HomeIcon,
   UsersIcon,
+  UserGroupIcon,
   CurrencyDollarIcon,
   ChartBarIcon,
   CalendarIcon,
@@ -21,6 +22,7 @@ import {
   MapPinIcon,
 } from "@heroicons/react/24/outline";
 import { useOptionalNodeContext } from "~/contexts/NodeContext";
+import { useAuth } from "~/contexts/AuthContext";
 
 interface SidebarProps {
   showOrgNavigation?: boolean;
@@ -56,18 +58,31 @@ export default function Sidebar({ showOrgNavigation = true }: SidebarProps) {
   const location = useLocation();
   const params = useParams();
   const nodeCtx = useOptionalNodeContext();
+  const { user } = useAuth();
 
   const orgId = params.orgId;
   const isOrgContext = showOrgNavigation && !!orgId;
   const isNodeContext = isOrgContext && !!nodeCtx?.activeNodeId;
+
+  // Determine user permissions
+  const isAdmin = user?.role === 'Administrator';
+  const isOrgLevelUser = user?.role === 'User' && !user?.orgNodeId;
+  const isNodeScopedUser = user?.role === 'User' && !!user?.orgNodeId;
+  const canManageOrg = isAdmin || isOrgLevelUser;
 
   // Determine base path and navigation
   let navigation: { name: string; href: string; icon: React.ComponentType<React.SVGProps<SVGSVGElement>> }[];
   let headerLabel: string;
   let backHref: string;
 
+  // For node-scoped users not currently viewing a node, find their assigned node
+  const userAssignedNode = isNodeScopedUser && user?.orgNodeId
+    ? nodeCtx?.nodes?.find(n => n.id === user.orgNodeId)
+    : null;
+
   if (!isOrgContext) {
-    navigation = appNavigation;
+    // Only show app navigation to admins
+    navigation = isAdmin ? appNavigation : [];
     headerLabel = '';
     backHref = '';
   } else if (isNodeContext && nodeCtx) {
@@ -88,14 +103,57 @@ export default function Sidebar({ showOrgNavigation = true }: SidebarProps) {
     }
 
     headerLabel = nodeCtx.activeNode?.attributes.name || '';
-    backHref = nodeCtx.backPath;
+
+    // For node-scoped users, restrict back navigation to stay within their scope
+    if (isNodeScopedUser && user?.orgNodeId) {
+      // If current node is the user's assigned node, don't show back (or go to org list for admins)
+      if (nodeCtx.activeNodeId === user.orgNodeId) {
+        backHref = isAdmin ? '/organizations' : '';
+      } else {
+        // Allow navigating back up to their assigned node
+        backHref = nodeCtx.backPath;
+      }
+    } else {
+      backHref = nodeCtx.backPath;
+    }
+  } else if (isNodeScopedUser && userAssignedNode) {
+    // Node-scoped user at org level - show their node's navigation
+    const nodeHome = `/organizations/${orgId}/nodes/${userAssignedNode.id}`;
+    navigation = [
+      { name: "Home", href: nodeHome, icon: HomeIcon },
+      ...getCrmNavigation(orgId!, userAssignedNode.id),
+    ];
+
+    // Add child level nav if there's a deeper level
+    const userNodeDepth = userAssignedNode.attributes.depth;
+    const childLevel = nodeCtx?.levels?.find(l => l.attributes.depth === userNodeDepth + 1);
+    if (childLevel) {
+      navigation.push({
+        name: childLevel.attributes.plural,
+        href: `${nodeHome}/children`,
+        icon: MapPinIcon,
+      });
+    }
+
+    // Find the level for the user's node
+    const userLevel = nodeCtx?.levels?.find(l => l.attributes.depth === userNodeDepth);
+
+    headerLabel = userAssignedNode.attributes.name || '';
+    backHref = ''; // Node-scoped users can't go above their node
   } else {
-    // Org level — standard nav plus child level link and structure
+    // Org level — standard nav plus admin-only items
     navigation = [
       { name: "Home", href: `/organizations/${orgId}`, icon: HomeIcon },
       ...getCrmNavigation(orgId!),
-      { name: "Structure", href: `/organizations/${orgId}/structure`, icon: BuildingOffice2Icon },
     ];
+
+    // Only show Team and Structure to org-level managers
+    if (canManageOrg) {
+      navigation.push(
+        { name: "Team", href: `/organizations/${orgId}/users`, icon: UserGroupIcon },
+        { name: "Structure", href: `/organizations/${orgId}/structure`, icon: BuildingOffice2Icon },
+      );
+    }
 
     // Add root level nav if org has structure defined
     if (nodeCtx?.childLevel) {
@@ -110,7 +168,7 @@ export default function Sidebar({ showOrgNavigation = true }: SidebarProps) {
                   orgId === 'startup-division' ? 'Startup Division' :
                   orgId === 'international' ? 'International Operations' :
                   orgId || '';
-    backHref = '/organizations';
+    backHref = isAdmin ? '/organizations' : '';
   }
 
   return (
@@ -120,12 +178,14 @@ export default function Sidebar({ showOrgNavigation = true }: SidebarProps) {
         <div className="flex items-center px-4 py-3 border-b border-gray-200 dark:border-gray-700 bg-brand-sidebar">
           {isOrgContext ? (
             <div className="flex items-center space-x-2 w-full">
-              <Link
-                to={backHref}
-                className="flex items-center text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 mr-2"
-              >
-                <ArrowLeftIcon className="h-4 w-4" />
-              </Link>
+              {backHref && (
+                <Link
+                  to={backHref}
+                  className="flex items-center text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 mr-2"
+                >
+                  <ArrowLeftIcon className="h-4 w-4" />
+                </Link>
+              )}
               <div className="flex-1 min-w-0">
                 {isNodeContext && nodeCtx?.activeLevel && (
                   <p className="text-xs text-gray-400 dark:text-gray-500 truncate">
@@ -146,26 +206,44 @@ export default function Sidebar({ showOrgNavigation = true }: SidebarProps) {
         </div>
 
         {/* Breadcrumb trail when deep in node hierarchy */}
-        {isNodeContext && nodeCtx && nodeCtx.ancestorChain.length > 1 && (
-          <div className="px-4 py-2 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50">
-            <div className="flex items-center space-x-1 text-xs text-gray-400 dark:text-gray-500 overflow-x-auto">
-              <Link to={`/organizations/${orgId}`} className="hover:text-gray-600 dark:hover:text-gray-300 truncate flex-shrink-0">
-                Org
-              </Link>
-              {nodeCtx.ancestorChain.slice(0, -1).map(ancestor => (
-                <span key={ancestor.id} className="flex items-center flex-shrink-0">
-                  <span className="mx-1">/</span>
-                  <Link
-                    to={`/organizations/${orgId}/nodes/${ancestor.id}`}
-                    className="hover:text-gray-600 dark:hover:text-gray-300 truncate"
-                  >
-                    {ancestor.attributes.name}
+        {isNodeContext && nodeCtx && nodeCtx.ancestorChain.length > 1 && (() => {
+          // For node-scoped users, filter breadcrumbs to only show from their assigned node down
+          let visibleAncestors = nodeCtx.ancestorChain.slice(0, -1);
+          let showOrgLink = canManageOrg;
+
+          if (isNodeScopedUser && user?.orgNodeId) {
+            const userNodeIndex = visibleAncestors.findIndex(n => n.id === user.orgNodeId);
+            if (userNodeIndex >= 0) {
+              visibleAncestors = visibleAncestors.slice(userNodeIndex);
+              showOrgLink = false;
+            }
+          }
+
+          if (!showOrgLink && visibleAncestors.length === 0) return null;
+
+          return (
+            <div className="px-4 py-2 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50">
+              <div className="flex items-center space-x-1 text-xs text-gray-400 dark:text-gray-500 overflow-x-auto">
+                {showOrgLink && (
+                  <Link to={`/organizations/${orgId}`} className="hover:text-gray-600 dark:hover:text-gray-300 truncate flex-shrink-0">
+                    Org
                   </Link>
-                </span>
-              ))}
+                )}
+                {visibleAncestors.map((ancestor, idx) => (
+                  <span key={ancestor.id} className="flex items-center flex-shrink-0">
+                    {(showOrgLink || idx > 0) && <span className="mx-1">/</span>}
+                    <Link
+                      to={`/organizations/${orgId}/nodes/${ancestor.id}`}
+                      className="hover:text-gray-600 dark:hover:text-gray-300 truncate"
+                    >
+                      {ancestor.attributes.name}
+                    </Link>
+                  </span>
+                ))}
+              </div>
             </div>
-          </div>
-        )}
+          );
+        })()}
 
         <div className="flex flex-1 flex-col overflow-y-auto">
           {/* Navigation */}
@@ -203,8 +281,8 @@ export default function Sidebar({ showOrgNavigation = true }: SidebarProps) {
             </div>
           </nav>
 
-          {/* Settings - Only show at org level */}
-          {isOrgContext && !isNodeContext && (
+          {/* Settings - Only show at org level for admins and org-level users */}
+          {isOrgContext && !isNodeContext && canManageOrg && (
             <div className="px-3 py-4 border-t border-gray-200 dark:border-gray-700 mt-auto">
               <Link
                 to={`/organizations/${orgId}/settings`}

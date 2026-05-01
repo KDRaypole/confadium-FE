@@ -24,16 +24,37 @@ export default function Login() {
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   
-  const { login, isAuthenticated } = useAuth();
+  const { login, isAuthenticated, user } = useAuth();
   const { isDarkMode } = useDarkMode();
   const navigate = useNavigate();
 
+  // Helper to get the appropriate redirect path based on user type
+  const getRedirectPath = (userData: typeof user) => {
+    if (!userData) return '/organizations';
+
+    // Administrators go to organizations list
+    if (userData.role === 'Administrator') {
+      return '/organizations';
+    }
+
+    // Users go to their organization, or node if they're node-scoped
+    if (userData.organizationId) {
+      if (userData.orgNodeId) {
+        return `/organizations/${userData.organizationId}/nodes/${userData.orgNodeId}`;
+      }
+      return `/organizations/${userData.organizationId}`;
+    }
+
+    // Fallback
+    return '/organizations';
+  };
+
   // Redirect if already authenticated
   useEffect(() => {
-    if (isAuthenticated) {
-      navigate("/organizations");
+    if (isAuthenticated && user) {
+      navigate(getRedirectPath(user));
     }
-  }, [isAuthenticated, navigate]);
+  }, [isAuthenticated, user, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -41,13 +62,21 @@ export default function Login() {
     setIsSubmitting(true);
 
     const result = await login(email, password);
-    
+
     if (result.success) {
-      navigate("/organizations");
+      // The useEffect will handle the redirect once user data is available
+      // But we can also check immediately from localStorage
+      const stored = localStorage.getItem('crm-auth');
+      if (stored) {
+        const userData = JSON.parse(stored);
+        navigate(getRedirectPath(userData));
+      } else {
+        navigate('/organizations');
+      }
     } else {
       setError(result.error || "Login failed");
     }
-    
+
     setIsSubmitting(false);
   };
 
