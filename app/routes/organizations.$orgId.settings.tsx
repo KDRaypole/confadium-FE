@@ -4,7 +4,7 @@ import { UserIcon, BellIcon, ShieldCheckIcon, CogIcon, KeyIcon, GlobeAltIcon } f
 
 export const meta: MetaFunction = () => {
   return [
-    { title: "Settings - CRM Dashboard" },
+    { title: "Settings - Confadium" },
     { name: "description", content: "Manage your account and application settings" },
   ];
 };

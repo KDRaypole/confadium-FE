@@ -13,7 +13,7 @@ import StateManager from "~/components/ui/StateManager";
 import { PRODUCTS_QUERY_KEYS } from "~/hooks/useProducts";
 
 export const meta: MetaFunction = () => {
-  return [{ title: "Product Detail - CRM Dashboard" }];
+  return [{ title: "Product Detail - Confadium" }];
 };
 
 export default function ProductDetail() {

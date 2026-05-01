@@ -10,7 +10,7 @@ import { ArrowLeftIcon, CheckIcon } from "@heroicons/react/24/outline";
 
 export const meta: MetaFunction = () => {
   return [
-    { title: "New Form - CRM Dashboard" },
+    { title: "New Form - Confadium" },
     { name: "description", content: "Create a new dynamic form" },
   ];
 };

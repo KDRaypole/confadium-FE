@@ -5,7 +5,7 @@ import { useOptionalNodeContext } from "~/contexts/NodeContext";
 
 export const meta: MetaFunction = () => {
   return [
-    { title: "Reports - CRM Dashboard" },
+    { title: "Reports - Confadium" },
     { name: "description", content: "View analytics and generate reports" },
   ];
 };

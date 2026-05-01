@@ -20,7 +20,7 @@ import ShareFormButton from "~/components/forms/ShareFormButton";
 
 export const meta: MetaFunction = () => {
   return [
-    { title: "Forms - CRM Dashboard" },
+    { title: "Forms - Confadium" },
     { name: "description", content: "Manage dynamic forms for your organization" },
   ];
 };

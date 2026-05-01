@@ -22,7 +22,7 @@ import ShareLinkButton from "~/components/ui/ShareLinkButton";
 
 export const meta: MetaFunction = () => {
   return [
-    { title: "Pages - CRM Dashboard" },
+    { title: "Pages - Confadium" },
     { name: "description", content: "Build and manage website pages" },
   ];
 };

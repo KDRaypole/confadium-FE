@@ -8,7 +8,7 @@ import { useState } from "react";
 
 export const meta: MetaFunction = () => {
   return [
-    { title: "New Product - CRM Dashboard" },
+    { title: "New Product - Confadium" },
   ];
 };
 

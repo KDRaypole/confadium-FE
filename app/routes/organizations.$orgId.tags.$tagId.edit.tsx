@@ -19,7 +19,7 @@ import {
 
 export const meta: MetaFunction = () => {
   return [
-    { title: "Edit Tag - CRM Dashboard" },
+    { title: "Edit Tag - Confadium" },
     { name: "description", content: "Edit tag properties and settings" },
   ];
 };

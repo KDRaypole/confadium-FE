@@ -4,7 +4,7 @@ import { PlusIcon, CalendarIcon, PhoneIcon, EnvelopeIcon } from "@heroicons/reac
 
 export const meta: MetaFunction = () => {
   return [
-    { title: "Activities - CRM Dashboard" },
+    { title: "Activities - Confadium" },
     { name: "description", content: "Track your sales activities" },
   ];
 };

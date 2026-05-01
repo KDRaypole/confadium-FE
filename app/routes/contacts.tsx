@@ -8,7 +8,7 @@ import { PlusIcon, MagnifyingGlassIcon } from "@heroicons/react/24/outline";
 
 export const meta: MetaFunction = () => {
   return [
-    { title: "Contacts - CRM Dashboard" },
+    { title: "Contacts - Confadium" },
     { name: "description", content: "Manage your contacts" },
   ];
 };

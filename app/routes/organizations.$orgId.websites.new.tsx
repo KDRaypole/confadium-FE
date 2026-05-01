@@ -9,7 +9,7 @@ import { PageBuilderProvider } from "~/components/page-builder";
 import type { PageTheme } from "~/lib/api/types";
 
 export const meta: MetaFunction = () => {
-  return [{ title: "New Website - CRM Dashboard" }];
+  return [{ title: "New Website - Confadium" }];
 };
 
 const DEFAULT_THEME: PageTheme = {

@@ -16,7 +16,7 @@ import StateManager from "~/components/ui/StateManager";
 import { PAGES_QUERY_KEYS } from "~/hooks/usePages";
 
 export const meta: MetaFunction = () => {
-  return [{ title: "Page Preview - CRM Dashboard" }];
+  return [{ title: "Page Preview - Confadium" }];
 };
 
 export default function PagePreview() {

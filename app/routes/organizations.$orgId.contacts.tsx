@@ -10,7 +10,7 @@ import type { ContactAttributes, ContactStatus } from "~/lib/api/types";
 
 export const meta: MetaFunction = () => {
   return [
-    { title: "Contacts - CRM Dashboard" },
+    { title: "Contacts - Confadium" },
     { name: "description", content: "Manage your contacts" },
   ];
 };

@@ -6,7 +6,7 @@ import { PageBuilder } from "~/components/page-builder";
 import type { PageComponentNode, PageTheme } from "~/lib/api/types";
 
 export const meta: MetaFunction = () => {
-  return [{ title: "Edit Page - CRM Dashboard" }];
+  return [{ title: "Edit Page - Confadium" }];
 };
 
 export default function EditPage() {

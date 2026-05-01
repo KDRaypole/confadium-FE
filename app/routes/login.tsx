@@ -12,7 +12,7 @@ import {
 
 export const meta: MetaFunction = () => {
   return [
-    { title: "Login - CRM Dashboard" },
+    { title: "Login - Confadium" },
     { name: "description", content: "Sign in to your CRM account" },
   ];
 };
@@ -91,12 +91,10 @@ export default function Login() {
           {/* Logo */}
           <div className="flex justify-center">
             <div className="flex items-center space-x-3">
-              <div className="h-12 w-12 bg-blue-600 rounded-lg flex items-center justify-center">
-                <span className="text-white font-bold text-xl">C</span>
-              </div>
+              <img src="/favicon.svg" alt="Confadium" className="h-12 w-12" />
               <div>
-                <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">CRM Dashboard</h1>
-                <p className="text-sm text-gray-600 dark:text-gray-400">Modlize Platform</p>
+                <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Confadium</h1>
+                <p className="text-sm text-gray-600 dark:text-gray-400">Configuration made simple</p>
               </div>
             </div>
           </div>

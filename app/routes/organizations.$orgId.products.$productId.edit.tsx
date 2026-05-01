@@ -5,7 +5,7 @@ import ProductEditor from "~/components/products/ProductEditor";
 import { useProduct } from "~/hooks/useProducts";
 
 export const meta: MetaFunction = () => {
-  return [{ title: "Edit Product - CRM Dashboard" }];
+  return [{ title: "Edit Product - Confadium" }];
 };
 
 export default function EditProduct() {

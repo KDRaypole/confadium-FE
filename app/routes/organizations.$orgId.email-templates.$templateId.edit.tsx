@@ -23,7 +23,7 @@ import type { EmailComponentNode, EmailTheme } from "~/lib/api/types";
 
 export const meta: MetaFunction = () => {
   return [
-    { title: "Edit Email Template - CRM Dashboard" },
+    { title: "Edit Email Template - Confadium" },
     { name: "description", content: "Edit and customize email template" },
   ];
 };

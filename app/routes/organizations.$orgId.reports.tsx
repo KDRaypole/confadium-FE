@@ -4,7 +4,7 @@ import Layout from "~/components/layout/Layout";
 
 export const meta: MetaFunction = () => {
   return [
-    { title: "Reports - CRM Dashboard" },
+    { title: "Reports - Confadium" },
     { name: "description", content: "View analytics and generate reports" },
   ];
 };

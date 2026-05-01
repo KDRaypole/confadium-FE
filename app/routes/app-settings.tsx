@@ -6,7 +6,7 @@ import { THEME_LIST, CUSTOM_THEME_ID, rgbToHex, hexToRgb } from "~/lib/themes";
 
 export const meta: MetaFunction = () => {
   return [
-    { title: "Application Settings - CRM Dashboard" },
+    { title: "Application Settings - Confadium" },
     { name: "description", content: "Manage your application settings and preferences" },
   ];
 };

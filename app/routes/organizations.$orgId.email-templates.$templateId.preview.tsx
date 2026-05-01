@@ -12,7 +12,7 @@ import {
 
 export const meta: MetaFunction = () => {
   return [
-    { title: "Preview Email Template - CRM Dashboard" },
+    { title: "Preview Email Template - Confadium" },
     { name: "description", content: "Preview email template with sample data" },
   ];
 };

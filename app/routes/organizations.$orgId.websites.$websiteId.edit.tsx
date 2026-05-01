@@ -7,7 +7,7 @@ import { ThemeEditor, PageBuilderProvider } from "~/components/page-builder";
 import type { PageTheme } from "~/lib/api/types";
 
 export const meta: MetaFunction = () => {
-  return [{ title: "Edit Website - CRM Dashboard" }];
+  return [{ title: "Edit Website - Confadium" }];
 };
 
 export default function EditWebsite() {

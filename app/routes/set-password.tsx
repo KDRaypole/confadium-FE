@@ -5,7 +5,7 @@ import { confirmationsAPI } from "~/lib/api/users";
 import { useAuth } from "~/contexts/AuthContext";
 
 export const meta: MetaFunction = () => {
-  return [{ title: "Set Your Password - CRM Dashboard" }];
+  return [{ title: "Set Your Password - Confadium" }];
 };
 
 export default function SetPassword() {
@@ -111,6 +111,9 @@ export default function SetPassword() {
     <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900 px-4">
       <div className="max-w-md w-full">
         <div className="text-center mb-8">
+          <div className="flex justify-center mb-4">
+            <img src="/favicon.svg" alt="Confadium" className="h-16 w-16" />
+          </div>
           <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">Welcome!</h1>
           <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
             {organizationName

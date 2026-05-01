@@ -10,7 +10,7 @@ import type { FormData } from './new';
 
 export const meta: MetaFunction = () => {
   return [
-    { title: "Edit Form - CRM Dashboard" },
+    { title: "Edit Form - Confadium" },
     { name: "description", content: "Edit an existing form" },
   ];
 };

@@ -4,7 +4,7 @@ import { useNodeContext } from "~/contexts/NodeContext";
 import NodeListContent from "~/components/nodes/NodeListContent";
 
 export const meta: MetaFunction = () => {
-  return [{ title: "Child Nodes - CRM Dashboard" }];
+  return [{ title: "Child Nodes - Confadium" }];
 };
 
 export default function NodeChildrenPage() {

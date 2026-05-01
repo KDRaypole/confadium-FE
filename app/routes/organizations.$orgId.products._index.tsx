@@ -20,7 +20,7 @@ import { StateBadge } from "~/components/ui/StateManager";
 
 export const meta: MetaFunction = () => {
   return [
-    { title: "Products - CRM Dashboard" },
+    { title: "Products - Confadium" },
     { name: "description", content: "Manage products and pricing" },
   ];
 };

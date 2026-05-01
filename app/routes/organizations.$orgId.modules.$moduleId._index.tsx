@@ -32,7 +32,7 @@ import { MODULES_QUERY_KEYS } from "~/hooks/useModules";
 
 export const meta: MetaFunction = () => {
   return [
-    { title: "Module Configuration - CRM Dashboard" },
+    { title: "Module Configuration - Confadium" },
     { name: "description", content: "View and manage module configurations" },
   ];
 };

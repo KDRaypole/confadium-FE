@@ -24,7 +24,7 @@ import {
 
 export const meta: MetaFunction = () => {
   return [
-    { title: "Create Module - CRM Dashboard" },
+    { title: "Create Module - Confadium" },
     { name: "description", content: "Create a new automation module" },
   ];
 };

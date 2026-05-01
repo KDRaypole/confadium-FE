@@ -17,7 +17,7 @@ import { useOptionalNodeContext } from "~/contexts/NodeContext";
 
 export const meta: MetaFunction = () => {
   return [
-    { title: "Users - CRM Dashboard" },
+    { title: "Users - Confadium" },
     { name: "description", content: "Manage organization users" },
   ];
 };

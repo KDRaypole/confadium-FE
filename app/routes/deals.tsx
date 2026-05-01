@@ -4,7 +4,7 @@ import { PlusIcon } from "@heroicons/react/24/outline";
 
 export const meta: MetaFunction = () => {
   return [
-    { title: "Deals - CRM Dashboard" },
+    { title: "Deals - Confadium" },
     { name: "description", content: "Manage your sales deals" },
   ];
 };

@@ -17,7 +17,7 @@ import {
 
 export const meta: MetaFunction = () => {
   return [
-    { title: "Organization Structure - CRM Dashboard" },
+    { title: "Organization Structure - Confadium" },
     { name: "description", content: "Define and manage your organization's hierarchical structure" },
   ];
 };

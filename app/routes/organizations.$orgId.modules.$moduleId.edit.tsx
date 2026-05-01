@@ -33,7 +33,7 @@ import {
 
 export const meta: MetaFunction = () => {
   return [
-    { title: "Edit Module Configuration - CRM Dashboard" },
+    { title: "Edit Module Configuration - Confadium" },
     { name: "description", content: "Create and edit automation configurations" },
   ];
 };

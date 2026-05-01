@@ -10,7 +10,7 @@ import type { Resource } from "~/lib/api/client";
 
 export const meta: MetaFunction = () => {
   return [
-    { title: "Organizations - CRM Dashboard" },
+    { title: "Organizations - Confadium" },
     { name: "description", content: "Manage your organizations" },
   ];
 };

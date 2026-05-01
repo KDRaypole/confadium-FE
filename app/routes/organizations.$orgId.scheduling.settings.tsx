@@ -17,7 +17,7 @@ import type { CalendarAttributes } from "~/lib/api/types";
 
 export const meta: MetaFunction = () => {
   return [
-    { title: "Calendar Settings - CRM Dashboard" },
+    { title: "Calendar Settings - Confadium" },
     { name: "description", content: "Manage calendar settings and integrations" },
   ];
 };

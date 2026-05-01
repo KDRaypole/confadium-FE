@@ -19,7 +19,7 @@ import {
 
 export const meta: MetaFunction = () => {
   return [
-    { title: "Create Email Template - CRM Dashboard" },
+    { title: "Create Email Template - Confadium" },
     { name: "description", content: "Create a new email template" },
   ];
 };

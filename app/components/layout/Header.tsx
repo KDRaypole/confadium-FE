@@ -23,10 +23,8 @@ export default function Header({ onMobileMenuClick }: HeaderProps) {
           <div className="flex h-10 items-center justify-between">
             <div className="flex items-center space-x-4">
               <div className="flex items-center space-x-2">
-                <div className="h-6 w-6 bg-white rounded-sm flex items-center justify-center">
-                  <span className="text-brand-primary font-bold text-xs">MD</span>
-                </div>
-                <span className="text-white text-sm font-medium">Modlize</span>
+                <img src="/favicon.svg" alt="Confadium" className="h-6 w-6" />
+                <span className="text-white text-sm font-medium">Confadium</span>
               </div>
             </div>
             <div className="flex items-center space-x-3">
@@ -112,10 +110,8 @@ export default function Header({ onMobileMenuClick }: HeaderProps) {
             </button>
 
             <div className="flex items-center space-x-2">
-              <div className="h-8 w-8 bg-brand-primary rounded flex items-center justify-center">
-                <span className="text-white font-bold text-sm">C</span>
-              </div>
-              <span className="text-gray-900 dark:text-gray-100 font-medium">CRM</span>
+              <img src="/favicon.svg" alt="Confadium" className="h-8 w-8" />
+              <span className="text-gray-900 dark:text-gray-100 font-medium">Confadium</span>
             </div>
           </div>
 
@@ -128,7 +124,7 @@ export default function Header({ onMobileMenuClick }: HeaderProps) {
                 id="search"
                 name="search"
                 className="block w-full rounded border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 py-2 pl-9 pr-3 text-sm text-gray-900 dark:text-gray-100 placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:border-brand-primary dark:focus:border-brand-primary focus:bg-white dark:focus:bg-gray-600 focus:outline-none focus:ring-1 focus:ring-brand-primary dark:focus:ring-brand-primary"
-                placeholder="Search Modlize..."
+                placeholder="Search Confadium..."
                 type="search"
               />
             </div>

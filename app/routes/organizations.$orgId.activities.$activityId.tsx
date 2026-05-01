@@ -25,7 +25,7 @@ import {
 
 export const meta: MetaFunction = () => {
   return [
-    { title: "Activity Details - CRM Dashboard" },
+    { title: "Activity Details - Confadium" },
     { name: "description", content: "View and edit activity details" },
   ];
 };

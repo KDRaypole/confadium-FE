@@ -19,7 +19,7 @@ import {
 
 export const meta: MetaFunction = () => {
   return [
-    { title: "Create Tag - CRM Dashboard" },
+    { title: "Create Tag - Confadium" },
     { name: "description", content: "Create a new tag for organizing contacts" },
   ];
 };

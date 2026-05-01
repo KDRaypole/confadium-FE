@@ -7,7 +7,7 @@ import { useNodeContext } from "~/contexts/NodeContext";
 import { useOrgNodes } from "~/hooks/useOrgNodes";
 
 export const meta: MetaFunction = () => {
-  return [{ title: "Invite User - CRM Dashboard" }];
+  return [{ title: "Invite User - Confadium" }];
 };
 
 export default function InviteUser() {

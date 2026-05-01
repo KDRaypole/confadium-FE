@@ -5,7 +5,7 @@ import { PlusIcon, MagnifyingGlassIcon, PhoneIcon, ClockIcon } from "@heroicons/
 
 export const meta: MetaFunction = () => {
   return [
-    { title: "Calls - CRM Dashboard" },
+    { title: "Calls - Confadium" },
     { name: "description", content: "Manage your calls and call logs" },
   ];
 };

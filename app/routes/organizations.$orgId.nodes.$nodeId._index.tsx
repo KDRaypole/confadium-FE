@@ -11,7 +11,7 @@ import {
 
 export const meta: MetaFunction = () => {
   return [
-    { title: "Node Home - CRM Dashboard" },
+    { title: "Node Home - Confadium" },
   ];
 };
 

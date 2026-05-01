@@ -7,7 +7,7 @@ import { useWebsite, useWebsitePages } from "~/hooks/useWebsites";
 import type { PageComponentNode, PageTheme } from "~/lib/api/types";
 
 export const meta: MetaFunction = () => {
-  return [{ title: "New Page - CRM Dashboard" }];
+  return [{ title: "New Page - Confadium" }];
 };
 
 export default function NewWebsitePage() {
