@@ -5,6 +5,8 @@ import { ChevronDownIcon, CheckIcon } from '@heroicons/react/24/outline';
 export interface SimpleSelectOption {
   value: string;
   label: string;
+  disabled?: boolean;
+  isGroupHeader?: boolean;
 }
 
 interface SimpleSelectProps {
@@ -152,18 +154,33 @@ export default function SimpleSelect({
             }}
             className="rounded-md bg-white dark:bg-gray-700 py-1 shadow-lg ring-1 ring-black ring-opacity-5 max-h-60 overflow-auto"
           >
-            {options.map((option) => {
+            {options.map((option, index) => {
               const isSelected = value === option.value;
+
+              // Render group headers differently
+              if (option.isGroupHeader) {
+                return (
+                  <div
+                    key={`${option.value}-${index}`}
+                    className="px-3 py-1.5 text-xs font-semibold text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800 uppercase tracking-wider border-t border-gray-200 dark:border-gray-600 first:border-t-0"
+                  >
+                    {option.label}
+                  </div>
+                );
+              }
 
               return (
                 <button
                   key={option.value}
                   type="button"
-                  onClick={() => handleSelect(option.value)}
+                  onClick={() => !option.disabled && handleSelect(option.value)}
+                  disabled={option.disabled}
                   className={`
                     relative w-full cursor-pointer select-none py-2 pl-3 pr-9 text-left text-sm
                     transition-colors duration-150
-                    ${isSelected
+                    ${option.disabled
+                      ? 'cursor-not-allowed text-gray-400 dark:text-gray-500'
+                      : isSelected
                       ? 'bg-brand-primary text-white'
                       : 'text-gray-900 dark:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-600'
                     }
@@ -173,7 +190,7 @@ export default function SimpleSelect({
                     {option.label}
                   </span>
 
-                  {isSelected && (
+                  {isSelected && !option.disabled && (
                     <span className="absolute inset-y-0 right-0 flex items-center pr-4">
                       <CheckIcon className="h-4 w-4" />
                     </span>

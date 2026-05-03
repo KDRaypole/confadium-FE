@@ -144,30 +144,27 @@ function VariableMappingSection({
             const mapping = currentMappings[variable.name] || { source: 'field', value: '' };
             const isStatic = mapping.source === 'static';
 
-            // Build grouped options for the field selector
-            const fieldOptions = [
-              { value: '', label: 'Select a field...', disabled: true },
+            // Build grouped options for the field selector using SimpleSelect format
+            const fieldOptions: SimpleSelectOption[] = [
               // Record fields group
               ...(modelFields.length > 0 ? [
-                { value: '__group_record__', label: `── Record Fields ──`, disabled: true },
+                { value: '__group_record__', label: 'Record Fields', isGroupHeader: true },
                 ...modelFields.map(f => ({
                   value: `field:${f.name}`,
                   label: f.name.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
-                  disabled: false
                 }))
               ] : []),
               // Association fields groups
               ...modelAssociations.flatMap(assoc => [
-                { value: `__group_${assoc.name}__`, label: `── ${assoc.model} (${assoc.name}) ──`, disabled: true },
+                { value: `__group_${assoc.name}__`, label: `${assoc.model} (${assoc.name})`, isGroupHeader: true },
                 ...assoc.fields.map(f => ({
                   value: `association:${assoc.name}.${f.name}`,
                   label: f.name.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
-                  disabled: false
                 }))
               ]),
               // Static value option
-              { value: '__group_static__', label: `── Other ──`, disabled: true },
-              { value: 'static:', label: 'Enter static value...', disabled: false }
+              { value: '__group_static__', label: 'Other', isGroupHeader: true },
+              { value: 'static:', label: 'Enter static value...' }
             ];
 
             // Get current combined value
@@ -213,17 +210,13 @@ function VariableMappingSection({
                       </button>
                     </div>
                   ) : (
-                    <select
+                    <SimpleSelect
+                      options={fieldOptions}
                       value={currentCombinedValue}
-                      onChange={(e) => handleMappingChange(e.target.value)}
-                      className="block w-full px-2 py-1 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-purple-500 focus:border-purple-500 text-sm"
-                    >
-                      {fieldOptions.map((opt, idx) => (
-                        <option key={`${opt.value}-${idx}`} value={opt.value} disabled={opt.disabled}>
-                          {opt.label}
-                        </option>
-                      ))}
-                    </select>
+                      onChange={handleMappingChange}
+                      placeholder="Select a field..."
+                      size="sm"
+                    />
                   )}
                 </div>
               </div>
@@ -1499,14 +1492,26 @@ export default function ModuleEdit() {
                                         ) : (
                                           <SimpleSelect
                                             options={[
-                                              { value: "", label: "Select record field..." },
-                                              ...(preset.available_fields || []).map(f => ({
-                                                value: f.name,
-                                                label: f.name.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())
-                                              }))
+                                              // Record fields group
+                                              ...(selectedModelSchema.fields.length > 0 ? [
+                                                { value: '__group_record__', label: 'Record Fields', isGroupHeader: true },
+                                                ...selectedModelSchema.fields.map(f => ({
+                                                  value: f.name,
+                                                  label: f.name.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())
+                                                }))
+                                              ] : []),
+                                              // Association fields groups
+                                              ...selectedModelSchema.associations.flatMap(assoc => [
+                                                { value: `__group_${assoc.name}__`, label: `${assoc.model} (${assoc.name})`, isGroupHeader: true },
+                                                ...assoc.fields.map(f => ({
+                                                  value: `${assoc.name}.${f.name}`,
+                                                  label: f.name.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())
+                                                }))
+                                              ])
                                             ]}
                                             value={currentValue}
                                             onChange={(v) => setParamValue('field', v)}
+                                            placeholder="Select record field..."
                                             size="sm"
                                           />
                                         )

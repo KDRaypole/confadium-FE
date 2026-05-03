@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Dialog, Transition } from '@headlessui/react';
 import { XMarkIcon, PlayIcon, InformationCircleIcon, EnvelopeIcon, ArrowsRightLeftIcon, VariableIcon } from '@heroicons/react/24/outline';
-import SimpleSelect from '~/components/ui/SimpleSelect';
+import SimpleSelect, { type SimpleSelectOption } from '~/components/ui/SimpleSelect';
 import ResourceSelect from '~/components/ui/ResourceSelect';
 import EnhancedEmailEditor from '~/components/email/EnhancedEmailEditor';
 import { type VariableAssignment } from '~/components/email/VariableAssignmentEditor';
@@ -604,14 +604,26 @@ const ActionConfigModal: React.FC<ActionConfigModalProps> = ({
                                     ) : (
                                       <SimpleSelect
                                         options={[
-                                          { value: "", label: "Select record field..." },
-                                          ...(preset.available_fields || []).map(f => ({
-                                            value: f.name,
-                                            label: f.name.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())
-                                          }))
+                                          // Record fields group
+                                          ...(modelFields.length > 0 ? [
+                                            { value: '__group_record__', label: 'Record Fields', isGroupHeader: true },
+                                            ...modelFields.map(f => ({
+                                              value: f.name,
+                                              label: f.name.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())
+                                            }))
+                                          ] : []),
+                                          // Association fields groups
+                                          ...modelAssociations.flatMap(assoc => [
+                                            { value: `__group_${assoc.name}__`, label: `${assoc.model} (${assoc.name})`, isGroupHeader: true },
+                                            ...assoc.fields.map(f => ({
+                                              value: `${assoc.name}.${f.name}`,
+                                              label: f.name.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())
+                                            }))
+                                          ])
                                         ]}
                                         value={currentValue}
                                         onChange={(v) => setParamValue('field', v)}
+                                        placeholder="Select record field..."
                                         size="sm"
                                       />
                                     )
@@ -690,12 +702,11 @@ const ActionConfigModal: React.FC<ActionConfigModalProps> = ({
                                 const mapping = variableMappings[variable.name] || { source: 'field', value: '' };
                                 const isStatic = mapping.source === 'static';
 
-                                // Build grouped options for the field selector
-                                const fieldOptions = [
-                                  { value: '', label: 'Select a field...', disabled: true },
+                                // Build grouped options for the field selector using SimpleSelect format
+                                const fieldOptions: SimpleSelectOption[] = [
                                   // Record fields group
                                   ...(modelFields.length > 0 ? [
-                                    { value: '__group_record__', label: `── Record Fields ──`, disabled: true },
+                                    { value: '__group_record__', label: 'Record Fields', isGroupHeader: true },
                                     ...modelFields.map(f => ({
                                       value: `field:${f.name}`,
                                       label: f.name.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())
@@ -703,14 +714,14 @@ const ActionConfigModal: React.FC<ActionConfigModalProps> = ({
                                   ] : []),
                                   // Association fields groups
                                   ...modelAssociations.flatMap(assoc => [
-                                    { value: `__group_${assoc.name}__`, label: `── ${assoc.model} (${assoc.name}) ──`, disabled: true },
+                                    { value: `__group_${assoc.name}__`, label: `${assoc.model} (${assoc.name})`, isGroupHeader: true },
                                     ...assoc.fields.map(f => ({
                                       value: `association:${assoc.name}.${f.name}`,
-                                      label: `${f.name.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}`
+                                      label: f.name.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())
                                     }))
                                   ]),
                                   // Static value option
-                                  { value: '__group_static__', label: `── Other ──`, disabled: true },
+                                  { value: '__group_static__', label: 'Other', isGroupHeader: true },
                                   { value: 'static:', label: 'Enter static value...' }
                                 ];
 
@@ -756,17 +767,13 @@ const ActionConfigModal: React.FC<ActionConfigModalProps> = ({
                                           </button>
                                         </div>
                                       ) : (
-                                        <select
+                                        <SimpleSelect
+                                          options={fieldOptions}
                                           value={currentCombinedValue}
-                                          onChange={(e) => handleMappingChange(e.target.value)}
-                                          className="block w-full px-3 py-1.5 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-purple-500 focus:border-purple-500 text-sm"
-                                        >
-                                          {fieldOptions.map((opt, idx) => (
-                                            <option key={`${opt.value}-${idx}`} value={opt.value} disabled={opt.disabled}>
-                                              {opt.label}
-                                            </option>
-                                          ))}
-                                        </select>
+                                          onChange={handleMappingChange}
+                                          placeholder="Select a field..."
+                                          size="sm"
+                                        />
                                       )}
                                     </div>
                                   </div>
