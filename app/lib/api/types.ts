@@ -326,9 +326,29 @@ export interface TriggerableModelTrigger {
   actions: TriggerableActionPreset[];
 }
 
+export interface TriggerableModelField {
+  name: string;
+  type: string;
+}
+
+export interface TriggerableModelAssociation {
+  name: string;
+  model: string;
+  fields: TriggerableModelField[];
+}
+
 export interface TriggerableModel {
   model: string;
   triggers: TriggerableModelTrigger[];
+  fields?: TriggerableModelField[];
+  associations?: TriggerableModelAssociation[];
+}
+
+export interface EmailTemplateVariable {
+  name: string;
+  path: string[];
+  root: string;
+  is_nested: boolean;
 }
 
 export interface TriggerableSchema {

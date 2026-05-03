@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Dialog, Transition } from '@headlessui/react';
-import { XMarkIcon, PlayIcon, InformationCircleIcon, EnvelopeIcon, ArrowsRightLeftIcon } from '@heroicons/react/24/outline';
+import { XMarkIcon, PlayIcon, InformationCircleIcon, EnvelopeIcon, ArrowsRightLeftIcon, VariableIcon } from '@heroicons/react/24/outline';
 import SimpleSelect from '~/components/ui/SimpleSelect';
 import ResourceSelect from '~/components/ui/ResourceSelect';
 import EnhancedEmailEditor from '~/components/email/EnhancedEmailEditor';
@@ -10,7 +10,14 @@ import { useDarkMode } from '~/contexts/DarkModeContext';
 import { useTags } from '~/hooks/useTags';
 import { formsApi, type FormField } from '~/lib/api/forms';
 import { getEntityFieldsForType } from '~/lib/utils/variableProcessor';
-import type { TriggerableActionPreset } from '~/lib/api/types';
+import { emailTemplatesAPI } from '~/lib/api/emailTemplates';
+import type { TriggerableActionPreset, TriggerableModelField, TriggerableModelAssociation, EmailTemplateVariable } from '~/lib/api/types';
+
+// Variable mapping types
+interface VariableMapping {
+  source: 'static' | 'field' | 'association';
+  value: string;
+}
 
 export interface ActionConfig {
   id: string;
@@ -48,6 +55,8 @@ interface ActionConfigModalProps {
   trigger?: TriggerConfig;
   actionTypes?: ActionTypeConfig[];
   actionPresets?: TriggerableActionPreset[];
+  modelFields?: TriggerableModelField[];
+  modelAssociations?: TriggerableModelAssociation[];
   onSave: (action: ActionConfig) => void;
   onClose: () => void;
   onRequestEmailEditor?: (actionId: string, currentTemplate?: string, currentVariables?: Record<string, string>, currentAssignments?: VariableAssignment[]) => void;
@@ -62,6 +71,8 @@ const ActionConfigModal: React.FC<ActionConfigModalProps> = ({
   trigger,
   actionTypes: actionTypesProp,
   actionPresets,
+  modelFields = [],
+  modelAssociations = [],
   onSave,
   onClose,
   onRequestEmailEditor
@@ -83,6 +94,11 @@ const ActionConfigModal: React.FC<ActionConfigModalProps> = ({
   const [fieldMappings, setFieldMappings] = useState<FieldMapping[]>([]);
   const [loadingFormFields, setLoadingFormFields] = useState(false);
 
+  // Email template variable mapping state
+  const [templateVariables, setTemplateVariables] = useState<EmailTemplateVariable[]>([]);
+  const [variableMappings, setVariableMappings] = useState<Record<string, VariableMapping>>({});
+  const [loadingTemplateVariables, setLoadingTemplateVariables] = useState(false);
+
   useEffect(() => {
     if (action) {
       setFormData(action);
@@ -100,6 +116,12 @@ const ActionConfigModal: React.FC<ActionConfigModalProps> = ({
       } else {
         setFieldMappings([]);
       }
+      // Initialize variable mappings for send_email action
+      if (action.parameters.variable_mappings) {
+        setVariableMappings(action.parameters.variable_mappings);
+      } else {
+        setVariableMappings({});
+      }
     } else {
       setFormData({
         id: generateId(),
@@ -109,6 +131,8 @@ const ActionConfigModal: React.FC<ActionConfigModalProps> = ({
       });
       setSelectedTagIds([]);
       setFieldMappings([]);
+      setVariableMappings({});
+      setTemplateVariables([]);
     }
     setErrors({});
   }, [action, isOpen]);
@@ -138,6 +162,79 @@ const ActionConfigModal: React.FC<ActionConfigModalProps> = ({
       loadFormFields();
     }
   }, [trigger, isOpen]);
+
+  // Get the selected email template ID from parameters
+  const getSelectedTemplateId = (): string | null => {
+    const params = formData.parameters;
+    if (!params) return null;
+
+    // Check for email_template_id (the parameter name from SendEmailAction)
+    const emailTemplateParam = params.email_template_id;
+    if (emailTemplateParam) {
+      return typeof emailTemplateParam === 'object' ? emailTemplateParam.value : emailTemplateParam;
+    }
+
+    return null;
+  };
+
+  // Load email template variables when template is selected
+  const selectedTemplateId = getSelectedTemplateId();
+
+  useEffect(() => {
+    const loadTemplateVariables = async () => {
+      if (formData.type === 'send_email' && selectedTemplateId) {
+        setLoadingTemplateVariables(true);
+        try {
+          const response = await emailTemplatesAPI.getTemplateVariables(selectedTemplateId);
+          setTemplateVariables(response.data.attributes.variables || []);
+        } catch (error) {
+          console.error('[ActionConfigModal] Error loading template variables:', error);
+          setTemplateVariables([]);
+        } finally {
+          setLoadingTemplateVariables(false);
+        }
+      } else {
+        setTemplateVariables([]);
+      }
+    };
+
+    loadTemplateVariables();
+  }, [formData.type, selectedTemplateId]);
+
+  // Build field options for variable mapping
+  const fieldOptions = useMemo(() => {
+    const options: { value: string; label: string; group?: string }[] = [];
+
+    // Add record fields
+    modelFields.forEach(field => {
+      options.push({
+        value: field.name,
+        label: field.name.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
+        group: 'Record Fields'
+      });
+    });
+
+    // Add association fields
+    modelAssociations.forEach(assoc => {
+      assoc.fields.forEach(field => {
+        options.push({
+          value: `${assoc.name}.${field.name}`,
+          label: `${assoc.name.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())} → ${field.name.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}`,
+          group: `${assoc.model} (${assoc.name})`
+        });
+      });
+    });
+
+    return options;
+  }, [modelFields, modelAssociations]);
+
+  // Update a variable mapping
+  const updateVariableMapping = (variableName: string, mapping: VariableMapping) => {
+    setVariableMappings(prev => ({
+      ...prev,
+      [variableName]: mapping
+    }));
+  };
 
   const generateId = () => {
     return Math.random().toString(36).substr(2, 9);
@@ -243,11 +340,11 @@ const ActionConfigModal: React.FC<ActionConfigModalProps> = ({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (validateForm()) {
       // Update parameters with selected tag data and field mappings
       const updatedFormData = { ...formData };
-      
+
       if ((formData.type === 'add_tag' || formData.type === 'remove_tag') && selectedTagIds.length > 0) {
         // Store both tag ID and tag name for backward compatibility
         updatedFormData.parameters.tagId = selectedTagIds[0];
@@ -256,13 +353,18 @@ const ActionConfigModal: React.FC<ActionConfigModalProps> = ({
           updatedFormData.parameters.tagName = selectedTag.name;
         }
       }
-      
+
       // Add field mappings for form-based actions
       if (isFormBasedAction(formData.type) && fieldMappings.length > 0) {
         updatedFormData.parameters.fieldMappings = fieldMappings;
         updatedFormData.parameters.entityType = getEntityTypeForAction(formData.type);
       }
-      
+
+      // Add variable mappings for send_email action
+      if (formData.type === 'send_email' && Object.keys(variableMappings).length > 0) {
+        updatedFormData.parameters.variable_mappings = variableMappings;
+      }
+
       onSave(updatedFormData);
       onClose();
     }
@@ -277,6 +379,8 @@ const ActionConfigModal: React.FC<ActionConfigModalProps> = ({
     }));
     setSelectedTagIds([]);
     setFieldMappings([]);
+    setTemplateVariables([]);
+    setVariableMappings({});
     setErrors({});
   };
 
@@ -547,6 +651,136 @@ const ActionConfigModal: React.FC<ActionConfigModalProps> = ({
                         </div>
                       );
                     })()}
+
+                    {/* Email Template Variable Mapping */}
+                    {formData.type === 'send_email' && (
+                      <div className="border-t border-gray-200 dark:border-gray-600 pt-6">
+                        <div className="flex items-center justify-between mb-4">
+                          <div className="flex items-center space-x-2">
+                            <VariableIcon className="h-5 w-5 text-purple-500" />
+                            <h4 className="text-md font-medium text-gray-900 dark:text-gray-100">Template Variable Mapping</h4>
+                          </div>
+                          {selectedTemplateId && (
+                            <span className="text-xs text-gray-500 dark:text-gray-400">
+                              Template: {selectedTemplateId.slice(0, 8)}...
+                            </span>
+                          )}
+                        </div>
+                        {!selectedTemplateId ? (
+                          <div className="text-sm text-gray-500 py-4 text-center border border-dashed border-gray-300 dark:border-gray-600 rounded-lg">
+                            Select an email template in the parameters above to map variables.
+                          </div>
+                        ) : loadingTemplateVariables ? (
+                          <div className="text-sm text-gray-500 italic py-4 text-center">Loading template variables...</div>
+                        ) : templateVariables.length === 0 ? (
+                          <div className="text-sm text-gray-500 py-4 text-center border border-dashed border-gray-300 dark:border-gray-600 rounded-lg">
+                            No variables found in this template. Variables use the format <code className="bg-gray-200 dark:bg-gray-700 px-1 rounded">{'{{variable_name}}'}</code>.
+                          </div>
+                        ) : (
+                          <div className="bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+                            {/* Table Header */}
+                            <div className="grid grid-cols-12 gap-2 px-4 py-2 bg-gray-100 dark:bg-gray-700/50 border-b border-gray-200 dark:border-gray-600 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                              <div className="col-span-4">Template Variable</div>
+                              <div className="col-span-1 text-center">→</div>
+                              <div className="col-span-7">Maps To</div>
+                            </div>
+                            {/* Mapping Rows */}
+                            <div className="divide-y divide-gray-200 dark:divide-gray-700">
+                              {templateVariables.map(variable => {
+                                const mapping = variableMappings[variable.name] || { source: 'field', value: '' };
+                                const isStatic = mapping.source === 'static';
+
+                                // Build grouped options for the field selector
+                                const fieldOptions = [
+                                  { value: '', label: 'Select a field...', disabled: true },
+                                  // Record fields group
+                                  ...(modelFields.length > 0 ? [
+                                    { value: '__group_record__', label: `── Record Fields ──`, disabled: true },
+                                    ...modelFields.map(f => ({
+                                      value: `field:${f.name}`,
+                                      label: f.name.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())
+                                    }))
+                                  ] : []),
+                                  // Association fields groups
+                                  ...modelAssociations.flatMap(assoc => [
+                                    { value: `__group_${assoc.name}__`, label: `── ${assoc.model} (${assoc.name}) ──`, disabled: true },
+                                    ...assoc.fields.map(f => ({
+                                      value: `association:${assoc.name}.${f.name}`,
+                                      label: `${f.name.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}`
+                                    }))
+                                  ]),
+                                  // Static value option
+                                  { value: '__group_static__', label: `── Other ──`, disabled: true },
+                                  { value: 'static:', label: 'Enter static value...' }
+                                ];
+
+                                // Get current combined value
+                                const currentCombinedValue = isStatic ? 'static:' : `${mapping.source}:${mapping.value}`;
+
+                                const handleMappingChange = (combinedValue: string) => {
+                                  if (combinedValue === 'static:') {
+                                    updateVariableMapping(variable.name, { source: 'static', value: '' });
+                                  } else if (combinedValue.startsWith('field:')) {
+                                    updateVariableMapping(variable.name, { source: 'field', value: combinedValue.replace('field:', '') });
+                                  } else if (combinedValue.startsWith('association:')) {
+                                    updateVariableMapping(variable.name, { source: 'association', value: combinedValue.replace('association:', '') });
+                                  }
+                                };
+
+                                return (
+                                  <div key={variable.name} className="grid grid-cols-12 gap-2 px-4 py-3 items-center hover:bg-gray-100/50 dark:hover:bg-gray-700/30">
+                                    <div className="col-span-4">
+                                      <code className="px-2 py-1 text-sm bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 rounded font-mono">
+                                        {`{{${variable.name}}}`}
+                                      </code>
+                                    </div>
+                                    <div className="col-span-1 text-center text-gray-400">
+                                      <ArrowsRightLeftIcon className="h-4 w-4 inline" />
+                                    </div>
+                                    <div className="col-span-7">
+                                      {isStatic ? (
+                                        <div className="flex gap-2">
+                                          <input
+                                            type="text"
+                                            value={mapping.value}
+                                            onChange={(e) => updateVariableMapping(variable.name, { ...mapping, value: e.target.value })}
+                                            placeholder="Enter static value..."
+                                            className="flex-1 px-3 py-1.5 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-purple-500 focus:border-purple-500 text-sm"
+                                          />
+                                          <button
+                                            onClick={() => updateVariableMapping(variable.name, { source: 'field', value: '' })}
+                                            className="px-2 py-1 text-xs text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 border border-gray-300 dark:border-gray-600 rounded"
+                                            title="Switch to field mapping"
+                                          >
+                                            Field
+                                          </button>
+                                        </div>
+                                      ) : (
+                                        <select
+                                          value={currentCombinedValue}
+                                          onChange={(e) => handleMappingChange(e.target.value)}
+                                          className="block w-full px-3 py-1.5 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-purple-500 focus:border-purple-500 text-sm"
+                                        >
+                                          {fieldOptions.map((opt, idx) => (
+                                            <option key={`${opt.value}-${idx}`} value={opt.value} disabled={opt.disabled}>
+                                              {opt.label}
+                                            </option>
+                                          ))}
+                                        </select>
+                                      )}
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                            {/* Summary footer */}
+                            <div className="px-4 py-2 bg-gray-100 dark:bg-gray-700/50 border-t border-gray-200 dark:border-gray-600 text-xs text-gray-500 dark:text-gray-400">
+                              {templateVariables.length} variable{templateVariables.length !== 1 ? 's' : ''} • {Object.values(variableMappings).filter(m => m.value).length} mapped
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
 
                     {/* Action Preview */}
                     {formData.type && formData.target && (

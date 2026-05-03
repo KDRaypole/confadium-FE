@@ -1,12 +1,13 @@
 import type { MetaFunction } from "@remix-run/node";
 import { Link, useParams, useSearchParams } from "@remix-run/react";
-import React, { useState } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import Layout from "~/components/layout/Layout";
 import EnhancedEmailEditor from "~/components/email/EnhancedEmailEditor";
 import { type VariableAssignment } from "~/components/email/VariableAssignmentEditor";
 import EmailPreview from "~/components/email/EmailPreview";
 import EmailTemplateManager from "~/components/email/EmailTemplateManager";
 import { useEmailTemplates } from "~/hooks/useEmailTemplates";
+import { emailTemplatesAPI } from "~/lib/api/emailTemplates";
 import { getTagColorClass } from "~/components/tags/TagsData";
 import SimpleSelect, { type SimpleSelectOption } from "~/components/ui/SimpleSelect";
 import { useTags, type Tag } from "~/hooks/useTags";
@@ -19,6 +20,7 @@ import ConditionConfigModal, { type Condition, type CrmFieldConfig } from "~/com
 import ActionConfigModal, { type ActionConfig, type ActionTypeConfig } from "~/components/flow/modals/ActionConfigModal";
 import { useTriggerableSchema } from "~/hooks/useTriggerableSchema";
 import { useNodeContext } from "~/contexts/NodeContext";
+import type { TriggerableModelField, TriggerableModelAssociation, EmailTemplateVariable } from "~/lib/api/types";
 import {
   ArrowLeftIcon,
   PlusIcon,
@@ -28,7 +30,9 @@ import {
   EnvelopeIcon,
   EyeIcon,
   ComputerDesktopIcon,
-  ListBulletIcon
+  ListBulletIcon,
+  ArrowsRightLeftIcon,
+  VariableIcon
 } from "@heroicons/react/24/outline";
 
 export const meta: MetaFunction = () => {
@@ -37,6 +41,203 @@ export const meta: MetaFunction = () => {
     { name: "description", content: "Create and edit automation configurations" },
   ];
 };
+
+// Variable mapping types
+interface VariableMapping {
+  source: 'static' | 'field' | 'association';
+  value: string;
+}
+
+// Variable Mapping Section Component for send_email actions
+interface VariableMappingSectionProps {
+  actionId: string;
+  templateId: string;
+  currentMappings: Record<string, VariableMapping>;
+  modelFields: TriggerableModelField[];
+  modelAssociations: TriggerableModelAssociation[];
+  onMappingsChange: (mappings: Record<string, VariableMapping>) => void;
+}
+
+function VariableMappingSection({
+  actionId,
+  templateId,
+  currentMappings,
+  modelFields,
+  modelAssociations,
+  onMappingsChange
+}: VariableMappingSectionProps) {
+  const [templateVariables, setTemplateVariables] = useState<EmailTemplateVariable[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  // Fetch template variables when templateId changes
+  useEffect(() => {
+    if (!templateId) {
+      setTemplateVariables([]);
+      return;
+    }
+
+    const fetchVariables = async () => {
+      setLoading(true);
+      try {
+        const response = await emailTemplatesAPI.getTemplateVariables(templateId);
+        setTemplateVariables(response.data.attributes.variables || []);
+      } catch (error) {
+        console.error('Error loading template variables:', error);
+        setTemplateVariables([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchVariables();
+  }, [templateId]);
+
+  const updateMapping = (variableName: string, mapping: VariableMapping) => {
+    onMappingsChange({
+      ...currentMappings,
+      [variableName]: mapping
+    });
+  };
+
+  if (loading) {
+    return (
+      <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-600">
+        <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-2 flex items-center">
+          <VariableIcon className="h-4 w-4 mr-1 text-purple-500" />
+          Variable Mappings
+        </label>
+        <div className="text-sm text-gray-500 italic py-3 text-center">Loading template variables...</div>
+      </div>
+    );
+  }
+
+  if (templateVariables.length === 0) {
+    return (
+      <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-600">
+        <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-2 flex items-center">
+          <VariableIcon className="h-4 w-4 mr-1 text-purple-500" />
+          Variable Mappings
+        </label>
+        <div className="text-sm text-gray-500 py-3 text-center border border-dashed border-gray-300 dark:border-gray-600 rounded-lg">
+          No variables found in this template. Use <code className="bg-gray-200 dark:bg-gray-700 px-1 rounded">{'{{variable_name}}'}</code> in your template.
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-600">
+      <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-2 flex items-center">
+        <VariableIcon className="h-4 w-4 mr-1 text-purple-500" />
+        Variable Mappings ({templateVariables.length})
+      </label>
+      <div className="bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+        {/* Table Header */}
+        <div className="grid grid-cols-12 gap-2 px-3 py-2 bg-gray-100 dark:bg-gray-700/50 border-b border-gray-200 dark:border-gray-600 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+          <div className="col-span-4">Template Variable</div>
+          <div className="col-span-1 text-center">→</div>
+          <div className="col-span-7">Maps To</div>
+        </div>
+        {/* Mapping Rows */}
+        <div className="divide-y divide-gray-200 dark:divide-gray-700">
+          {templateVariables.map(variable => {
+            const mapping = currentMappings[variable.name] || { source: 'field', value: '' };
+            const isStatic = mapping.source === 'static';
+
+            // Build grouped options for the field selector
+            const fieldOptions = [
+              { value: '', label: 'Select a field...', disabled: true },
+              // Record fields group
+              ...(modelFields.length > 0 ? [
+                { value: '__group_record__', label: `── Record Fields ──`, disabled: true },
+                ...modelFields.map(f => ({
+                  value: `field:${f.name}`,
+                  label: f.name.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
+                  disabled: false
+                }))
+              ] : []),
+              // Association fields groups
+              ...modelAssociations.flatMap(assoc => [
+                { value: `__group_${assoc.name}__`, label: `── ${assoc.model} (${assoc.name}) ──`, disabled: true },
+                ...assoc.fields.map(f => ({
+                  value: `association:${assoc.name}.${f.name}`,
+                  label: f.name.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
+                  disabled: false
+                }))
+              ]),
+              // Static value option
+              { value: '__group_static__', label: `── Other ──`, disabled: true },
+              { value: 'static:', label: 'Enter static value...', disabled: false }
+            ];
+
+            // Get current combined value
+            const currentCombinedValue = isStatic ? 'static:' : `${mapping.source}:${mapping.value}`;
+
+            const handleMappingChange = (combinedValue: string) => {
+              if (combinedValue === 'static:') {
+                updateMapping(variable.name, { source: 'static', value: '' });
+              } else if (combinedValue.startsWith('field:')) {
+                updateMapping(variable.name, { source: 'field', value: combinedValue.replace('field:', '') });
+              } else if (combinedValue.startsWith('association:')) {
+                updateMapping(variable.name, { source: 'association', value: combinedValue.replace('association:', '') });
+              }
+            };
+
+            return (
+              <div key={variable.name} className="grid grid-cols-12 gap-2 px-3 py-2 items-center hover:bg-gray-100/50 dark:hover:bg-gray-700/30">
+                <div className="col-span-4">
+                  <code className="px-2 py-1 text-xs bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 rounded font-mono">
+                    {`{{${variable.name}}}`}
+                  </code>
+                </div>
+                <div className="col-span-1 text-center text-gray-400">
+                  <ArrowsRightLeftIcon className="h-4 w-4 inline" />
+                </div>
+                <div className="col-span-7">
+                  {isStatic ? (
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        value={mapping.value}
+                        onChange={(e) => updateMapping(variable.name, { ...mapping, value: e.target.value })}
+                        placeholder="Enter static value..."
+                        className="flex-1 px-2 py-1 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-purple-500 focus:border-purple-500 text-sm"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => updateMapping(variable.name, { source: 'field', value: '' })}
+                        className="px-2 py-1 text-xs text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 border border-gray-300 dark:border-gray-600 rounded"
+                        title="Switch to field mapping"
+                      >
+                        Field
+                      </button>
+                    </div>
+                  ) : (
+                    <select
+                      value={currentCombinedValue}
+                      onChange={(e) => handleMappingChange(e.target.value)}
+                      className="block w-full px-2 py-1 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-purple-500 focus:border-purple-500 text-sm"
+                    >
+                      {fieldOptions.map((opt, idx) => (
+                        <option key={`${opt.value}-${idx}`} value={opt.value} disabled={opt.disabled}>
+                          {opt.label}
+                        </option>
+                      ))}
+                    </select>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+        {/* Summary footer */}
+        <div className="px-3 py-2 bg-gray-100 dark:bg-gray-700/50 border-t border-gray-200 dark:border-gray-600 text-xs text-gray-500 dark:text-gray-400">
+          {templateVariables.length} variable{templateVariables.length !== 1 ? 's' : ''} • {Object.values(currentMappings).filter(m => m.value).length} mapped
+        </div>
+      </div>
+    </div>
+  );
+}
 
 // Re-export types from modal components for consistency
 export type { Condition } from "~/components/flow/modals/ConditionConfigModal";
@@ -226,7 +427,7 @@ export default function ModuleEdit() {
   const { createConfiguration, isCreating } = useModuleConfigurations(moduleId);
   const { templates: emailTemplates } = useEmailTemplates();
   const { data: availableForms = [] } = useActiveForms();
-  const { schema } = useTriggerableSchema();
+  const { schema, loading: schemaLoading } = useTriggerableSchema();
 
   // Helper function to get template by ID from the proper templates source
   const getTemplateById = (templateId: string) => {
@@ -343,6 +544,22 @@ export default function ModuleEdit() {
     const trigger = model.triggers.find(t => t.event === event);
     return trigger?.actions;
   }, [schema, configuration.trigger.entityType, configuration.trigger.action]);
+
+  // Get model fields and associations for variable mapping
+  const selectedModelSchema = React.useMemo(() => {
+    if (!schema?.models?.length) return { fields: [], associations: [] };
+
+    const selectedEntity = configuration.trigger.entityType;
+    if (!selectedEntity) return { fields: [], associations: [] };
+
+    const model = schema.models.find(m => toSnakeCase(m.model) === selectedEntity);
+    if (!model) return { fields: [], associations: [] };
+
+    return {
+      fields: model.fields || [],
+      associations: model.associations || []
+    };
+  }, [schema, configuration.trigger.entityType]);
 
   // View mode state
   const [viewMode, setViewMode] = useState<'form' | 'flow'>('form');
@@ -1329,6 +1546,43 @@ export default function ModuleEdit() {
                             </div>
                           );
                         })()}
+
+                        {/* Variable Mapping for send_email actions */}
+                        {action.type === 'send_email' && (() => {
+                          const templateParam = action.parameters?.email_template_id;
+                          const templateId = typeof templateParam === 'object' ? templateParam?.value : templateParam;
+
+                          if (!templateId) {
+                            return (
+                              <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-600">
+                                <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                  Variable Mappings
+                                </label>
+                                <div className="text-sm text-gray-500 py-3 text-center border border-dashed border-gray-300 dark:border-gray-600 rounded-lg">
+                                  Select an email template above to map variables.
+                                </div>
+                              </div>
+                            );
+                          }
+
+                          return (
+                            <VariableMappingSection
+                              actionId={action.id}
+                              templateId={templateId}
+                              currentMappings={action.parameters?.variable_mappings || {}}
+                              modelFields={selectedModelSchema.fields}
+                              modelAssociations={selectedModelSchema.associations}
+                              onMappingsChange={(mappings) => {
+                                updateAction(action.id, {
+                                  parameters: {
+                                    ...action.parameters,
+                                    variable_mappings: mappings
+                                  }
+                                });
+                              }}
+                            />
+                          );
+                        })()}
                       </div>
                     ))}
                   </div>
@@ -1365,6 +1619,8 @@ export default function ModuleEdit() {
         trigger={configuration.trigger}
         actionTypes={schemaActionTypes}
         actionPresets={schemaActionPresets}
+        modelFields={selectedModelSchema.fields}
+        modelAssociations={selectedModelSchema.associations}
         onSave={handleActionSave}
         onRequestEmailEditor={handleEmailEditorRequest}
         onClose={() => {
