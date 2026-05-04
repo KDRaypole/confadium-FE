@@ -210,6 +210,8 @@ export default function EditEmailTemplate() {
                 initialComponents={((template.attributes as any)?.structure as EmailComponentNode[]) || []}
                 initialTheme={((template.attributes as any)?.theme as EmailTheme) || {}}
                 initialHtmlContent={template.attributes?.html_content || ''}
+                subject={templateData.subject}
+                previewText={templateData.previewText}
                 onSave={async (data) => {
                   // Extract variables from the components
                   const componentVars = extractVariablesFromComponents(data.structure);

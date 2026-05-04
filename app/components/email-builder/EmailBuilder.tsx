@@ -30,9 +30,11 @@ interface EmailBuilderProps {
   initialHtmlContent: string;
   onSave: (data: { html_content: string; text_content: string; structure: EmailComponentNode[]; theme: EmailTheme; variables: string[] }) => void;
   saving?: boolean;
+  subject?: string;
+  previewText?: string;
 }
 
-export default function EmailBuilder({ initialComponents, initialTheme, initialHtmlContent, onSave, saving }: EmailBuilderProps) {
+export default function EmailBuilder({ initialComponents, initialTheme, initialHtmlContent, onSave, saving, subject = '', previewText = '' }: EmailBuilderProps) {
   // Ensure initialComponents is always an array
   const safeInitialComponents = Array.isArray(initialComponents) ? initialComponents : [];
   const safeInitialTheme = initialTheme || {};
@@ -141,7 +143,7 @@ export default function EmailBuilder({ initialComponents, initialTheme, initialH
       {/* Content area */}
       <div className="flex-1 overflow-hidden">
         {mode === 'visual' && (
-          <EmailBuilderProvider initialComponents={components} initialTheme={emailTheme} onChange={handleBuilderChange}>
+          <EmailBuilderProvider initialComponents={components} initialTheme={emailTheme} onChange={handleBuilderChange} subject={subject} previewText={previewText}>
             <VisualBuilder />
           </EmailBuilderProvider>
         )}
@@ -153,16 +155,33 @@ export default function EmailBuilder({ initialComponents, initialTheme, initialH
   );
 }
 
+// Extract variables from a string using {{variable}} pattern
+function extractVariablesFromString(content: string): string[] {
+  const regex = /\{\{([^}]+)\}\}/g;
+  const matches: string[] = [];
+  let match;
+  while ((match = regex.exec(content)) !== null) {
+    const varName = match[1].trim();
+    if (!matches.includes(varName)) {
+      matches.push(varName);
+    }
+  }
+  return matches;
+}
+
 function VisualBuilder() {
-  const { undo, redo, canUndo, canRedo, selectedId, theme, components } = useEmailBuilder();
+  const { undo, redo, canUndo, canRedo, selectedId, theme, components, subject, previewText } = useEmailBuilder();
   const [sidebarTab, setSidebarTab] = useState<SidebarTab>('components');
 
   const activeTab = selectedId && sidebarTab === 'components' ? 'properties' : sidebarTab;
 
-  // Count detected variables for badge
+  // Count detected variables for badge (from all sources)
   const variableCount = useMemo(() => {
-    return extractVariablesFromComponents(components).length;
-  }, [components]);
+    const componentVars = extractVariablesFromComponents(components);
+    const subjectVars = extractVariablesFromString(subject || '');
+    const previewVars = extractVariablesFromString(previewText || '');
+    return new Set([...componentVars, ...subjectVars, ...previewVars]).size;
+  }, [components, subject, previewText]);
 
   return (
     <div className="flex h-full">
