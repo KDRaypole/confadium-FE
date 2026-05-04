@@ -2,24 +2,12 @@ import type { MetaFunction } from "@remix-run/node";
 import { Link, useParams, useNavigate } from "@remix-run/react";
 import { useState, useEffect } from "react";
 import Layout from "~/components/layout/Layout";
-import HTMLEditor from "~/components/email/HTMLEditor";
-import { replaceVariables } from "~/components/email/EmailTemplates";
 import { useEmailTemplate } from "~/hooks/useEmailTemplates";
 import type { EmailTemplateUpdateData } from "~/lib/api/emailTemplates";
-import {
-  ArrowLeftIcon,
-  EyeIcon,
-  ClipboardDocumentIcon,
-  CheckIcon,
-  XMarkIcon,
-  PlusIcon,
-  TrashIcon,
-  TagIcon,
-  Squares2X2Icon,
-  CodeBracketIcon,
-} from "@heroicons/react/24/outline";
+import { ArrowLeftIcon } from "@heroicons/react/24/outline";
 import { EmailBuilder } from "~/components/email-builder";
 import type { EmailComponentNode, EmailTheme } from "~/lib/api/types";
+import { extractVariablesFromComponents } from "~/lib/email/parser";
 
 export const meta: MetaFunction = () => {
   return [
@@ -32,10 +20,10 @@ export default function EditEmailTemplate() {
   const params = useParams();
   const navigate = useNavigate();
   const { orgId, templateId } = params;
-  
+
   // React Query hooks
   const { template, loading, error, updateTemplate, isUpdating } = useEmailTemplate(templateId);
-  
+
   const [templateData, setTemplateData] = useState<EmailTemplateUpdateData>({
     name: "",
     category: "welcome",
@@ -46,51 +34,6 @@ export default function EditEmailTemplate() {
     description: "",
     previewText: ""
   });
-
-  const [sampleVariables, setSampleVariables] = useState<Record<string, string>>({});
-  const [previewMode, setPreviewMode] = useState<"html" | "text">("html");
-  const [showPreview, setShowPreview] = useState(true);
-  const [editorMode, setEditorMode] = useState<'code' | 'visual'>('code');
-
-  // Determine initial editor mode based on whether structure exists
-  useEffect(() => {
-    if (template) {
-      const structure = (template.attributes as any)?.structure;
-      if (structure && Array.isArray(structure) && structure.length > 0) {
-        setEditorMode('visual');
-      }
-    }
-  }, [template]);
-
-  const extractVariablesFromContent = (content: string) => {
-    const regex = /\{\{([^}]+)\}\}/g;
-    const variables = new Set<string>();
-    let match;
-    while ((match = regex.exec(content)) !== null) {
-      variables.add(match[1].trim());
-    }
-    return Array.from(variables);
-  };
-
-  const updateVariablesFromContent = () => {
-    const htmlVars = extractVariablesFromContent(templateData.htmlContent);
-    const textVars = extractVariablesFromContent(templateData.textContent);
-    const subjectVars = extractVariablesFromContent(templateData.subject);
-    const previewVars = extractVariablesFromContent(templateData.previewText);
-    
-    const allVars = [...new Set([...htmlVars, ...textVars, ...subjectVars, ...previewVars])];
-    
-    setTemplateData(prev => ({ ...prev, variables: allVars }));
-    
-    // Add sample values for new variables
-    const newSampleVars = { ...sampleVariables };
-    allVars.forEach(variable => {
-      if (!newSampleVars[variable]) {
-        newSampleVars[variable] = `Sample ${variable.replace(/_/g, " ")}`;
-      }
-    });
-    setSampleVariables(newSampleVars);
-  };
 
   // Load template data when it becomes available
   useEffect(() => {
@@ -107,99 +50,6 @@ export default function EditEmailTemplate() {
       });
     }
   }, [template]);
-
-  // Initialize sample variables when template loads
-  useEffect(() => {
-    if (templateData.variables) {
-      const initialVars: Record<string, string> = {};
-      templateData.variables.forEach((variable) => {
-        // Provide default sample values
-        switch (variable) {
-          case "contact_name":
-            initialVars[variable] = "John Smith";
-            break;
-          case "company_name":
-            initialVars[variable] = "Acme Corporation";
-            break;
-          case "sender_name":
-            initialVars[variable] = "Sarah Johnson";
-            break;
-          case "phone_number":
-            initialVars[variable] = "(555) 123-4567";
-            break;
-          case "email":
-            initialVars[variable] = "john.smith@example.com";
-            break;
-          case "lead_score":
-            initialVars[variable] = "85";
-            break;
-          case "estimated_value":
-            initialVars[variable] = "$50,000";
-            break;
-          case "discount_percent":
-            initialVars[variable] = "20";
-            break;
-          case "service_name":
-            initialVars[variable] = "Premium Package";
-            break;
-          default:
-            initialVars[variable] = `Sample ${variable.replace(/_/g, " ")}`;
-        }
-      });
-      setSampleVariables(initialVars);
-    }
-  }, [templateData.variables]);
-
-  const handleVariableChange = (variable: string, value: string) => {
-    setSampleVariables(prev => ({
-      ...prev,
-      [variable]: value
-    }));
-  };
-
-  const addVariable = () => {
-    const newVariable = prompt("Enter variable name (without {{ }}):");
-    if (newVariable && !templateData.variables.includes(newVariable)) {
-      setTemplateData(prev => ({
-        ...prev,
-        variables: [...prev.variables, newVariable]
-      }));
-      setSampleVariables(prev => ({
-        ...prev,
-        [newVariable]: `Sample ${newVariable.replace(/_/g, " ")}`
-      }));
-    }
-  };
-
-  const removeVariable = (variable: string) => {
-    setTemplateData(prev => ({
-      ...prev,
-      variables: prev.variables.filter(v => v !== variable)
-    }));
-    setSampleVariables(prev => {
-      const { [variable]: removed, ...rest } = prev;
-      return rest;
-    });
-  };
-
-  const generatePreview = (content: string) => {
-    return replaceVariables(content, sampleVariables);
-  };
-
-  const copyToClipboard = (text: string) => {
-    navigator.clipboard.writeText(text);
-  };
-
-  const handleSave = async () => {
-    try {
-      await updateTemplate(templateData);
-      alert("Template updated successfully!");
-      navigate(`/organizations/${orgId}/email-templates`);
-    } catch (error) {
-      console.error("Failed to update template:", error);
-      alert("Failed to update template. Please try again.");
-    }
-  };
 
   const getCategoryColor = (category: string) => {
     switch (category) {
@@ -295,7 +145,7 @@ export default function EditEmailTemplate() {
               <span>/</span>
               <span>Edit Template</span>
             </nav>
-            
+
             <div className="flex items-center justify-between">
               <div className="flex items-center">
                 <Link
@@ -319,45 +169,11 @@ export default function EditEmailTemplate() {
                   </div>
                 </div>
               </div>
-              
-              <div className="flex items-center space-x-3">
-                <button
-                  onClick={() => setShowPreview(!showPreview)}
-                  className="inline-flex items-center px-3 py-2 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-md shadow-sm text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  <EyeIcon className="-ml-1 mr-2 h-4 w-4" />
-                  {showPreview ? "Hide" : "Show"} Preview
-                </button>
-                <button
-                  onClick={handleSave}
-                  disabled={isUpdating}
-                  className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
-                >
-                  <CheckIcon className="-ml-1 mr-2 h-4 w-4" />
-                  {isUpdating ? "Saving..." : "Save Changes"}
-                </button>
-              </div>
             </div>
           </div>
 
-          {/* Editor mode toggle */}
-          <div className="mb-6 flex items-center space-x-1 bg-gray-100 dark:bg-gray-700 rounded-md p-0.5 w-fit">
-            <button
-              onClick={() => setEditorMode('visual')}
-              className={`inline-flex items-center px-3 py-1.5 text-sm font-medium rounded ${editorMode === 'visual' ? 'bg-white dark:bg-gray-600 text-purple-600 shadow-sm' : 'text-gray-600 dark:text-gray-400'}`}
-            >
-              <Squares2X2Icon className="h-4 w-4 mr-1.5" /> Visual Builder
-            </button>
-            <button
-              onClick={() => setEditorMode('code')}
-              className={`inline-flex items-center px-3 py-1.5 text-sm font-medium rounded ${editorMode === 'code' ? 'bg-white dark:bg-gray-600 text-purple-600 shadow-sm' : 'text-gray-600 dark:text-gray-400'}`}
-            >
-              <CodeBracketIcon className="h-4 w-4 mr-1.5" /> Code Editor
-            </button>
-          </div>
-
-          {/* Visual Builder Mode */}
-          {editorMode === 'visual' && template && (
+          {/* Visual Builder */}
+          {template && (
             <div className="space-y-6">
               {/* Basic metadata fields */}
               <div className="bg-white dark:bg-gray-800 shadow rounded-lg border border-gray-200 dark:border-gray-700 p-6">
@@ -379,21 +195,29 @@ export default function EditEmailTemplate() {
                   </div>
                   <div className="md:col-span-2">
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Subject Line</label>
-                    <input type="text" value={templateData.subject} onChange={(e) => setTemplateData(prev => ({ ...prev, subject: e.target.value }))} placeholder="Email subject..." className="block w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 sm:text-sm" />
+                    <input type="text" value={templateData.subject} onChange={(e) => setTemplateData(prev => ({ ...prev, subject: e.target.value }))} placeholder="Email subject... Use {{variable_name}} for dynamic content" className="block w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 sm:text-sm" />
                   </div>
                   <div className="md:col-span-2">
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Preview Text</label>
-                    <input type="text" value={templateData.previewText} onChange={(e) => setTemplateData(prev => ({ ...prev, previewText: e.target.value }))} placeholder="Preview text shown in inbox..." className="block w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 sm:text-sm" />
+                    <input type="text" value={templateData.previewText} onChange={(e) => setTemplateData(prev => ({ ...prev, previewText: e.target.value }))} placeholder="Preview text shown in inbox... Use {{variable_name}} for dynamic content" className="block w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 sm:text-sm" />
                   </div>
                 </div>
               </div>
 
-              {/* Email Builder */}
+              {/* Email Builder - use key to force remount when template changes */}
               <EmailBuilder
+                key={templateId}
                 initialComponents={((template.attributes as any)?.structure as EmailComponentNode[]) || []}
                 initialTheme={((template.attributes as any)?.theme as EmailTheme) || {}}
-                initialHtmlContent={templateData.htmlContent}
+                initialHtmlContent={template.attributes?.html_content || ''}
                 onSave={async (data) => {
+                  // Extract variables from the components
+                  const componentVars = extractVariablesFromComponents(data.structure);
+                  // Also check subject and preview text for variables
+                  const subjectVars = (templateData.subject.match(/\{\{([^}]+)\}\}/g) || []).map(m => m.slice(2, -2).trim());
+                  const previewVars = (templateData.previewText.match(/\{\{([^}]+)\}\}/g) || []).map(m => m.slice(2, -2).trim());
+                  const allVars = [...new Set([...componentVars, ...subjectVars, ...previewVars])];
+
                   try {
                     await updateTemplate({
                       ...templateData,
@@ -401,6 +225,7 @@ export default function EditEmailTemplate() {
                       textContent: data.text_content,
                       structure: data.structure as any,
                       theme: data.theme as any,
+                      variables: allVars,
                     });
                     alert("Template saved!");
                     navigate(`/organizations/${orgId}/email-templates`);
@@ -411,286 +236,6 @@ export default function EditEmailTemplate() {
                 saving={isUpdating}
               />
             </div>
-          )}
-
-          {/* Code Editor Mode (existing UI) */}
-          {editorMode === 'code' && (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Left Panel - Template Editor */}
-            <div className="space-y-6">
-              {/* Basic Information */}
-              <div className="bg-white dark:bg-gray-800 shadow rounded-lg border border-gray-200 dark:border-gray-700">
-                <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
-                  <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">Template Details</h3>
-                </div>
-                <div className="p-6 space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                      Template Name
-                    </label>
-                    <input
-                      type="text"
-                      value={templateData.name}
-                      onChange={(e) => setTemplateData(prev => ({ ...prev, name: e.target.value }))}
-                      className="block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                      Description
-                    </label>
-                    <textarea
-                      rows={3}
-                      value={templateData.description}
-                      onChange={(e) => setTemplateData(prev => ({ ...prev, description: e.target.value }))}
-                      className="block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                      Category
-                    </label>
-                    <select
-                      value={templateData.category}
-                      onChange={(e) => setTemplateData(prev => ({ ...prev, category: e.target.value as any }))}
-                      className="block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                    >
-                      <option value="welcome">Welcome</option>
-                      <option value="follow_up">Follow Up</option>
-                      <option value="nurturing">Nurturing</option>
-                      <option value="promotion">Promotion</option>
-                      <option value="notification">Notification</option>
-                      <option value="reminder">Reminder</option>
-                    </select>
-                  </div>
-                </div>
-              </div>
-
-              {/* Email Content */}
-              <div className="bg-white dark:bg-gray-800 shadow rounded-lg border border-gray-200 dark:border-gray-700">
-                <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
-                  <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">Email Content</h3>
-                </div>
-                <div className="p-6 space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                      Subject Line
-                    </label>
-                    <input
-                      type="text"
-                      value={templateData.subject}
-                      onChange={(e) => {
-                        setTemplateData(prev => ({ ...prev, subject: e.target.value }));
-                        setTimeout(updateVariablesFromContent, 100);
-                      }}
-                      className="block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                      placeholder="Enter subject line with {{variables}}"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                      Preview Text
-                    </label>
-                    <input
-                      type="text"
-                      value={templateData.previewText}
-                      onChange={(e) => {
-                        setTemplateData(prev => ({ ...prev, previewText: e.target.value }));
-                        setTimeout(updateVariablesFromContent, 100);
-                      }}
-                      className="block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                      placeholder="Brief preview text shown in email clients"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* HTML Content Editor */}
-              <div className="bg-white dark:bg-gray-800 shadow rounded-lg border border-gray-200 dark:border-gray-700">
-                <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
-                  <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">HTML Content</h3>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">
-                    Use variable_name syntax for dynamic content. Variables will be automatically detected.
-                  </p>
-                </div>
-                <div className="p-6">
-                  <HTMLEditor
-                    value={templateData.htmlContent}
-                    onChange={(value) => {
-                      setTemplateData(prev => ({ ...prev, htmlContent: value }));
-                      setTimeout(updateVariablesFromContent, 100);
-                    }}
-                    placeholder="Enter HTML content with {{variables}}"
-                    height="400px"
-                    isDarkMode={false}
-                  />
-                </div>
-              </div>
-
-              {/* Text Content Editor */}
-              <div className="bg-white dark:bg-gray-800 shadow rounded-lg border border-gray-200 dark:border-gray-700">
-                <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
-                  <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">Text Content</h3>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">Plain text version for email clients that don't support HTML</p>
-                </div>
-                <div className="p-6">
-                  <textarea
-                    rows={8}
-                    value={templateData.textContent}
-                    onChange={(e) => {
-                      setTemplateData(prev => ({ ...prev, textContent: e.target.value }));
-                      setTimeout(updateVariablesFromContent, 100);
-                    }}
-                    className="block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-sm font-mono"
-                    placeholder="Enter plain text content with {{variables}}"
-                  />
-                </div>
-              </div>
-
-              {/* Variables */}
-              <div className="bg-white dark:bg-gray-800 shadow rounded-lg border border-gray-200 dark:border-gray-700">
-                <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
-                  <div className="flex items-center justify-between">
-                    <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">Template Variables</h3>
-                    <div className="flex items-center space-x-2">
-                      <button
-                        onClick={updateVariablesFromContent}
-                        className="inline-flex items-center px-3 py-1 border border-gray-300 dark:border-gray-600 text-xs font-medium rounded text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600"
-                      >
-                        Auto-detect
-                      </button>
-                      <button
-                        onClick={addVariable}
-                        className="inline-flex items-center px-3 py-1 border border-transparent text-xs font-medium rounded text-blue-700 dark:text-blue-300 bg-blue-100 dark:bg-blue-900 hover:bg-blue-200 dark:hover:bg-blue-800"
-                      >
-                        <PlusIcon className="-ml-1 mr-1 h-3 w-3" />
-                        Add Variable
-                      </button>
-                    </div>
-                  </div>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">
-                    Configure sample values for template variables
-                  </p>
-                </div>
-                <div className="p-6">
-                  {templateData.variables.length === 0 ? (
-                    <p className="text-gray-500 dark:text-gray-400 text-center py-4">
-                      No variables defined
-                    </p>
-                  ) : (
-                    <div className="space-y-3">
-                      {templateData.variables.map((variable) => (
-                        <div key={variable} className="flex items-center space-x-3">
-                          <div className="flex-1">
-                            <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
-                              {variable}
-                            </label>
-                            <input
-                              type="text"
-                              value={sampleVariables[variable] || ""}
-                              onChange={(e) => handleVariableChange(variable, e.target.value)}
-                              className="block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-sm"
-                              placeholder={`Sample value for {{${variable}}}`}
-                            />
-                          </div>
-                          <button
-                            onClick={() => removeVariable(variable)}
-                            className="p-2 text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300"
-                          >
-                            <TrashIcon className="h-4 w-4" />
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            {/* Right Panel - Preview */}
-            {showPreview && (
-              <div className="space-y-6">
-                <div className="bg-white dark:bg-gray-800 shadow rounded-lg border border-gray-200 dark:border-gray-700 sticky top-6 max-h-[calc(100vh-8rem)] overflow-hidden flex flex-col">
-                  <div className="flex-shrink-0 px-6 py-4 border-b border-gray-200 dark:border-gray-700">
-                    <div className="flex items-center justify-between">
-                      <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">Live Preview</h3>
-                      <div className="flex items-center space-x-2">
-                        <button
-                          onClick={() => setPreviewMode("html")}
-                          className={`px-3 py-1 text-sm rounded ${
-                            previewMode === "html"
-                              ? "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200"
-                              : "text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200"
-                          }`}
-                        >
-                          HTML
-                        </button>
-                        <button
-                          onClick={() => setPreviewMode("text")}
-                          className={`px-3 py-1 text-sm rounded ${
-                            previewMode === "text"
-                              ? "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200"
-                              : "text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200"
-                          }`}
-                        >
-                          Text
-                        </button>
-                        <button
-                          onClick={() => copyToClipboard(
-                            previewMode === "html" 
-                              ? generatePreview(templateData.htmlContent)
-                              : generatePreview(templateData.textContent)
-                          )}
-                          className="inline-flex items-center px-2 py-1 text-xs bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 rounded hover:bg-gray-200 dark:hover:bg-gray-600"
-                        >
-                          <ClipboardDocumentIcon className="h-3 w-3 mr-1" />
-                          Copy
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Email Details Preview */}
-                  <div className="flex-shrink-0 p-6 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-700">
-                    <div className="space-y-2">
-                      <div>
-                        <label className="block text-xs font-medium text-gray-500 dark:text-gray-400">Subject</label>
-                        <div className="mt-1 p-2 bg-white dark:bg-gray-800 rounded border text-sm">
-                          {generatePreview(templateData.subject) || "No subject set"}
-                        </div>
-                      </div>
-                      <div>
-                        <label className="block text-xs font-medium text-gray-500 dark:text-gray-400">Preview Text</label>
-                        <div className="mt-1 p-2 bg-white dark:bg-gray-800 rounded border text-sm text-gray-600 dark:text-gray-400">
-                          {generatePreview(templateData.previewText) || "No preview text set"}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Content Preview */}
-                  <div className="flex-1 overflow-y-auto p-6">
-                    {previewMode === "html" ? (
-                      <div className="border border-gray-200 dark:border-gray-600 rounded-lg bg-white overflow-hidden">
-                        <iframe
-                          srcDoc={generatePreview(templateData.htmlContent) || "<p>No HTML content set</p>"}
-                          className="w-full h-[400px] border-0"
-                          title="Email Preview"
-                          sandbox="allow-same-origin"
-                        />
-                      </div>
-                    ) : (
-                      <div className="border border-gray-200 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-900 p-4 h-[400px] overflow-y-auto">
-                        <pre className="whitespace-pre-wrap text-sm text-gray-700 dark:text-gray-300 font-mono">
-                          {generatePreview(templateData.textContent) || "No text content set"}
-                        </pre>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
           )}
         </div>
       </div>

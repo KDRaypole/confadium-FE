@@ -66,7 +66,10 @@ function renderEditor(comp: EmailComponentNode, update: (c: Record<string, unkno
 
     case 'EmailText':
       return <div className="space-y-3">
-        <Field label="Content"><TextArea value={p.content || ''} onChange={(v) => update({ content: v })} rows={4} /></Field>
+        <Field label="Content">
+          <TextArea value={p.content || ''} onChange={(v) => update({ content: v })} rows={4} />
+          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Supports HTML tags like &lt;br&gt;, &lt;strong&gt;, &lt;a&gt;</p>
+        </Field>
         <Field label="Type"><Select value={p.textType || 'body'} onChange={(v) => update({ textType: v })} options={[{ value: 'heading', label: 'Heading' }, { value: 'body', label: 'Body' }]} /></Field>
         <Field label="Alignment"><Select value={p.align || 'left'} onChange={(v) => update({ align: v })} options={[{ value: 'left', label: 'Left' }, { value: 'center', label: 'Center' }, { value: 'right', label: 'Right' }]} /></Field>
         <Field label="Color Override"><Color value={p.color || ''} onChange={(v) => update({ color: v })} /></Field>
@@ -113,13 +116,14 @@ function renderEditor(comp: EmailComponentNode, update: (c: Record<string, unkno
           const updated = Array.from({ length: n }).map((_, i) => content[i] || { content: `Column ${i + 1}` });
           update({ columns: n, columnContent: updated });
         }} options={[{ value: '2', label: '2 Columns' }, { value: '3', label: '3 Columns' }]} /></Field>
+        <p className="text-xs text-gray-500 dark:text-gray-400">HTML is supported in column content</p>
         {Array.from({ length: cols }).map((_, i) => (
-          <Field key={i} label={`Column ${i + 1} Content`}>
+          <Field key={i} label={`Column ${i + 1}`}>
             <TextArea value={content[i]?.content || ''} onChange={(v) => {
               const updated = [...content];
               updated[i] = { content: v };
               update({ columnContent: updated });
-            }} rows={2} />
+            }} rows={3} />
           </Field>
         ))}
       </div>;

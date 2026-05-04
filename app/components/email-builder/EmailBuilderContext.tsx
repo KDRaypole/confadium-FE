@@ -65,11 +65,14 @@ interface EmailBuilderProviderProps {
 }
 
 export function EmailBuilderProvider({ initialComponents, initialTheme, children, onChange }: EmailBuilderProviderProps) {
-  const [components, setComponentsState] = useState<EmailComponentNode[]>(initialComponents);
-  const [theme, setThemeState] = useState<EmailTheme>(initialTheme);
+  // Ensure initialComponents is always an array
+  const safeInitialComponents = Array.isArray(initialComponents) ? initialComponents : [];
+
+  const [components, setComponentsState] = useState<EmailComponentNode[]>(safeInitialComponents);
+  const [theme, setThemeState] = useState<EmailTheme>(initialTheme || {});
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
-  const historyRef = useRef<EmailComponentNode[][]>([deepClone(initialComponents)]);
+  const historyRef = useRef<EmailComponentNode[][]>([deepClone(safeInitialComponents)]);
   const historyIndexRef = useRef(0);
 
   const pushHistory = useCallback((newComps: EmailComponentNode[]) => {

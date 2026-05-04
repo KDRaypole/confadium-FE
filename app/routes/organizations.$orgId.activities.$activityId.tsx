@@ -4,6 +4,7 @@ import { useState } from "react";
 import SimpleSelect from "~/components/ui/SimpleSelect";
 import { useActivity } from "~/hooks/useActivities";
 import { useNodeContext } from "~/contexts/NodeContext";
+import { EventTimeline } from "~/components/timeline";
 import type { ActivityAttributes } from "~/lib/api/types";
 import {
   ArrowLeftIcon,
@@ -21,6 +22,7 @@ import {
   BanknotesIcon,
   ChatBubbleLeftRightIcon,
   CheckCircleIcon,
+  BoltIcon,
 } from "@heroicons/react/24/outline";
 
 export const meta: MetaFunction = () => {
@@ -431,6 +433,19 @@ export default function ActivityShow() {
                   <dt className="text-sm font-medium text-gray-500 dark:text-gray-400">Last Updated</dt>
                   <dd className="mt-1 text-sm text-gray-900 dark:text-gray-100">{formatDate(attrs?.updated_at)}</dd>
                 </div>
+              </div>
+            </div>
+
+            {/* Automation History */}
+            <div className="bg-white dark:bg-gray-800 shadow rounded-lg border border-gray-200 dark:border-gray-700">
+              <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+                <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 flex items-center">
+                  <BoltIcon className="h-5 w-5 mr-2" />
+                  Automation History
+                </h3>
+              </div>
+              <div className="p-6">
+                <EventTimeline entityType="activities" entityId={activityId!} />
               </div>
             </div>
           </div>

@@ -95,6 +95,27 @@ export interface ActivityAttributes extends Timestamps {
   completed_at: string | null;
 }
 
+// ── Event Log (Automation History) ─────────────────────────────
+
+export type EventLogStatus = 'completed' | 'failed' | 'skipped';
+
+export interface EventLogAttributes extends Timestamps {
+  action_type: string;
+  status: EventLogStatus;
+  description: string;
+  icon: string;
+  workflow_id: string;
+  trigger_entity_type: string | null;
+  trigger_entity_id: string | null;
+  trigger_action: string | null;
+  result_data: Record<string, unknown>;
+  parameters: Record<string, unknown>;
+  error_message: string | null;
+  executed_at: string;
+  configuration_name: string;
+  module_name: string;
+}
+
 // ── Call ─────────────────────────────────────────────────────
 
 export type CallDirection = 'inbound' | 'outbound';
@@ -326,9 +347,29 @@ export interface TriggerableModelTrigger {
   actions: TriggerableActionPreset[];
 }
 
+export interface TriggerableModelField {
+  name: string;
+  type: string;
+}
+
+export interface TriggerableModelAssociation {
+  name: string;
+  model: string;
+  fields: TriggerableModelField[];
+}
+
 export interface TriggerableModel {
   model: string;
   triggers: TriggerableModelTrigger[];
+  fields?: TriggerableModelField[];
+  associations?: TriggerableModelAssociation[];
+}
+
+export interface EmailTemplateVariable {
+  name: string;
+  path: string[];
+  root: string;
+  is_nested: boolean;
 }
 
 export interface TriggerableSchema {

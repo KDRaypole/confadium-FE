@@ -6,6 +6,7 @@ import { useContact } from "~/hooks/useContacts";
 import { useTags } from "~/hooks/useTags";
 import { useNodeContext } from "~/contexts/NodeContext";
 import { getTagColorClass } from "~/components/tags/TagsData";
+import { EventTimeline } from "~/components/timeline";
 import type { ContactAttributes } from "~/lib/api/types";
 import {
   ArrowLeftIcon,
@@ -556,6 +557,19 @@ export default function ContactShow() {
                     </div>
                   )}
                 </div>
+              </div>
+            </div>
+
+            {/* Automation History */}
+            <div className="bg-white dark:bg-gray-800 shadow rounded-lg border border-gray-200 dark:border-gray-700">
+              <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+                <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 flex items-center">
+                  <BoltIcon className="h-5 w-5 mr-2" />
+                  Automation History
+                </h3>
+              </div>
+              <div className="p-6">
+                <EventTimeline entityType="contacts" entityId={contactId!} />
               </div>
             </div>
 

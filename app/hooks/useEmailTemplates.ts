@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useParams } from '@remix-run/react';
-import { emailTemplatesAPI } from '~/lib/api/emailTemplates';
+import { emailTemplatesAPI, toTemplateAttributes, type EmailTemplateCreateData, type EmailTemplateUpdateData } from '~/lib/api/emailTemplates';
 import type { EmailTemplateAttributes, EmailTemplateCategory } from '~/lib/api/types';
 import type { Resource } from '~/lib/api/client';
 import { useNodeFilter, useNodeCacheKey, useNodeAttrs } from './useNodeFilter';
@@ -47,14 +47,18 @@ export const useEmailTemplates = () => {
     queryClient.invalidateQueries({ queryKey: EMAIL_TEMPLATES_QUERY_KEYS.all });
 
   const createMutation = useMutation({
-    mutationFn: (attrs: Partial<EmailTemplateAttributes>) =>
-      emailTemplatesAPI.createTemplate(orgId, { ...nodeAttrs, ...attrs }),
+    mutationFn: (data: Partial<EmailTemplateCreateData>) => {
+      const attrs = toTemplateAttributes(data);
+      return emailTemplatesAPI.createTemplate(orgId, { ...nodeAttrs, ...attrs });
+    },
     onSuccess: invalidate,
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, attrs }: { id: string; attrs: Partial<EmailTemplateAttributes> }) =>
-      emailTemplatesAPI.updateTemplate(id, attrs),
+    mutationFn: ({ id, data }: { id: string; data: Partial<EmailTemplateUpdateData> }) => {
+      const attrs = toTemplateAttributes(data);
+      return emailTemplatesAPI.updateTemplate(id, attrs);
+    },
     onSuccess: invalidate,
   });
 
@@ -67,11 +71,12 @@ export const useEmailTemplates = () => {
     mutationFn: async (id: string) => {
       const source = await emailTemplatesAPI.getTemplateById(id);
       const src = source.data.attributes;
+      // Copy attributes directly (they're already in snake_case)
       const copyAttrs: Partial<EmailTemplateAttributes> = {
         ...src,
         name: `${src.name} (copy)`,
       };
-      return emailTemplatesAPI.createTemplate(orgId, copyAttrs);
+      return emailTemplatesAPI.createTemplate(orgId, { ...nodeAttrs, ...copyAttrs });
     },
     onSuccess: invalidate,
   });
@@ -107,8 +112,10 @@ export const useEmailTemplate = (id?: string) => {
   });
 
   const updateMutation = useMutation({
-    mutationFn: (attrs: Partial<EmailTemplateAttributes>) =>
-      emailTemplatesAPI.updateTemplate(id as string, attrs),
+    mutationFn: (data: Partial<EmailTemplateUpdateData>) => {
+      const attrs = toTemplateAttributes(data);
+      return emailTemplatesAPI.updateTemplate(id as string, attrs);
+    },
     onSuccess: () =>
       queryClient.invalidateQueries({ queryKey: EMAIL_TEMPLATES_QUERY_KEYS.all }),
   });

@@ -1,59 +1,114 @@
-import { useState, useCallback, useMemo } from "react";
+import { useState, useCallback, useEffect, useRef, useMemo } from "react";
 import { EmailBuilderProvider, useEmailBuilder } from "./EmailBuilderContext";
 import EmailComponentRenderer from "./EmailComponentRenderer";
 import EmailComponentPalette from "./EmailComponentPalette";
 import EmailComponentEditor from "./EmailComponentEditor";
 import EmailThemeEditor from "./EmailThemeEditor";
-import HTMLEditor from "~/components/email/HTMLEditor";
+import EmailVariablesPanel from "./EmailVariablesPanel";
 import type { EmailComponentNode, EmailTheme } from "~/lib/api/types";
 import { compileEmailHtml, compileEmailText } from "~/lib/email/compiler";
+import { parseEmailHtml, isBuilderHtml, extractVariablesFromComponents } from "~/lib/email/parser";
 import {
   ArrowUturnLeftIcon,
   ArrowUturnRightIcon,
   EyeIcon,
   Squares2X2Icon,
-  CodeBracketIcon,
   PaintBrushIcon,
   Cog6ToothIcon,
   DevicePhoneMobileIcon,
   ComputerDesktopIcon,
+  VariableIcon,
 } from "@heroicons/react/24/outline";
 
-type EditorMode = 'visual' | 'code' | 'preview';
-type SidebarTab = 'components' | 'properties' | 'theme';
+type EditorMode = 'visual' | 'preview';
+type SidebarTab = 'components' | 'properties' | 'theme' | 'variables';
 type PreviewDevice = 'desktop' | 'mobile';
 
 interface EmailBuilderProps {
   initialComponents: EmailComponentNode[];
   initialTheme: EmailTheme;
   initialHtmlContent: string;
-  onSave: (data: { html_content: string; text_content: string; structure: EmailComponentNode[]; theme: EmailTheme }) => void;
+  onSave: (data: { html_content: string; text_content: string; structure: EmailComponentNode[]; theme: EmailTheme; variables: string[] }) => void;
   saving?: boolean;
 }
 
 export default function EmailBuilder({ initialComponents, initialTheme, initialHtmlContent, onSave, saving }: EmailBuilderProps) {
-  const [components, setComponents] = useState<EmailComponentNode[]>(initialComponents);
-  const [emailTheme, setEmailTheme] = useState<EmailTheme>(initialTheme);
-  const [rawHtml, setRawHtml] = useState(initialHtmlContent);
-  const [mode, setMode] = useState<EditorMode>(initialComponents.length > 0 ? 'visual' : initialHtmlContent ? 'code' : 'visual');
+  // Ensure initialComponents is always an array
+  const safeInitialComponents = Array.isArray(initialComponents) ? initialComponents : [];
+  const safeInitialTheme = initialTheme || {};
+
+  // If no components provided but HTML exists, try to parse components from HTML
+  const [parsedData] = useState(() => {
+    if (safeInitialComponents.length === 0 && initialHtmlContent && isBuilderHtml(initialHtmlContent)) {
+      const parsed = parseEmailHtml(initialHtmlContent);
+      if (parsed && parsed.components.length > 0) {
+        return parsed;
+      }
+    }
+    return null;
+  });
+
+  const [components, setComponents] = useState<EmailComponentNode[]>(
+    parsedData?.components || safeInitialComponents
+  );
+  const [emailTheme, setEmailTheme] = useState<EmailTheme>(
+    parsedData?.theme || safeInitialTheme
+  );
+
+  // Initialize rawHtml from initialHtmlContent OR compile from components
+  const [rawHtml, setRawHtml] = useState(() => {
+    // If we have HTML content, use it
+    if (initialHtmlContent) {
+      return initialHtmlContent;
+    }
+    // Otherwise compile from components (for new templates or when structure exists but no HTML)
+    const comps = parsedData?.components || safeInitialComponents;
+    const theme = parsedData?.theme || safeInitialTheme;
+    if (comps.length > 0) {
+      return compileEmailHtml(comps, theme);
+    }
+    return '';
+  });
+  const [mode, setMode] = useState<EditorMode>('visual');
+
+  // Track if we've received HTML content (for async loading)
+  const hasInitializedRef = useRef(!!initialHtmlContent || safeInitialComponents.length > 0);
+
+  // Handle async template loading - update state when initialHtmlContent arrives
+  useEffect(() => {
+    // Only run if we haven't initialized yet and now have content
+    if (!hasInitializedRef.current && initialHtmlContent) {
+      hasInitializedRef.current = true;
+
+      // Try to parse components from HTML
+      if (isBuilderHtml(initialHtmlContent)) {
+        const parsed = parseEmailHtml(initialHtmlContent);
+        if (parsed && parsed.components.length > 0) {
+          setComponents(parsed.components);
+          setEmailTheme(parsed.theme);
+          setRawHtml(initialHtmlContent);
+          return;
+        }
+      }
+
+      // If we can't parse, just set the raw HTML
+      setRawHtml(initialHtmlContent);
+    }
+  }, [initialHtmlContent]);
 
   const handleBuilderChange = useCallback((comps: EmailComponentNode[], theme: EmailTheme) => {
     setComponents(comps);
     setEmailTheme(theme);
-    // Keep raw HTML in sync when in visual mode
+    // Keep raw HTML in sync
     setRawHtml(compileEmailHtml(comps, theme));
   }, []);
 
   const handleSave = useCallback(() => {
-    if (mode === 'visual') {
-      const html = compileEmailHtml(components, emailTheme);
-      const text = compileEmailText(components);
-      onSave({ html_content: html, text_content: text, structure: components, theme: emailTheme });
-    } else {
-      // Code mode — save raw HTML, clear structure since it's hand-edited
-      onSave({ html_content: rawHtml, text_content: '', structure: [], theme: emailTheme });
-    }
-  }, [mode, components, emailTheme, rawHtml, onSave]);
+    const html = compileEmailHtml(components, emailTheme);
+    const text = compileEmailText(components);
+    const variables = extractVariablesFromComponents(components);
+    onSave({ html_content: html, text_content: text, structure: components, theme: emailTheme, variables });
+  }, [components, emailTheme, onSave]);
 
   return (
     <div className="h-[calc(100vh-12rem)] flex flex-col border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
@@ -64,13 +119,7 @@ export default function EmailBuilder({ initialComponents, initialTheme, initialH
             onClick={() => setMode('visual')}
             className={`inline-flex items-center px-3 py-1.5 text-xs font-medium rounded ${mode === 'visual' ? 'bg-white dark:bg-gray-600 text-purple-600 shadow-sm' : 'text-gray-600 dark:text-gray-400'}`}
           >
-            <Squares2X2Icon className="h-3.5 w-3.5 mr-1" /> Visual
-          </button>
-          <button
-            onClick={() => setMode('code')}
-            className={`inline-flex items-center px-3 py-1.5 text-xs font-medium rounded ${mode === 'code' ? 'bg-white dark:bg-gray-600 text-purple-600 shadow-sm' : 'text-gray-600 dark:text-gray-400'}`}
-          >
-            <CodeBracketIcon className="h-3.5 w-3.5 mr-1" /> Code
+            <Squares2X2Icon className="h-3.5 w-3.5 mr-1" /> Edit
           </button>
           <button
             onClick={() => setMode('preview')}
@@ -96,14 +145,6 @@ export default function EmailBuilder({ initialComponents, initialTheme, initialH
             <VisualBuilder />
           </EmailBuilderProvider>
         )}
-        {mode === 'code' && (
-          <div className="h-full">
-            <HTMLEditor
-              value={rawHtml}
-              onChange={setRawHtml}
-            />
-          </div>
-        )}
         {mode === 'preview' && (
           <EmailPreview html={rawHtml} />
         )}
@@ -113,24 +154,40 @@ export default function EmailBuilder({ initialComponents, initialTheme, initialH
 }
 
 function VisualBuilder() {
-  const { undo, redo, canUndo, canRedo, selectedId, theme } = useEmailBuilder();
+  const { undo, redo, canUndo, canRedo, selectedId, theme, components } = useEmailBuilder();
   const [sidebarTab, setSidebarTab] = useState<SidebarTab>('components');
 
   const activeTab = selectedId && sidebarTab === 'components' ? 'properties' : sidebarTab;
+
+  // Count detected variables for badge
+  const variableCount = useMemo(() => {
+    return extractVariablesFromComponents(components).length;
+  }, [components]);
 
   return (
     <div className="flex h-full">
       {/* Sidebar */}
       <div className="w-64 flex-shrink-0 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 flex flex-col">
         <div className="flex border-b border-gray-200 dark:border-gray-700">
-          <button onClick={() => setSidebarTab('components')} className={`flex-1 px-3 py-2 text-xs font-medium ${activeTab === 'components' ? 'text-purple-600 border-b-2 border-purple-600' : 'text-gray-500 hover:text-gray-700'}`}>
+          <button onClick={() => setSidebarTab('components')} className={`flex-1 px-2 py-2 text-xs font-medium ${activeTab === 'components' ? 'text-purple-600 border-b-2 border-purple-600' : 'text-gray-500 hover:text-gray-700'}`}>
             <Squares2X2Icon className="h-4 w-4 mx-auto mb-0.5" /> Add
           </button>
-          <button onClick={() => setSidebarTab('properties')} className={`flex-1 px-3 py-2 text-xs font-medium ${activeTab === 'properties' ? 'text-purple-600 border-b-2 border-purple-600' : 'text-gray-500 hover:text-gray-700'}`}>
+          <button onClick={() => setSidebarTab('properties')} className={`flex-1 px-2 py-2 text-xs font-medium ${activeTab === 'properties' ? 'text-purple-600 border-b-2 border-purple-600' : 'text-gray-500 hover:text-gray-700'}`}>
             <Cog6ToothIcon className="h-4 w-4 mx-auto mb-0.5" /> Edit
           </button>
-          <button onClick={() => setSidebarTab('theme')} className={`flex-1 px-3 py-2 text-xs font-medium ${activeTab === 'theme' ? 'text-purple-600 border-b-2 border-purple-600' : 'text-gray-500 hover:text-gray-700'}`}>
+          <button onClick={() => setSidebarTab('theme')} className={`flex-1 px-2 py-2 text-xs font-medium ${activeTab === 'theme' ? 'text-purple-600 border-b-2 border-purple-600' : 'text-gray-500 hover:text-gray-700'}`}>
             <PaintBrushIcon className="h-4 w-4 mx-auto mb-0.5" /> Theme
+          </button>
+          <button onClick={() => setSidebarTab('variables')} className={`flex-1 px-2 py-2 text-xs font-medium relative ${activeTab === 'variables' ? 'text-purple-600 border-b-2 border-purple-600' : 'text-gray-500 hover:text-gray-700'}`}>
+            <VariableIcon className="h-4 w-4 mx-auto mb-0.5" />
+            <span className="flex items-center justify-center">
+              Vars
+              {variableCount > 0 && (
+                <span className="ml-1 inline-flex items-center justify-center h-4 min-w-4 px-1 text-[10px] font-bold rounded-full bg-purple-100 text-purple-600 dark:bg-purple-900 dark:text-purple-300">
+                  {variableCount}
+                </span>
+              )}
+            </span>
           </button>
         </div>
         <div className="flex items-center justify-between px-3 py-1 border-b border-gray-100 dark:border-gray-700">
@@ -143,6 +200,7 @@ function VisualBuilder() {
           {activeTab === 'components' && <EmailComponentPalette />}
           {activeTab === 'properties' && <EmailComponentEditor />}
           {activeTab === 'theme' && <EmailThemeEditor />}
+          {activeTab === 'variables' && <EmailVariablesPanel />}
         </div>
       </div>
 
@@ -179,18 +237,19 @@ function EmailPreview({ html }: { html: string }) {
           <DevicePhoneMobileIcon className="h-4 w-4" />
         </button>
       </div>
-      <div className="flex-1 flex justify-center p-4 overflow-auto">
+      <div className="flex-1 flex justify-center items-start p-4 overflow-auto">
         <iframe
           srcDoc={html}
           title="Email Preview"
           style={{
             width: device === 'mobile' ? '375px' : '620px',
+            minHeight: '500px',
             height: '100%',
             border: '1px solid #e5e7eb',
             borderRadius: '8px',
             backgroundColor: '#ffffff',
           }}
-          sandbox="allow-same-origin"
+          sandbox="allow-same-origin allow-popups"
         />
       </div>
     </div>

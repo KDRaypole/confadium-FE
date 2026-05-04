@@ -111,10 +111,14 @@ function renderPreview(node: EmailComponentNode, s: Required<EmailTheme>) {
 
     case 'EmailText': {
       const isH = p.textType === 'heading';
+      const textContent = p.content || 'Your text here';
+      // Check if content contains HTML tags (like <br>, <a>, <strong>, etc.)
+      const hasHtml = /<[^>]+>/.test(textContent);
       return (
-        <div style={{ padding: '8px 40px', fontFamily: s.fontFamily, fontSize: isH ? s.headingFontSize : s.bodyFontSize, fontWeight: isH ? 'bold' : 'normal', color: p.color || (isH ? s.headingColor : s.textColor), textAlign: p.align || 'left', lineHeight: 1.6 }}>
-          {p.content || 'Your text here'}
-        </div>
+        <div
+          style={{ padding: '8px 40px', fontFamily: s.fontFamily, fontSize: isH ? s.headingFontSize : s.bodyFontSize, fontWeight: isH ? 'bold' : 'normal', color: p.color || (isH ? s.headingColor : s.textColor), textAlign: p.align || 'left', lineHeight: 1.6 }}
+          {...(hasHtml ? { dangerouslySetInnerHTML: { __html: textContent } } : { children: textContent })}
+        />
       );
     }
 
@@ -152,11 +156,18 @@ function renderPreview(node: EmailComponentNode, s: Required<EmailTheme>) {
       const content = p.columnContent || [];
       return (
         <div style={{ padding: '8px 30px', display: 'flex', gap: '10px' }}>
-          {Array.from({ length: cols }).map((_, i) => (
-            <div key={i} style={{ flex: 1, padding: '10px', fontSize: s.bodyFontSize, color: s.textColor, fontFamily: s.fontFamily, lineHeight: 1.6, backgroundColor: '#f9fafb', borderRadius: '4px', minHeight: '40px' }}>
-              {content[i]?.content || `Column ${i + 1}`}
-            </div>
-          ))}
+          {Array.from({ length: cols }).map((_, i) => {
+            const cellContent = content[i]?.content || `Column ${i + 1}`;
+            // Check if content contains HTML tags
+            const hasHtml = /<[^>]+>/.test(cellContent);
+            return (
+              <div
+                key={i}
+                style={{ flex: 1, padding: '10px', fontSize: s.bodyFontSize, color: s.textColor, fontFamily: s.fontFamily, lineHeight: 1.6, backgroundColor: '#f9fafb', borderRadius: '4px', minHeight: '40px' }}
+                {...(hasHtml ? { dangerouslySetInnerHTML: { __html: cellContent } } : { children: cellContent })}
+              />
+            );
+          })}
         </div>
       );
     }
@@ -174,14 +185,17 @@ function renderPreview(node: EmailComponentNode, s: Required<EmailTheme>) {
       );
     }
 
-    case 'EmailFooter':
+    case 'EmailFooter': {
+      const footerText = p.text || '© 2026 Company';
+      const hasHtml = /<[^>]+>/.test(footerText);
       return (
         <div style={{ padding: '24px 40px', textAlign: 'center', fontSize: s.smallFontSize, color: '#9ca3af', fontFamily: s.fontFamily, lineHeight: 1.6 }}>
-          {p.text || '© 2026 Company'}
+          {hasHtml ? <span dangerouslySetInnerHTML={{ __html: footerText }} /> : footerText}
           {p.companyAddress && <><br />{p.companyAddress}</>}
           {p.unsubscribeUrl && <><br /><span style={{ color: s.linkColor, textDecoration: 'underline' }}>Unsubscribe</span></>}
         </div>
       );
+    }
 
     case 'EmailHtml':
       return (
