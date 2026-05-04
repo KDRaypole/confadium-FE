@@ -193,6 +193,23 @@ function renderPreview(node: EmailComponentNode, s: Required<EmailTheme>) {
           {hasHtml ? <span dangerouslySetInnerHTML={{ __html: footerText }} /> : footerText}
           {p.companyAddress && <><br />{p.companyAddress}</>}
           {p.unsubscribeUrl && <><br /><span style={{ color: s.linkColor, textDecoration: 'underline' }}>Unsubscribe</span></>}
+          {/* Confadium branding */}
+          <div style={{ marginTop: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
+            <svg width="16" height="16" viewBox="0 0 32 32" style={{ flexShrink: 0 }}>
+              <defs>
+                <linearGradient id="email-confadium-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" style={{ stopColor: '#6366f1' }} />
+                  <stop offset="100%" style={{ stopColor: '#8b5cf6' }} />
+                </linearGradient>
+              </defs>
+              <rect x="2" y="2" width="28" height="28" rx="6" fill="url(#email-confadium-grad)" />
+              <path d="M6 9h6v3a2 2 0 100 4v3H6a1 1 0 01-1-1v-8a1 1 0 011-1z" fill="white" fillOpacity="0.85" />
+              <path d="M14 9h6a1 1 0 011 1v8a1 1 0 01-1 1h-6v-3a2 2 0 110-4z" fill="white" />
+            </svg>
+            <span style={{ fontSize: '11px', color: '#9ca3af' }}>
+              Created using <span style={{ color: '#8b5cf6' }}>Confadium</span>
+            </span>
+          </div>
         </div>
       );
     }

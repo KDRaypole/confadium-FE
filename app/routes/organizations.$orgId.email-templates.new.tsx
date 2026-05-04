@@ -398,6 +398,8 @@ export default function CreateEmailTemplate() {
                 initialComponents={selectedPreset.components}
                 initialTheme={selectedPreset.theme}
                 initialHtmlContent=""
+                subject={templateData.subject}
+                previewText={templateData.previewText}
                 onSave={async (data) => {
                   if (!templateData.name.trim()) {
                     alert("Please enter a template name");

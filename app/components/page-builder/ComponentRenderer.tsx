@@ -853,6 +853,41 @@ function FooterComponent({ node }: { node: PageComponentNode }) {
       }}>
         {text || '\u00A9 2026 Your Company. All rights reserved.'}
       </div>
+      {/* Confadium branding */}
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginTop: '1rem',
+        gap: '6px',
+      }}>
+        <svg width="16" height="16" viewBox="0 0 32 32" style={{ flexShrink: 0 }}>
+          <defs>
+            <linearGradient id="confadium-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" style={{ stopColor: '#6366f1' }} />
+              <stop offset="100%" style={{ stopColor: '#8b5cf6' }} />
+            </linearGradient>
+          </defs>
+          <rect x="2" y="2" width="28" height="28" rx="6" fill="url(#confadium-grad)" />
+          <path d="M6 9 h6 v3 a2 2 0 1 0 0 4 v3 h-6 a1 1 0 0 1-1-1 v-8 a1 1 0 0 1 1-1z" fill="white" fillOpacity="0.85" />
+          <path d="M14 9 h6 a1 1 0 0 1 1 1 v8 a1 1 0 0 1-1 1 h-6 v-3 a2 2 0 1 1 0-4 z" fill="white" />
+        </svg>
+        <span style={{
+          fontSize: '0.6875rem',
+          color: '#9ca3af',
+          ...paragraphFontStyle(theme),
+        }}>
+          Created using{' '}
+          <a
+            href="https://confadium.com"
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{ color: '#8b5cf6', textDecoration: 'none' }}
+          >
+            Confadium
+          </a>
+        </span>
+      </div>
     </footer>
   );
 }

@@ -43,6 +43,43 @@ export default function EmailTemplateForm({
   const isEditing = !!template;
   const isSaving = isCreating || isUpdating;
 
+  // Extract variables from content using {{variable}} pattern
+  const extractVariables = (content: string): string[] => {
+    const regex = /\{\{(\w+)\}\}/g;
+    const matches: string[] = [];
+    let match;
+    while ((match = regex.exec(content)) !== null) {
+      if (!matches.includes(match[1])) {
+        matches.push(match[1]);
+      }
+    }
+    return matches;
+  };
+
+  // Auto-detect variables from all content fields
+  useEffect(() => {
+    const allContent = [
+      formData.subject,
+      formData.previewText,
+      formData.htmlContent,
+      formData.textContent
+    ].join(' ');
+
+    const detectedVariables = extractVariables(allContent);
+
+    // Only update if there are new variables detected that aren't already in the list
+    setFormData(prev => {
+      const newVariables = detectedVariables.filter(v => !prev.variables.includes(v));
+      if (newVariables.length === 0) {
+        return prev; // No change needed
+      }
+      return {
+        ...prev,
+        variables: [...prev.variables, ...newVariables]
+      };
+    });
+  }, [formData.subject, formData.previewText, formData.htmlContent, formData.textContent]);
+
   // Load template data when editing
   useEffect(() => {
     if (template) {

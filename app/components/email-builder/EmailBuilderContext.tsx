@@ -7,6 +7,8 @@ interface EmailBuilderState {
   selectedId: string | null;
   history: EmailComponentNode[][];
   historyIndex: number;
+  subject: string;
+  previewText: string;
 }
 
 interface EmailBuilderActions {
@@ -62,9 +64,11 @@ interface EmailBuilderProviderProps {
   initialTheme: EmailTheme;
   children: React.ReactNode;
   onChange?: (components: EmailComponentNode[], theme: EmailTheme) => void;
+  subject?: string;
+  previewText?: string;
 }
 
-export function EmailBuilderProvider({ initialComponents, initialTheme, children, onChange }: EmailBuilderProviderProps) {
+export function EmailBuilderProvider({ initialComponents, initialTheme, children, onChange, subject = '', previewText = '' }: EmailBuilderProviderProps) {
   // Ensure initialComponents is always an array
   const safeInitialComponents = Array.isArray(initialComponents) ? initialComponents : [];
 
@@ -163,6 +167,7 @@ export function EmailBuilderProvider({ initialComponents, initialTheme, children
   const value: EmailBuilderContextType = {
     components, theme, selectedId,
     history: historyRef.current, historyIndex: historyIndexRef.current,
+    subject, previewText,
     setComponents, setTheme, select, getComponent, manipulate,
     addComponent, removeComponent, moveComponent, duplicateComponent,
     undo, redo,

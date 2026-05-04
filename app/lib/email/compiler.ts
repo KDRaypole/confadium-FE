@@ -298,9 +298,32 @@ function compileFooter(node: EmailComponentNode, s: Required<EmailTheme>): strin
     ? `<br>${esc(companyAddress)}`
     : '';
 
+  // Confadium branding with inline SVG icon (using img tag for better email compatibility)
+  // Base64-encoded SVG of the Confadium logo
+  const confadiumIconSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="16" height="16"><defs><linearGradient id="g" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="%236366f1"/><stop offset="100%" stop-color="%238b5cf6"/></linearGradient></defs><rect x="2" y="2" width="28" height="28" rx="6" fill="url(%23g)"/><path d="M6 9h6v3a2 2 0 100 4v3H6a1 1 0 01-1-1v-8a1 1 0 011-1z" fill="white" fill-opacity=".85"/><path d="M14 9h6a1 1 0 011 1v8a1 1 0 01-1 1h-6v-3a2 2 0 110-4z" fill="white"/></svg>`;
+  const confadiumIconDataUri = `data:image/svg+xml,${encodeURIComponent(confadiumIconSvg)}`;
+
+  const confadiumBranding = `
+              <table role="presentation" border="0" cellpadding="0" cellspacing="0" align="center" style="margin: 16px auto 0;">
+                <tr>
+                  <td align="center" style="padding: 8px 0;">
+                    <table role="presentation" border="0" cellpadding="0" cellspacing="0">
+                      <tr>
+                        <td valign="middle" style="padding-right: 6px;">
+                          <img src="${confadiumIconDataUri}" alt="Confadium" width="16" height="16" style="display: block; border: 0; outline: none;" />
+                        </td>
+                        <td valign="middle" style="font-family: ${s.fontFamily}; font-size: 11px; color: #9ca3af;">
+                          Created using <a href="https://confadium.com" style="color: #8b5cf6; text-decoration: none;">Confadium</a>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>`;
+
   return `          <tr data-email-component="${encoded}">
             <td align="center" valign="top" style="padding: 24px 40px; font-family: ${s.fontFamily}; font-size: ${s.smallFontSize}; color: #9ca3af; text-align: center; line-height: 1.6;">
-              ${text || ''}${addr}${unsub}
+              ${text || ''}${addr}${unsub}${confadiumBranding}
             </td>
           </tr>`;
 }

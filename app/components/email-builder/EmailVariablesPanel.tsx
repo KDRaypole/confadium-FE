@@ -4,14 +4,32 @@ import { extractVariablesFromComponents } from "~/lib/email/parser";
 import { VariableIcon, ClipboardIcon, CheckIcon } from "@heroicons/react/24/outline";
 import { useState } from "react";
 
+// Extract variables from a string using {{variable}} pattern
+function extractVariablesFromString(content: string): string[] {
+  const regex = /\{\{([^}]+)\}\}/g;
+  const matches: string[] = [];
+  let match;
+  while ((match = regex.exec(content)) !== null) {
+    const varName = match[1].trim();
+    if (!matches.includes(varName)) {
+      matches.push(varName);
+    }
+  }
+  return matches;
+}
+
 export default function EmailVariablesPanel() {
-  const { components } = useEmailBuilder();
+  const { components, subject, previewText } = useEmailBuilder();
   const [copiedVar, setCopiedVar] = useState<string | null>(null);
 
-  // Extract variables from all components
+  // Extract variables from all sources: components, subject, and previewText
   const variables = useMemo(() => {
-    return extractVariablesFromComponents(components);
-  }, [components]);
+    const componentVars = extractVariablesFromComponents(components);
+    const subjectVars = extractVariablesFromString(subject || '');
+    const previewVars = extractVariablesFromString(previewText || '');
+    // Combine and dedupe
+    return [...new Set([...componentVars, ...subjectVars, ...previewVars])];
+  }, [components, subject, previewText]);
 
   const copyToClipboard = (varName: string) => {
     navigator.clipboard.writeText(`{{${varName}}}`);
