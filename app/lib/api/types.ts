@@ -520,6 +520,45 @@ export interface PageTheme {
   selectedTheme?: string;
 }
 
+// ── Background Configuration ─────────────────────────────────
+
+export interface BackgroundLayer {
+  id: string;
+  type: 'svg' | 'html';
+  content: string;
+  position?: 'absolute' | 'fixed';
+  zIndex?: number;
+  opacity?: number;
+}
+
+export interface BackgroundImage {
+  url: string;
+  size?: 'cover' | 'contain' | 'auto' | string;
+  position?: string;
+  repeat?: 'no-repeat' | 'repeat' | 'repeat-x' | 'repeat-y';
+  attachment?: 'scroll' | 'fixed' | 'local';
+}
+
+export interface BackgroundGradient {
+  type: 'linear' | 'radial' | 'conic';
+  angle?: number; // for linear gradients
+  stops: Array<{ color: string; position: number }>;
+}
+
+export interface BackgroundOverlay {
+  color: string;
+  opacity: number;
+  blendMode?: 'normal' | 'multiply' | 'screen' | 'overlay' | 'darken' | 'lighten';
+}
+
+export interface BackgroundConfig {
+  color?: string;
+  gradient?: BackgroundGradient;
+  image?: BackgroundImage;
+  overlay?: BackgroundOverlay;
+  layers?: BackgroundLayer[];
+}
+
 export interface PageSettings {
   seoTitle?: string;
   seoDescription?: string;

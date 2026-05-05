@@ -1,7 +1,19 @@
 import type { MetaFunction } from "@remix-run/node";
 import { Link, useParams } from "@remix-run/react";
-import { ChartBarIcon, DocumentArrowDownIcon, CalendarIcon, CurrencyDollarIcon, UsersIcon, PhoneIcon } from "@heroicons/react/24/outline";
+import {
+  ChartBarIcon,
+  DocumentArrowDownIcon,
+  CalendarIcon,
+  CurrencyDollarIcon,
+  UsersIcon,
+  PhoneIcon,
+  PlusIcon,
+  ClipboardDocumentListIcon,
+  TrashIcon,
+} from "@heroicons/react/24/outline";
 import { useOptionalNodeContext } from "~/contexts/NodeContext";
+import { useReports } from "~/hooks/useReports";
+import type { Report } from "~/hooks/useReports";
 
 export const meta: MetaFunction = () => {
   return [
@@ -10,91 +22,18 @@ export const meta: MetaFunction = () => {
   ];
 };
 
-interface ReportAttributes {
-  name: string;
-  description: string;
-  category: "sales" | "contacts" | "calls" | "activities";
-  last_generated: string;
-  icon: string;
-}
-
-interface Report {
-  id: string;
-  type: string;
-  attributes: ReportAttributes;
-}
-
-const mockReports: Report[] = [
-  {
-    id: "1",
-    type: "report",
-    attributes: {
-      name: "Sales Performance",
-      description: "Monthly sales performance and revenue trends",
-      category: "sales",
-      last_generated: "2024-01-15",
-      icon: "chart"
-    }
-  },
-  {
-    id: "2",
-    type: "report",
-    attributes: {
-      name: "Contact Activity Summary",
-      description: "Contact engagement and interaction summary",
-      category: "contacts",
-      last_generated: "2024-01-14",
-      icon: "users"
-    }
-  },
-  {
-    id: "3",
-    type: "report",
-    attributes: {
-      name: "Call Log Analysis",
-      description: "Call volume, duration, and success rate analysis",
-      category: "calls",
-      last_generated: "2024-01-13",
-      icon: "phone"
-    }
-  },
-  {
-    id: "4",
-    type: "report",
-    attributes: {
-      name: "Deal Pipeline Report",
-      description: "Current deals status and pipeline health",
-      category: "sales",
-      last_generated: "2024-01-12",
-      icon: "currency"
-    }
-  },
-  {
-    id: "5",
-    type: "report",
-    attributes: {
-      name: "Activity Timeline",
-      description: "Timeline of all customer interactions and activities",
-      category: "activities",
-      last_generated: "2024-01-11",
-      icon: "calendar"
-    }
-  }
-];
-
 export default function ReportsIndex() {
   const params = useParams();
   const orgId = params.orgId;
   const nodeCtx = useOptionalNodeContext();
-  
-  const getCategoryColor = (category: ReportAttributes["category"]) => {
-    switch (category) {
-      case "sales":
-        return "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200";
+  const { reports, loading, deleteReport, total } = useReports();
+
+  const getEntityColor = (entity: string) => {
+    switch (entity) {
       case "contacts":
         return "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200";
-      case "calls":
-        return "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200";
+      case "deals":
+        return "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200";
       case "activities":
         return "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200";
       default:
@@ -102,20 +41,24 @@ export default function ReportsIndex() {
     }
   };
 
-  const getIcon = (iconType: string) => {
-    switch (iconType) {
-      case "chart":
-        return <ChartBarIcon className="h-6 w-6" />;
-      case "users":
+  const getEntityIcon = (entity: string) => {
+    switch (entity) {
+      case "contacts":
         return <UsersIcon className="h-6 w-6" />;
-      case "phone":
-        return <PhoneIcon className="h-6 w-6" />;
-      case "currency":
+      case "deals":
         return <CurrencyDollarIcon className="h-6 w-6" />;
-      case "calendar":
-        return <CalendarIcon className="h-6 w-6" />;
+      case "activities":
+        return <ClipboardDocumentListIcon className="h-6 w-6" />;
       default:
         return <ChartBarIcon className="h-6 w-6" />;
+    }
+  };
+
+  const handleDelete = async (reportId: string, e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (confirm("Are you sure you want to delete this report?")) {
+      await deleteReport(reportId);
     }
   };
 
@@ -126,17 +69,17 @@ export default function ReportsIndex() {
         <div className="flex-1 min-w-0">
           <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Reports</h1>
           <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
-            Generate insights and analytics from your CRM data
+            Create custom reports with filters, groupings, and visualizations
           </p>
         </div>
         <div className="mt-4 flex md:mt-0 md:ml-4">
-          <button
-            type="button"
-            className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+          <Link
+            to={`/organizations/${orgId}/reports/new`}
+            className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-brand-primary hover:bg-brand-primary/90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-primary"
           >
-            <ChartBarIcon className="-ml-1 mr-2 h-5 w-5" aria-hidden="true" />
+            <PlusIcon className="-ml-1 mr-2 h-5 w-5" aria-hidden="true" />
             Create Report
-          </button>
+          </Link>
         </div>
       </div>
 
@@ -210,56 +153,87 @@ export default function ReportsIndex() {
       {/* Available Reports */}
       <div className="bg-white dark:bg-gray-800 shadow rounded-lg">
         <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
-          <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">Available Reports</h3>
-          <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
-            Generate and download detailed reports for analysis
-          </p>
-        </div>
-        <div className="divide-y divide-gray-200 dark:divide-gray-700">
-          {mockReports.map((report) => (
-            <div key={report.id} className="p-6 hover:bg-gray-50 dark:hover:bg-gray-700">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-4">
-                  <div className="flex-shrink-0 text-gray-400 dark:text-gray-500">
-                    {getIcon(report.attributes.icon)}
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center space-x-3">
-                      <h4 className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                        {report.attributes.name}
-                      </h4>
-                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getCategoryColor(report.attributes.category)}`}>
-                        {report.attributes.category}
-                      </span>
-                    </div>
-                    <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                      {report.attributes.description}
-                    </p>
-                    <p className="mt-1 text-xs text-gray-400 dark:text-gray-500">
-                      Last generated: {new Date(report.attributes.last_generated).toLocaleDateString()}
-                    </p>
-                  </div>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <Link
-                    to={nodeCtx?.buildDetailPath('reports', report.id) ?? `/organizations/${orgId}/reports/${report.id}`}
-                    className="inline-flex items-center px-3 py-2 border border-gray-300 dark:border-gray-600 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-                  >
-                    <ChartBarIcon className="-ml-0.5 mr-2 h-4 w-4" aria-hidden="true" />
-                    View
-                  </Link>
-                  <button
-                    type="button"
-                    className="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-                  >
-                    <DocumentArrowDownIcon className="-ml-0.5 mr-2 h-4 w-4" aria-hidden="true" />
-                    Generate
-                  </button>
-                </div>
-              </div>
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">Your Reports</h3>
+              <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
+                {total > 0 ? `${total} custom reports` : "Create your first custom report"}
+              </p>
             </div>
-          ))}
+          </div>
         </div>
+
+        {loading ? (
+          <div className="p-12 text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-primary mx-auto"></div>
+            <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">Loading reports...</p>
+          </div>
+        ) : reports.length === 0 ? (
+          <div className="p-12 text-center">
+            <ChartBarIcon className="mx-auto h-12 w-12 text-gray-400" />
+            <h3 className="mt-2 text-sm font-medium text-gray-900 dark:text-gray-100">No reports yet</h3>
+            <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+              Get started by creating a new report
+            </p>
+            <div className="mt-6">
+              <Link
+                to={`/organizations/${orgId}/reports/new`}
+                className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-brand-primary hover:bg-brand-primary/90"
+              >
+                <PlusIcon className="-ml-1 mr-2 h-5 w-5" />
+                Create Report
+              </Link>
+            </div>
+          </div>
+        ) : (
+          <div className="divide-y divide-gray-200 dark:divide-gray-700">
+            {reports.map((report) => (
+              <Link
+                key={report.id}
+                to={nodeCtx?.buildDetailPath('reports', report.id) ?? `/organizations/${orgId}/reports/${report.id}`}
+                className="block p-6 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-4">
+                    <div className="flex-shrink-0 text-gray-400 dark:text-gray-500">
+                      {getEntityIcon(report.attributes.entity)}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center space-x-3">
+                        <h4 className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                          {report.attributes.name}
+                        </h4>
+                        <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full capitalize ${getEntityColor(report.attributes.entity)}`}>
+                          {report.attributes.entity}
+                        </span>
+                      </div>
+                      {report.attributes.description && (
+                        <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                          {report.attributes.description}
+                        </p>
+                      )}
+                      <p className="mt-1 text-xs text-gray-400 dark:text-gray-500">
+                        Created: {new Date(report.attributes.created_at).toLocaleDateString()}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <span className="inline-flex items-center px-3 py-2 text-sm leading-4 font-medium text-gray-700 dark:text-gray-200">
+                      <ChartBarIcon className="mr-2 h-4 w-4" aria-hidden="true" />
+                      View
+                    </span>
+                    <button
+                      onClick={(e) => handleDelete(report.id, e)}
+                      className="p-2 text-gray-400 hover:text-red-500 rounded-md hover:bg-red-50 dark:hover:bg-red-900/20"
+                    >
+                      <TrashIcon className="h-4 w-4" />
+                    </button>
+                  </div>
+                </div>
+              </Link>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Chart Placeholder */}

@@ -139,7 +139,7 @@ function BuilderLayout({ onSave, saving }: { onSave: () => void; saving?: boolea
       <div className="flex-1 flex overflow-hidden">
         {/* Left sidebar — hidden in preview */}
         {editMode && (
-          <div className="w-64 flex-shrink-0 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 flex flex-col">
+          <div className="w-96 flex-shrink-0 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 flex flex-col">
             <div className="flex border-b border-gray-200 dark:border-gray-700">
               <button onClick={() => setSidebarTab('components')} className={`flex-1 px-3 py-2 text-xs font-medium ${activeTab === 'components' ? 'text-purple-600 border-b-2 border-purple-600' : 'text-gray-500 hover:text-gray-700'}`}>
                 <Squares2X2Icon className="h-4 w-4 mx-auto mb-0.5" /> Add

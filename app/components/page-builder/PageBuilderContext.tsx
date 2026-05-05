@@ -140,6 +140,7 @@ const DEFAULT_COMPONENTS: Record<string, Partial<PageComponentNode>> = {
       children: [],
       rows: { lg: 12, sm: 12 },
       backgroundColor: '',
+      background: {}, // Advanced background config (image, gradient, overlay, layers)
       paddingX: 32,
       paddingY: 24,
       gridGapX: 8,

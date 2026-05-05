@@ -1,9 +1,11 @@
+import { useState } from "react";
 import { usePageBuilder } from "./PageBuilderContext";
-import type { PageComponentNode } from "~/lib/api/types";
+import type { PageComponentNode, BackgroundConfig, BackgroundGradient, BackgroundLayer, BackgroundImage, BackgroundOverlay } from "~/lib/api/types";
 import { useForms } from "~/hooks/useForms";
 import { useProducts } from "~/hooks/useProducts";
 import { useWebsitePages } from "~/hooks/useWebsites";
 import { usePages } from "~/hooks/usePages";
+import { PlusIcon, TrashIcon, ChevronDownIcon, ChevronRightIcon } from "@heroicons/react/24/outline";
 
 export default function ComponentEditor() {
   const { selectedSelector, getComponent, manipulate, select, removeComponent, duplicateComponent } = usePageBuilder();
@@ -327,11 +329,29 @@ function SectionEditor({ node, onChange }: { node: PageComponentNode; onChange: 
 
   const deviceLabel = bp === 'lg' ? 'Desktop' : 'Mobile';
 
+  // Background configuration
+  const background = (p.background as BackgroundConfig) || {};
+
+  const updateBackground = (updates: Partial<BackgroundConfig>) => {
+    onChange({ background: { ...background, ...updates } });
+  };
+
   return (
     <div className="space-y-3">
+      {/* Simple background color - backward compatible */}
       <Field label="Background Color">
-        <ColorInput value={(p.backgroundColor as string) || ''} onChange={(v) => onChange({ backgroundColor: v })} />
+        <ColorInput
+          value={background.color || (p.backgroundColor as string) || ''}
+          onChange={(v) => {
+            updateBackground({ color: v });
+            // Also update legacy field for backward compatibility
+            onChange({ backgroundColor: v, background: { ...background, color: v } });
+          }}
+        />
       </Field>
+
+      {/* Advanced Background Settings */}
+      <BackgroundConfigEditor background={background} onChange={updateBackground} />
 
       <div className="px-2 py-1 bg-gray-100 dark:bg-gray-700 rounded text-xs text-center text-gray-500 dark:text-gray-400">
         Editing layout for <span className="font-medium text-gray-700 dark:text-gray-200">{deviceLabel}</span>
@@ -372,6 +392,497 @@ function SectionEditor({ node, onChange }: { node: PageComponentNode; onChange: 
           <span className="text-xs text-gray-500 tabular-nums w-6 text-right">{rowCount}</span>
         </div>
       </Field>
+    </div>
+  );
+}
+
+// ── Advanced Background Configuration Editor ────────────────
+
+function BackgroundConfigEditor({ background, onChange }: {
+  background: BackgroundConfig;
+  onChange: (updates: Partial<BackgroundConfig>) => void;
+}) {
+  const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({});
+
+  const toggleSection = (section: string) => {
+    setExpandedSections(prev => ({ ...prev, [section]: !prev[section] }));
+  };
+
+  return (
+    <div className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
+      {/* Background Image Section */}
+      <CollapsibleSection
+        title="Background Image"
+        isExpanded={expandedSections.image}
+        onToggle={() => toggleSection('image')}
+        hasContent={!!background.image?.url}
+      >
+        <BackgroundImageEditor
+          image={background.image}
+          onChange={(image) => onChange({ image })}
+        />
+      </CollapsibleSection>
+
+      {/* Gradient Section */}
+      <CollapsibleSection
+        title="Gradient"
+        isExpanded={expandedSections.gradient}
+        onToggle={() => toggleSection('gradient')}
+        hasContent={!!background.gradient}
+      >
+        <GradientEditor
+          gradient={background.gradient}
+          onChange={(gradient) => onChange({ gradient })}
+        />
+      </CollapsibleSection>
+
+      {/* Overlay Section */}
+      <CollapsibleSection
+        title="Overlay"
+        isExpanded={expandedSections.overlay}
+        onToggle={() => toggleSection('overlay')}
+        hasContent={!!background.overlay}
+      >
+        <OverlayEditor
+          overlay={background.overlay}
+          onChange={(overlay) => onChange({ overlay })}
+        />
+      </CollapsibleSection>
+
+      {/* Custom Layers Section (SVG/HTML) */}
+      <CollapsibleSection
+        title="Custom Layers (SVG/HTML)"
+        isExpanded={expandedSections.layers}
+        onToggle={() => toggleSection('layers')}
+        hasContent={(background.layers?.length || 0) > 0}
+      >
+        <BackgroundLayersEditor
+          layers={background.layers || []}
+          onChange={(layers) => onChange({ layers })}
+        />
+      </CollapsibleSection>
+    </div>
+  );
+}
+
+function CollapsibleSection({ title, isExpanded, onToggle, hasContent, children }: {
+  title: string;
+  isExpanded: boolean;
+  onToggle: () => void;
+  hasContent: boolean;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="border-b border-gray-200 dark:border-gray-700 last:border-b-0">
+      <button
+        onClick={onToggle}
+        className="w-full flex items-center justify-between px-3 py-2 text-left hover:bg-gray-50 dark:hover:bg-gray-800"
+      >
+        <span className="text-xs font-medium text-gray-700 dark:text-gray-300 flex items-center gap-2">
+          {title}
+          {hasContent && <span className="w-2 h-2 rounded-full bg-purple-500" />}
+        </span>
+        {isExpanded ? (
+          <ChevronDownIcon className="w-4 h-4 text-gray-400" />
+        ) : (
+          <ChevronRightIcon className="w-4 h-4 text-gray-400" />
+        )}
+      </button>
+      {isExpanded && <div className="px-3 pb-3 space-y-2">{children}</div>}
+    </div>
+  );
+}
+
+function BackgroundImageEditor({ image, onChange }: {
+  image?: BackgroundImage;
+  onChange: (image: BackgroundImage | undefined) => void;
+}) {
+  const current = image || { url: '', size: 'cover', position: 'center', repeat: 'no-repeat' };
+
+  const update = (updates: Partial<BackgroundImage>) => {
+    const updated = { ...current, ...updates };
+    onChange(updated.url ? updated : undefined);
+  };
+
+  return (
+    <div className="space-y-2">
+      <Field label="Image URL">
+        <TextInput
+          value={current.url}
+          onChange={(v) => update({ url: v })}
+          placeholder="https://example.com/image.jpg"
+        />
+      </Field>
+      <Field label="Size">
+        <SelectInput
+          value={current.size || 'cover'}
+          onChange={(v) => update({ size: v as BackgroundImage['size'] })}
+          options={[
+            { value: 'cover', label: 'Cover' },
+            { value: 'contain', label: 'Contain' },
+            { value: 'auto', label: 'Auto' },
+            { value: '100% 100%', label: 'Stretch' },
+          ]}
+        />
+      </Field>
+      <Field label="Position">
+        <SelectInput
+          value={current.position || 'center'}
+          onChange={(v) => update({ position: v })}
+          options={[
+            { value: 'center', label: 'Center' },
+            { value: 'top', label: 'Top' },
+            { value: 'bottom', label: 'Bottom' },
+            { value: 'left', label: 'Left' },
+            { value: 'right', label: 'Right' },
+            { value: 'top left', label: 'Top Left' },
+            { value: 'top right', label: 'Top Right' },
+            { value: 'bottom left', label: 'Bottom Left' },
+            { value: 'bottom right', label: 'Bottom Right' },
+          ]}
+        />
+      </Field>
+      <Field label="Repeat">
+        <SelectInput
+          value={current.repeat || 'no-repeat'}
+          onChange={(v) => update({ repeat: v as BackgroundImage['repeat'] })}
+          options={[
+            { value: 'no-repeat', label: 'No Repeat' },
+            { value: 'repeat', label: 'Repeat' },
+            { value: 'repeat-x', label: 'Repeat Horizontally' },
+            { value: 'repeat-y', label: 'Repeat Vertically' },
+          ]}
+        />
+      </Field>
+      <Field label="Attachment">
+        <SelectInput
+          value={current.attachment || 'scroll'}
+          onChange={(v) => update({ attachment: v as BackgroundImage['attachment'] })}
+          options={[
+            { value: 'scroll', label: 'Scroll' },
+            { value: 'fixed', label: 'Fixed (Parallax)' },
+            { value: 'local', label: 'Local' },
+          ]}
+        />
+      </Field>
+      {image?.url && (
+        <button
+          onClick={() => onChange(undefined)}
+          className="text-xs text-red-600 hover:text-red-700 dark:text-red-400"
+        >
+          Remove Image
+        </button>
+      )}
+    </div>
+  );
+}
+
+function GradientEditor({ gradient, onChange }: {
+  gradient?: BackgroundGradient;
+  onChange: (gradient: BackgroundGradient | undefined) => void;
+}) {
+  const current = gradient || {
+    type: 'linear' as const,
+    angle: 180,
+    stops: [
+      { color: '#6366f1', position: 0 },
+      { color: '#8b5cf6', position: 100 },
+    ],
+  };
+
+  const update = (updates: Partial<BackgroundGradient>) => {
+    onChange({ ...current, ...updates });
+  };
+
+  const updateStop = (index: number, updates: Partial<{ color: string; position: number }>) => {
+    const stops = [...current.stops];
+    stops[index] = { ...stops[index], ...updates };
+    update({ stops });
+  };
+
+  const addStop = () => {
+    const stops = [...current.stops, { color: '#ffffff', position: 50 }];
+    update({ stops });
+  };
+
+  const removeStop = (index: number) => {
+    if (current.stops.length <= 2) return;
+    const stops = current.stops.filter((_, i) => i !== index);
+    update({ stops });
+  };
+
+  return (
+    <div className="space-y-2">
+      <div className="flex gap-2">
+        <button
+          onClick={() => onChange(gradient ? undefined : current)}
+          className={`flex-1 text-xs py-1.5 rounded ${gradient ? 'bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300' : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400'}`}
+        >
+          {gradient ? 'Enabled' : 'Enable Gradient'}
+        </button>
+      </div>
+
+      {gradient && (
+        <>
+          <Field label="Type">
+            <SelectInput
+              value={current.type}
+              onChange={(v) => update({ type: v as BackgroundGradient['type'] })}
+              options={[
+                { value: 'linear', label: 'Linear' },
+                { value: 'radial', label: 'Radial' },
+                { value: 'conic', label: 'Conic' },
+              ]}
+            />
+          </Field>
+
+          {(current.type === 'linear' || current.type === 'conic') && (
+            <Field label="Angle">
+              <div className="flex items-center space-x-2">
+                <input
+                  type="range"
+                  min="0"
+                  max="360"
+                  value={current.angle || 180}
+                  onChange={(e) => update({ angle: parseInt(e.target.value, 10) })}
+                  className="flex-1"
+                />
+                <span className="text-xs text-gray-500 tabular-nums w-10 text-right">{current.angle}°</span>
+              </div>
+            </Field>
+          )}
+
+          <div className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Color Stops</div>
+          {current.stops.map((stop, i) => (
+            <div key={i} className="flex items-center gap-2">
+              <input
+                type="color"
+                value={stop.color}
+                onChange={(e) => updateStop(i, { color: e.target.value })}
+                className="w-8 h-8 rounded border border-gray-300 cursor-pointer"
+              />
+              <input
+                type="range"
+                min="0"
+                max="100"
+                value={stop.position}
+                onChange={(e) => updateStop(i, { position: parseInt(e.target.value, 10) })}
+                className="flex-1"
+              />
+              <span className="text-xs text-gray-500 w-8">{stop.position}%</span>
+              {current.stops.length > 2 && (
+                <button onClick={() => removeStop(i)} className="text-red-500 hover:text-red-700">
+                  <TrashIcon className="w-4 h-4" />
+                </button>
+              )}
+            </div>
+          ))}
+          <button
+            onClick={addStop}
+            className="text-xs text-purple-600 hover:text-purple-700 dark:text-purple-400 flex items-center gap-1"
+          >
+            <PlusIcon className="w-3 h-3" /> Add Stop
+          </button>
+
+          {/* Gradient Preview */}
+          <div
+            className="h-8 rounded border border-gray-300 dark:border-gray-600"
+            style={{
+              background: current.type === 'linear'
+                ? `linear-gradient(${current.angle}deg, ${current.stops.map(s => `${s.color} ${s.position}%`).join(', ')})`
+                : current.type === 'radial'
+                  ? `radial-gradient(circle, ${current.stops.map(s => `${s.color} ${s.position}%`).join(', ')})`
+                  : `conic-gradient(from ${current.angle}deg, ${current.stops.map(s => `${s.color} ${s.position}%`).join(', ')})`,
+            }}
+          />
+        </>
+      )}
+    </div>
+  );
+}
+
+function OverlayEditor({ overlay, onChange }: {
+  overlay?: BackgroundOverlay;
+  onChange: (overlay: BackgroundOverlay | undefined) => void;
+}) {
+  const current = overlay || { color: '#000000', opacity: 0.5, blendMode: 'normal' as const };
+
+  const update = (updates: Partial<BackgroundOverlay>) => {
+    onChange({ ...current, ...updates });
+  };
+
+  return (
+    <div className="space-y-2">
+      <div className="flex gap-2">
+        <button
+          onClick={() => onChange(overlay ? undefined : current)}
+          className={`flex-1 text-xs py-1.5 rounded ${overlay ? 'bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300' : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400'}`}
+        >
+          {overlay ? 'Enabled' : 'Enable Overlay'}
+        </button>
+      </div>
+
+      {overlay && (
+        <>
+          <Field label="Color">
+            <ColorInput value={current.color} onChange={(v) => update({ color: v })} />
+          </Field>
+          <Field label="Opacity">
+            <div className="flex items-center space-x-2">
+              <input
+                type="range"
+                min="0"
+                max="100"
+                value={Math.round(current.opacity * 100)}
+                onChange={(e) => update({ opacity: parseInt(e.target.value, 10) / 100 })}
+                className="flex-1"
+              />
+              <span className="text-xs text-gray-500 tabular-nums w-10 text-right">{Math.round(current.opacity * 100)}%</span>
+            </div>
+          </Field>
+          <Field label="Blend Mode">
+            <SelectInput
+              value={current.blendMode || 'normal'}
+              onChange={(v) => update({ blendMode: v as BackgroundOverlay['blendMode'] })}
+              options={[
+                { value: 'normal', label: 'Normal' },
+                { value: 'multiply', label: 'Multiply' },
+                { value: 'screen', label: 'Screen' },
+                { value: 'overlay', label: 'Overlay' },
+                { value: 'darken', label: 'Darken' },
+                { value: 'lighten', label: 'Lighten' },
+              ]}
+            />
+          </Field>
+        </>
+      )}
+    </div>
+  );
+}
+
+function BackgroundLayersEditor({ layers, onChange }: {
+  layers: BackgroundLayer[];
+  onChange: (layers: BackgroundLayer[]) => void;
+}) {
+  const addLayer = (type: 'svg' | 'html') => {
+    const newLayer: BackgroundLayer = {
+      id: `layer-${Date.now()}`,
+      type,
+      content: type === 'svg'
+        ? '<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">\n  <!-- Your SVG content -->\n</svg>'
+        : '<div style="width: 100%; height: 100%;">\n  <!-- Your HTML content -->\n</div>',
+      position: 'absolute',
+      zIndex: 0,
+      opacity: 1,
+    };
+    onChange([...layers, newLayer]);
+  };
+
+  const updateLayer = (id: string, updates: Partial<BackgroundLayer>) => {
+    onChange(layers.map(l => l.id === id ? { ...l, ...updates } : l));
+  };
+
+  const removeLayer = (id: string) => {
+    onChange(layers.filter(l => l.id !== id));
+  };
+
+  const moveLayer = (id: string, direction: 'up' | 'down') => {
+    const index = layers.findIndex(l => l.id === id);
+    if (index === -1) return;
+    const newIndex = direction === 'up' ? index - 1 : index + 1;
+    if (newIndex < 0 || newIndex >= layers.length) return;
+    const newLayers = [...layers];
+    [newLayers[index], newLayers[newIndex]] = [newLayers[newIndex], newLayers[index]];
+    onChange(newLayers);
+  };
+
+  return (
+    <div className="space-y-2">
+      <div className="flex gap-2">
+        <button
+          onClick={() => addLayer('svg')}
+          className="flex-1 text-xs py-1.5 rounded bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600 flex items-center justify-center gap-1"
+        >
+          <PlusIcon className="w-3 h-3" /> Add SVG
+        </button>
+        <button
+          onClick={() => addLayer('html')}
+          className="flex-1 text-xs py-1.5 rounded bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600 flex items-center justify-center gap-1"
+        >
+          <PlusIcon className="w-3 h-3" /> Add HTML
+        </button>
+      </div>
+
+      {layers.map((layer, index) => (
+        <div key={layer.id} className="border border-gray-200 dark:border-gray-700 rounded p-2 space-y-2">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-medium text-gray-700 dark:text-gray-300">
+              {layer.type.toUpperCase()} Layer {index + 1}
+            </span>
+            <div className="flex items-center gap-1">
+              <button
+                onClick={() => moveLayer(layer.id, 'up')}
+                disabled={index === 0}
+                className="text-xs text-gray-500 hover:text-gray-700 disabled:opacity-30"
+              >
+                ↑
+              </button>
+              <button
+                onClick={() => moveLayer(layer.id, 'down')}
+                disabled={index === layers.length - 1}
+                className="text-xs text-gray-500 hover:text-gray-700 disabled:opacity-30"
+              >
+                ↓
+              </button>
+              <button
+                onClick={() => removeLayer(layer.id)}
+                className="text-red-500 hover:text-red-700"
+              >
+                <TrashIcon className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+
+          <Field label="Content">
+            <textarea
+              value={layer.content}
+              onChange={(e) => updateLayer(layer.id, { content: e.target.value })}
+              className="w-full h-24 text-xs font-mono p-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+              placeholder={layer.type === 'svg' ? 'Paste SVG code here...' : 'Paste HTML code here...'}
+            />
+          </Field>
+
+          <div className="grid grid-cols-2 gap-2">
+            <Field label="Z-Index">
+              <input
+                type="number"
+                value={layer.zIndex ?? 0}
+                onChange={(e) => updateLayer(layer.id, { zIndex: parseInt(e.target.value, 10) })}
+                className="w-full text-xs p-1.5 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+              />
+            </Field>
+            <Field label="Opacity">
+              <div className="flex items-center gap-1">
+                <input
+                  type="range"
+                  min="0"
+                  max="100"
+                  value={Math.round((layer.opacity ?? 1) * 100)}
+                  onChange={(e) => updateLayer(layer.id, { opacity: parseInt(e.target.value, 10) / 100 })}
+                  className="flex-1"
+                />
+                <span className="text-xs text-gray-500 w-8">{Math.round((layer.opacity ?? 1) * 100)}%</span>
+              </div>
+            </Field>
+          </div>
+        </div>
+      ))}
+
+      {layers.length === 0 && (
+        <p className="text-xs text-gray-500 dark:text-gray-400 text-center py-2">
+          No custom layers. Add SVG or HTML for decorative backgrounds.
+        </p>
+      )}
     </div>
   );
 }
