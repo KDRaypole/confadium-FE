@@ -20,7 +20,7 @@ export default function Layout({ children, showOrgNavigation = true }: LayoutPro
         {mobileMenuOpen && (
           <div className="fixed inset-0 z-50 md:hidden">
             <div className="fixed inset-0 bg-gray-600 bg-opacity-75" onClick={() => setMobileMenuOpen(false)} />
-            <div className="relative flex w-full max-w-xs flex-1 flex-col bg-gray-900">
+            <div className="relative flex w-full max-w-xs flex-1 flex-col bg-brand-sidebar h-full">
               <div className="absolute top-0 right-0 -mr-12 pt-2">
                 <button
                   type="button"
@@ -33,7 +33,7 @@ export default function Layout({ children, showOrgNavigation = true }: LayoutPro
                   </svg>
                 </button>
               </div>
-              <Sidebar showOrgNavigation={showOrgNavigation} />
+              <Sidebar showOrgNavigation={showOrgNavigation} isMobile={true} />
             </div>
           </div>
         )}

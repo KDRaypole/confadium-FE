@@ -321,6 +321,37 @@ export function ReportBuilderProvider({
     (type: WidgetType) => {
       const widgets = configuration.widgets || [];
       const newWidget = createDefaultWidget(type, widgets.length);
+
+      // Auto-initialize widget config based on report configuration
+      const groupings = configuration.groupings || [];
+      const aggregations = configuration.aggregations || [];
+      const dateGrouping = configuration.dateGrouping;
+
+      // For bar/pie charts, set groupBy from first grouping
+      if ((type === "bar" || type === "pie") && groupings.length > 0) {
+        newWidget.config.groupBy = groupings[0].field;
+      }
+
+      // For line/area charts, set dateField from dateGrouping
+      if ((type === "line" || type === "area") && dateGrouping) {
+        newWidget.config.dateField = dateGrouping.field;
+        newWidget.config.dateInterval = dateGrouping.interval;
+      }
+
+      // Set aggregation from first aggregation if available
+      if (aggregations.length > 0) {
+        newWidget.config.aggregation = {
+          field: aggregations[0].field,
+          function: aggregations[0].function,
+        };
+      } else {
+        // Default to count
+        newWidget.config.aggregation = {
+          field: "*",
+          function: "count",
+        };
+      }
+
       updateConfiguration({
         ...configuration,
         widgets: [...widgets, newWidget],

@@ -26,6 +26,7 @@ import { useAuth } from "~/contexts/AuthContext";
 
 interface SidebarProps {
   showOrgNavigation?: boolean;
+  isMobile?: boolean;
 }
 
 // App-level navigation (when not in an organization)
@@ -54,7 +55,7 @@ function getCrmNavigation(orgId: string, nodeId?: string | null) {
   ];
 }
 
-export default function Sidebar({ showOrgNavigation = true }: SidebarProps) {
+export default function Sidebar({ showOrgNavigation = true, isMobile = false }: SidebarProps) {
   const location = useLocation();
   const params = useParams();
   const nodeCtx = useOptionalNodeContext();
@@ -172,7 +173,7 @@ export default function Sidebar({ showOrgNavigation = true }: SidebarProps) {
   }
 
   return (
-    <div className="hidden md:flex md:w-64 md:flex-col">
+    <div className={isMobile ? "flex w-full flex-col h-full" : "hidden md:flex md:w-64 md:flex-col"}>
       <div className="flex min-h-0 flex-1 flex-col bg-brand-sidebar border-r border-gray-200 dark:border-gray-700">
         {/* Header with back navigation */}
         <div className="flex items-center px-4 py-3 border-b border-gray-200 dark:border-gray-700 bg-brand-sidebar">

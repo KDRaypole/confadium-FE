@@ -311,7 +311,8 @@ const ActionConfigModal: React.FC<ActionConfigModalProps> = ({
       newErrors.type = 'Action type is required';
     }
 
-    if (!formData.target) {
+    // Only require target when not using action presets (presets auto-determine target)
+    if (!formData.target && !actionPresets) {
       newErrors.target = 'Target is required';
     }
 
@@ -360,6 +361,11 @@ const ActionConfigModal: React.FC<ActionConfigModalProps> = ({
     if (validateForm()) {
       // Update parameters with selected tag data and field mappings
       const updatedFormData = { ...formData };
+
+      // Auto-set target when using action presets (target is determined by the action type)
+      if (actionPresets && !updatedFormData.target) {
+        updatedFormData.target = updatedFormData.type;
+      }
 
       if ((formData.type === 'add_tag' || formData.type === 'remove_tag') && selectedTagIds.length > 0) {
         // Store both tag ID and tag name for backward compatibility

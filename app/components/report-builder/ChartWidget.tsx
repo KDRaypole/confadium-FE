@@ -205,8 +205,11 @@ export default function ChartWidget({
       onDuplicate={onDuplicate}
     >
       {data.length === 0 ? (
-        <div className="flex items-center justify-center h-full text-gray-400 text-sm">
-          No data available
+        <div className="flex flex-col items-center justify-center h-full text-gray-400 text-sm gap-2">
+          <span>No data available</span>
+          {widget.config.groupBy && (
+            <span className="text-xs">Grouped by: {widget.config.groupBy}</span>
+          )}
         </div>
       ) : (
         <svg
@@ -334,18 +337,38 @@ function renderBarChart(
 ) {
   // Get the first two fields as category and value
   const keys = Object.keys(data[0] || {});
-  const categoryKey = config.groupBy || keys[0];
-  const valueKey = keys.find((k) => k !== categoryKey) || keys[1];
+
+  // Find the category key - prefer config.groupBy, then look for non-numeric/non-aggregate fields
+  const aggregatePatterns = /^(count|sum|avg|min|max)_/i;
+  const categoryKey = config.groupBy ||
+    keys.find(k => !aggregatePatterns.test(k) && k !== 'date_bucket' && typeof data[0]?.[k] === 'string') ||
+    keys.find(k => !aggregatePatterns.test(k) && k !== 'date_bucket') ||
+    keys[0];
+
+  // Find the value key - prefer aggregation fields, then numeric fields
+  const valueKey = config.aggregation?.field
+    ? keys.find(k => k.toLowerCase().includes(config.aggregation!.field.toLowerCase()) || k.startsWith(`${config.aggregation!.function}_`))
+    : keys.find(k => aggregatePatterns.test(k)) ||
+      keys.find(k => k !== categoryKey && typeof data[0]?.[k] === 'number') ||
+      keys.find(k => k !== categoryKey) ||
+      keys[1];
+
+  // Handle null/undefined category values
+  const formatCategory = (val: unknown): string => {
+    if (val === null || val === undefined) return '(Empty)';
+    return String(val);
+  };
 
   const x = d3
     .scaleBand()
-    .domain(data.map((d) => String(d[categoryKey])))
+    .domain(data.map((d) => formatCategory(d[categoryKey])))
     .range([0, width])
     .padding(0.2);
 
+  const maxValue = d3.max(data, (d) => Number(d[valueKey]) || 0) || 1;
   const y = d3
     .scaleLinear()
-    .domain([0, d3.max(data, (d) => Number(d[valueKey])) || 0])
+    .domain([0, maxValue])
     .nice()
     .range([height, 0]);
 
@@ -363,17 +386,36 @@ function renderBarChart(
     .style("stroke-opacity", 0.5);
 
   // Bars
-  g.selectAll(".bar")
+  const bars = g.selectAll(".bar")
     .data(data)
     .enter()
-    .append("rect")
+    .append("g")
+    .attr("class", "bar-group");
+
+  bars.append("rect")
     .attr("class", "bar")
-    .attr("x", (d) => x(String(d[categoryKey])) || 0)
-    .attr("y", (d) => y(Number(d[valueKey])))
+    .attr("x", (d) => x(formatCategory(d[categoryKey])) || 0)
+    .attr("y", (d) => y(Number(d[valueKey]) || 0))
     .attr("width", x.bandwidth())
-    .attr("height", (d) => height - y(Number(d[valueKey])))
+    .attr("height", (d) => Math.max(0, height - y(Number(d[valueKey]) || 0)))
     .attr("fill", colors.primary)
     .attr("rx", 4);
+
+  // Value labels on top of bars (only show if bar is tall enough)
+  bars.append("text")
+    .attr("x", (d) => (x(formatCategory(d[categoryKey])) || 0) + x.bandwidth() / 2)
+    .attr("y", (d) => y(Number(d[valueKey]) || 0) - 4)
+    .attr("text-anchor", "middle")
+    .style("font-size", "9px")
+    .style("fill", colors.text)
+    .style("font-weight", "500")
+    .text((d) => {
+      const val = Number(d[valueKey]) || 0;
+      const barHeight = height - y(val);
+      // Only show label if bar is visible
+      if (barHeight < 10) return "";
+      return val >= 1000 ? `${(val / 1000).toFixed(1)}k` : val.toLocaleString();
+    });
 
   // X axis
   g.append("g")
@@ -405,14 +447,33 @@ function renderPieChart(
   config: ReportWidget["config"]
 ) {
   const keys = Object.keys(data[0] || {});
-  const categoryKey = config.groupBy || keys[0];
-  const valueKey = keys.find((k) => k !== categoryKey) || keys[1];
+
+  // Find the category key - prefer config.groupBy, then look for non-numeric/non-aggregate fields
+  const aggregatePatterns = /^(count|sum|avg|min|max)_/i;
+  const categoryKey = config.groupBy ||
+    keys.find(k => !aggregatePatterns.test(k) && k !== 'date_bucket' && typeof data[0]?.[k] === 'string') ||
+    keys.find(k => !aggregatePatterns.test(k) && k !== 'date_bucket') ||
+    keys[0];
+
+  // Find the value key - prefer aggregation fields, then numeric fields
+  const valueKey = config.aggregation?.field
+    ? keys.find(k => k.toLowerCase().includes(config.aggregation!.field.toLowerCase()) || k.startsWith(`${config.aggregation!.function}_`))
+    : keys.find(k => aggregatePatterns.test(k)) ||
+      keys.find(k => k !== categoryKey && typeof data[0]?.[k] === 'number') ||
+      keys.find(k => k !== categoryKey) ||
+      keys[1];
 
   const radius = Math.min(width, height) / 2;
 
+  // Handle null/undefined category values
+  const formatCategory = (val: unknown): string => {
+    if (val === null || val === undefined) return '(Empty)';
+    return String(val);
+  };
+
   const pie = d3
     .pie<Record<string, unknown>>()
-    .value((d) => Number(d[valueKey]))
+    .value((d) => Number(d[valueKey]) || 0)
     .sort(null);
 
   const arc = d3
@@ -438,7 +499,7 @@ function renderPieChart(
     .attr("stroke", "white")
     .attr("stroke-width", 2);
 
-  // Labels
+  // Labels on slices (only for large slices)
   arcs
     .append("text")
     .attr("transform", (d) => `translate(${arc.centroid(d)})`)
@@ -448,8 +509,35 @@ function renderPieChart(
     .style("font-weight", "bold")
     .text((d) => {
       const angle = d.endAngle - d.startAngle;
-      return angle > 0.4 ? String(d.data[categoryKey]) : "";
+      return angle > 0.5 ? formatCategory(d.data[categoryKey]) : "";
     });
+
+  // Add legend below the pie
+  const legendY = height / 2 + radius + 10;
+  const legendItemWidth = Math.min(100, width / Math.min(data.length, 3));
+
+  const legend = g.append("g")
+    .attr("transform", `translate(${width / 2 - (Math.min(data.length, 3) * legendItemWidth) / 2}, ${legendY})`);
+
+  data.slice(0, 6).forEach((d, i) => {
+    const row = Math.floor(i / 3);
+    const col = i % 3;
+    const itemG = legend.append("g")
+      .attr("transform", `translate(${col * legendItemWidth}, ${row * 16})`);
+
+    itemG.append("rect")
+      .attr("width", 10)
+      .attr("height", 10)
+      .attr("rx", 2)
+      .attr("fill", colorScale(String(i)));
+
+    itemG.append("text")
+      .attr("x", 14)
+      .attr("y", 9)
+      .style("font-size", "9px")
+      .style("fill", colors.text)
+      .text(formatCategory(d[categoryKey]).slice(0, 12));
+  });
 }
 
 function renderLineChart(
@@ -462,28 +550,58 @@ function renderLineChart(
   isArea: boolean
 ) {
   const keys = Object.keys(data[0] || {});
-  const xKey = config.dateField || keys[0];
-  const yKey = keys.find((k) => k !== xKey) || keys[1];
 
-  // Parse dates if needed
-  const parseDate = (val: unknown): Date => {
-    if (val instanceof Date) return val;
+  // Find date key - look for date_bucket first, then config.dateField, then first key
+  const xKey = keys.find(k => k === 'date_bucket') ||
+    config.dateField ||
+    keys.find(k => k.toLowerCase().includes('date') || k.toLowerCase().includes('created') || k.toLowerCase().includes('updated')) ||
+    keys[0];
+
+  // Find value key - look for aggregation columns
+  const aggregatePatterns = /^(count|sum|avg|min|max)_/i;
+  const yKey = keys.find(k => aggregatePatterns.test(k)) ||
+    keys.find((k) => k !== xKey && typeof data[0]?.[k] === 'number') ||
+    keys.find((k) => k !== xKey) ||
+    keys[1];
+
+  // Parse dates safely
+  const parseDate = (val: unknown): Date | null => {
+    if (val === null || val === undefined) return null;
+    if (val instanceof Date) return isNaN(val.getTime()) ? null : val;
     const str = String(val);
-    return new Date(str);
+    const date = new Date(str);
+    return isNaN(date.getTime()) ? null : date;
   };
 
-  const sortedData = [...data].sort(
-    (a, b) => parseDate(a[xKey]).getTime() - parseDate(b[xKey]).getTime()
-  );
+  // Filter out invalid dates and sort
+  const validData = data
+    .map(d => ({ ...d, _parsedDate: parseDate(d[xKey]) }))
+    .filter(d => d._parsedDate !== null)
+    .sort((a, b) => a._parsedDate!.getTime() - b._parsedDate!.getTime());
+
+  // If no valid dates, show message and return
+  if (validData.length === 0) {
+    g.append("text")
+      .attr("x", width / 2)
+      .attr("y", height / 2)
+      .attr("text-anchor", "middle")
+      .style("fill", colors.text)
+      .style("font-size", "12px")
+      .text("No valid date data available");
+    return;
+  }
+
+  const dateExtent = d3.extent(validData, (d) => d._parsedDate) as [Date, Date];
 
   const x = d3
     .scaleTime()
-    .domain(d3.extent(sortedData, (d) => parseDate(d[xKey])) as [Date, Date])
+    .domain(dateExtent)
     .range([0, width]);
 
+  const maxY = d3.max(validData, (d) => Number(d[yKey]) || 0) || 1;
   const y = d3
     .scaleLinear()
-    .domain([0, d3.max(sortedData, (d) => Number(d[yKey])) || 0])
+    .domain([0, maxY])
     .nice()
     .range([height, 0]);
 
@@ -503,14 +621,14 @@ function renderLineChart(
   // Area (if area chart)
   if (isArea) {
     const area = d3
-      .area<Record<string, unknown>>()
-      .x((d) => x(parseDate(d[xKey])))
+      .area<typeof validData[0]>()
+      .x((d) => x(d._parsedDate!))
       .y0(height)
-      .y1((d) => y(Number(d[yKey])))
+      .y1((d) => y(Number(d[yKey]) || 0))
       .curve(d3.curveMonotoneX);
 
     g.append("path")
-      .datum(sortedData)
+      .datum(validData)
       .attr("fill", colors.primary)
       .attr("fill-opacity", 0.2)
       .attr("d", area);
@@ -518,13 +636,13 @@ function renderLineChart(
 
   // Line
   const line = d3
-    .line<Record<string, unknown>>()
-    .x((d) => x(parseDate(d[xKey])))
-    .y((d) => y(Number(d[yKey])))
+    .line<typeof validData[0]>()
+    .x((d) => x(d._parsedDate!))
+    .y((d) => y(Number(d[yKey]) || 0))
     .curve(d3.curveMonotoneX);
 
   g.append("path")
-    .datum(sortedData)
+    .datum(validData)
     .attr("fill", "none")
     .attr("stroke", colors.primary)
     .attr("stroke-width", 2)
@@ -532,12 +650,12 @@ function renderLineChart(
 
   // Dots
   g.selectAll(".dot")
-    .data(sortedData)
+    .data(validData)
     .enter()
     .append("circle")
     .attr("class", "dot")
-    .attr("cx", (d) => x(parseDate(d[xKey])))
-    .attr("cy", (d) => y(Number(d[yKey])))
+    .attr("cx", (d) => x(d._parsedDate!))
+    .attr("cy", (d) => y(Number(d[yKey]) || 0))
     .attr("r", 3)
     .attr("fill", colors.primary);
 
