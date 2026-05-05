@@ -15,8 +15,16 @@ import type { TriggerableActionPreset, TriggerableModelField, TriggerableModelAs
 
 // Variable mapping types
 interface VariableMapping {
-  source: 'static' | 'field' | 'association';
+  source: 'static' | 'field' | 'association' | 'template';
   value: string;
+}
+
+// State for template variable picker modal
+interface TemplatePickerState {
+  isOpen: boolean;
+  paramName: string;
+  currentValue: string;
+  cursorPosition: number;
 }
 
 export interface ActionConfig {
@@ -98,6 +106,14 @@ const ActionConfigModal: React.FC<ActionConfigModalProps> = ({
   const [templateVariables, setTemplateVariables] = useState<EmailTemplateVariable[]>([]);
   const [variableMappings, setVariableMappings] = useState<Record<string, VariableMapping>>({});
   const [loadingTemplateVariables, setLoadingTemplateVariables] = useState(false);
+
+  // Template string variable picker modal state
+  const [templatePicker, setTemplatePicker] = useState<TemplatePickerState>({
+    isOpen: false,
+    paramName: '',
+    currentValue: '',
+    cursorPosition: 0
+  });
 
   useEffect(() => {
     if (action) {
@@ -441,6 +457,162 @@ const ActionConfigModal: React.FC<ActionConfigModalProps> = ({
 
   return (
     <>
+      {/* Variable Picker Modal */}
+      <Transition appear show={templatePicker.isOpen} as={React.Fragment}>
+        <Dialog
+          as="div"
+          className="relative z-[60]"
+          onClose={() => setTemplatePicker(prev => ({ ...prev, isOpen: false }))}
+        >
+          <Transition.Child
+            as={React.Fragment}
+            enter="ease-out duration-300"
+            enterFrom="opacity-0"
+            enterTo="opacity-100"
+            leave="ease-in duration-200"
+            leaveFrom="opacity-100"
+            leaveTo="opacity-0"
+          >
+            <div className="fixed inset-0 bg-black bg-opacity-25" />
+          </Transition.Child>
+
+          <div className="fixed inset-0 overflow-y-auto">
+            <div className="flex min-h-full items-center justify-center p-4 text-center">
+              <Transition.Child
+                as={React.Fragment}
+                enter="ease-out duration-300"
+                enterFrom="opacity-0 scale-95"
+                enterTo="opacity-100 scale-100"
+                leave="ease-in duration-200"
+                leaveFrom="opacity-100 scale-100"
+                leaveTo="opacity-0 scale-95"
+              >
+                <Dialog.Panel className={`
+                  w-full max-w-md transform overflow-hidden rounded-2xl p-6 text-left align-middle shadow-xl transition-all
+                  ${isDarkMode ? 'bg-gray-800 text-gray-100' : 'bg-white text-gray-900'}
+                `}>
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center space-x-2">
+                      <VariableIcon className="h-5 w-5 text-purple-500" />
+                      <Dialog.Title as="h3" className="text-lg font-medium">
+                        Insert Variable
+                      </Dialog.Title>
+                    </div>
+                    <button
+                      onClick={() => setTemplatePicker(prev => ({ ...prev, isOpen: false }))}
+                      className="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+                    >
+                      <XMarkIcon className="h-5 w-5 text-gray-500" />
+                    </button>
+                  </div>
+
+                  <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
+                    Click a variable to insert it into your template string.
+                  </p>
+
+                  <div className="space-y-4 max-h-[400px] overflow-y-auto">
+                    {/* Record Fields */}
+                    {modelFields.length > 0 && (
+                      <div>
+                        <h4 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">
+                          Record Fields
+                        </h4>
+                        <div className="grid grid-cols-2 gap-2">
+                          {modelFields.map(field => (
+                            <button
+                              key={field.name}
+                              type="button"
+                              onClick={() => {
+                                const newValue = templatePicker.currentValue + `{{${field.name}}}`;
+                                setFormData(prev => ({
+                                  ...prev,
+                                  parameters: {
+                                    ...prev.parameters,
+                                    [templatePicker.paramName]: { source: 'template', value: newValue }
+                                  }
+                                }));
+                                setTemplatePicker(prev => ({ ...prev, currentValue: newValue }));
+                              }}
+                              className="flex items-center px-3 py-2 text-left text-sm bg-gray-50 dark:bg-gray-700 hover:bg-purple-50 dark:hover:bg-purple-900/30 rounded-lg border border-gray-200 dark:border-gray-600 hover:border-purple-300 dark:hover:border-purple-600 transition-colors"
+                            >
+                              <code className="text-purple-600 dark:text-purple-400 font-mono text-xs">
+                                {`{{${field.name}}}`}
+                              </code>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Association Fields */}
+                    {modelAssociations.map(assoc => (
+                      <div key={assoc.name}>
+                        <h4 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">
+                          {assoc.model} ({assoc.name})
+                        </h4>
+                        <div className="grid grid-cols-2 gap-2">
+                          {assoc.fields.map(field => (
+                            <button
+                              key={`${assoc.name}.${field.name}`}
+                              type="button"
+                              onClick={() => {
+                                const varPath = `${assoc.name}.${field.name}`;
+                                const newValue = templatePicker.currentValue + `{{${varPath}}}`;
+                                setFormData(prev => ({
+                                  ...prev,
+                                  parameters: {
+                                    ...prev.parameters,
+                                    [templatePicker.paramName]: { source: 'template', value: newValue }
+                                  }
+                                }));
+                                setTemplatePicker(prev => ({ ...prev, currentValue: newValue }));
+                              }}
+                              className="flex items-center px-3 py-2 text-left text-sm bg-gray-50 dark:bg-gray-700 hover:bg-purple-50 dark:hover:bg-purple-900/30 rounded-lg border border-gray-200 dark:border-gray-600 hover:border-purple-300 dark:hover:border-purple-600 transition-colors"
+                            >
+                              <code className="text-purple-600 dark:text-purple-400 font-mono text-xs truncate">
+                                {`{{${assoc.name}.${field.name}}}`}
+                              </code>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+
+                    {modelFields.length === 0 && modelAssociations.length === 0 && (
+                      <div className="text-center py-6 text-gray-500 dark:text-gray-400">
+                        <VariableIcon className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                        <p className="text-sm">No variables available for this entity type.</p>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Current template preview */}
+                  {templatePicker.currentValue && (
+                    <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-600">
+                      <h4 className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2">Current Template:</h4>
+                      <div className="p-2 bg-gray-100 dark:bg-gray-700 rounded text-sm font-mono break-all">
+                        {templatePicker.currentValue}
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="mt-4 flex justify-end">
+                    <button
+                      type="button"
+                      onClick={() => setTemplatePicker(prev => ({ ...prev, isOpen: false }))}
+                      className="px-4 py-2 text-sm font-medium text-white bg-purple-600 hover:bg-purple-700 rounded-md transition-colors"
+                    >
+                      Done
+                    </button>
+                  </div>
+                </Dialog.Panel>
+              </Transition.Child>
+            </div>
+          </div>
+        </Dialog>
+      </Transition>
+
+      {/* Main Action Config Modal */}
       <Transition appear show={isOpen} as={React.Fragment}>
         <Dialog as="div" className="relative z-50" onClose={onClose}>
           <Transition.Child
@@ -580,12 +752,13 @@ const ActionConfigModal: React.FC<ActionConfigModalProps> = ({
                                       <SimpleSelect
                                         options={[
                                           { value: "static", label: "Static value" },
-                                          { value: "field", label: "From record field" }
+                                          { value: "field", label: "From record field" },
+                                          { value: "template", label: "Template string" }
                                         ]}
                                         value={currentSource}
                                         onChange={(v) => setParamValue(v, '')}
                                         size="sm"
-                                        className="w-40"
+                                        className="w-44"
                                       />
                                     )}
                                   </div>
@@ -627,6 +800,40 @@ const ActionConfigModal: React.FC<ActionConfigModalProps> = ({
                                         size="sm"
                                       />
                                     )
+                                  ) : (param.source === 'any' && currentSource === 'template') ? (
+                                    <div className="space-y-2">
+                                      <div className="relative">
+                                        <textarea
+                                          value={currentValue}
+                                          onChange={(e) => setParamValue('template', e.target.value)}
+                                          placeholder={`Enter template with {{variables}}...`}
+                                          rows={2}
+                                          className="block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-purple-500 focus:border-purple-500 text-sm font-mono"
+                                        />
+                                      </div>
+                                      <div className="flex items-center justify-between">
+                                        <button
+                                          type="button"
+                                          onClick={() => {
+                                            const paramVal = formData.parameters?.[param.name];
+                                            const templateValue = typeof paramVal === 'object' && paramVal?.value ? paramVal.value : (typeof paramVal === 'string' ? paramVal : '');
+                                            setTemplatePicker({
+                                              isOpen: true,
+                                              paramName: param.name,
+                                              currentValue: templateValue,
+                                              cursorPosition: templateValue.length
+                                            });
+                                          }}
+                                          className="inline-flex items-center px-2 py-1 text-xs font-medium text-purple-700 dark:text-purple-300 bg-purple-100 dark:bg-purple-900/30 rounded hover:bg-purple-200 dark:hover:bg-purple-900/50 transition-colors"
+                                        >
+                                          <VariableIcon className="h-3.5 w-3.5 mr-1" />
+                                          Insert Variable
+                                        </button>
+                                        <span className="text-xs text-gray-400">
+                                          Use <code className="bg-gray-200 dark:bg-gray-700 px-1 rounded">{'{{field_name}}'}</code> syntax
+                                        </span>
+                                      </div>
+                                    </div>
                                   ) : param.resource ? (
                                     <ResourceSelect
                                       resource={param.resource}
