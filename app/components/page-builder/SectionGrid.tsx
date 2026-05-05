@@ -1,12 +1,106 @@
-import { useCallback, useMemo, useRef, useState, useEffect, type ComponentType, type ReactNode } from "react";
+import { useCallback, useMemo, useRef, useState, useEffect, type ComponentType, type ReactNode, type CSSProperties } from "react";
 import { Responsive as ResponsiveImport } from "react-grid-layout";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const Responsive = ResponsiveImport as ComponentType<any>;
 import { usePageBuilder } from "./PageBuilderContext";
 import ComponentRenderer from "./ComponentRenderer";
-import type { PageComponentNode } from "~/lib/api/types";
+import type { PageComponentNode, BackgroundConfig, BackgroundGradient, BackgroundLayer } from "~/lib/api/types";
 import { PlusIcon } from "@heroicons/react/24/outline";
+
+/** Convert a BackgroundGradient to a CSS gradient string */
+function gradientToCss(gradient: BackgroundGradient): string {
+  const stops = gradient.stops
+    .map(s => `${s.color} ${s.position}%`)
+    .join(', ');
+
+  if (gradient.type === 'linear') {
+    const angle = gradient.angle ?? 180;
+    return `linear-gradient(${angle}deg, ${stops})`;
+  } else if (gradient.type === 'radial') {
+    return `radial-gradient(circle, ${stops})`;
+  } else if (gradient.type === 'conic') {
+    const angle = gradient.angle ?? 0;
+    return `conic-gradient(from ${angle}deg, ${stops})`;
+  }
+  return '';
+}
+
+/** Build the section's background styles from BackgroundConfig */
+function buildBackgroundStyles(config: BackgroundConfig | undefined, fallbackColor: string): CSSProperties {
+  if (!config) {
+    return { backgroundColor: fallbackColor };
+  }
+
+  const styles: CSSProperties = {};
+
+  // Base color
+  if (config.color) {
+    styles.backgroundColor = config.color;
+  } else {
+    styles.backgroundColor = fallbackColor;
+  }
+
+  // Background image
+  if (config.image?.url) {
+    const img = config.image;
+    styles.backgroundImage = `url(${img.url})`;
+    styles.backgroundSize = img.size || 'cover';
+    styles.backgroundPosition = img.position || 'center';
+    styles.backgroundRepeat = img.repeat || 'no-repeat';
+    if (img.attachment) {
+      styles.backgroundAttachment = img.attachment;
+    }
+  }
+
+  // Gradient (can layer on top of image using multiple backgrounds)
+  if (config.gradient) {
+    const gradientCss = gradientToCss(config.gradient);
+    if (config.image?.url) {
+      // Layer gradient over image
+      styles.backgroundImage = `${gradientCss}, url(${config.image.url})`;
+    } else {
+      styles.backgroundImage = gradientCss;
+    }
+  }
+
+  return styles;
+}
+
+/** Render a background layer (SVG or HTML) */
+function BackgroundLayerRenderer({ layer }: { layer: BackgroundLayer }) {
+  const baseStyle: CSSProperties = {
+    position: layer.position || 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    zIndex: layer.zIndex ?? 0,
+    opacity: layer.opacity ?? 1,
+    pointerEvents: 'none',
+    overflow: 'hidden',
+  };
+
+  if (layer.type === 'svg') {
+    return (
+      <div
+        style={baseStyle}
+        dangerouslySetInnerHTML={{ __html: layer.content }}
+      />
+    );
+  }
+
+  if (layer.type === 'html') {
+    return (
+      <div
+        style={baseStyle}
+        dangerouslySetInnerHTML={{ __html: layer.content }}
+      />
+    );
+  }
+
+  return null;
+}
 
 /**
  * Wrapper that measures its content and reports when the content height
@@ -58,7 +152,13 @@ export default function SectionGrid({ node }: SectionGridProps) {
 
   const children = (node.props.children as PageComponentNode[]) || [];
   const palette = theme.colorPalette;
-  const sectionBg = (node.props.backgroundColor as string) || palette?.color5 || '#ffffff';
+
+  // Support both legacy backgroundColor string and new background config object
+  const backgroundConfig = node.props.background as BackgroundConfig | undefined;
+  const legacyBgColor = (node.props.backgroundColor as string) || palette?.color5 || '#ffffff';
+  const backgroundStyles = buildBackgroundStyles(backgroundConfig, legacyBgColor);
+  const backgroundLayers = backgroundConfig?.layers || [];
+  const overlay = backgroundConfig?.overlay;
 
   // Read breakpoint-specific layout values (supports both legacy single numbers and { lg, sm } objects)
   const bpVal = (prop: unknown, fallback: number, bp: string): number => {
@@ -181,7 +281,7 @@ export default function SectionGrid({ node }: SectionGridProps) {
   return (
     <div
       style={{
-        backgroundColor: sectionBg,
+        ...backgroundStyles,
         paddingLeft: `${paddingX}px`,
         paddingRight: `${paddingX}px`,
         paddingTop: `${paddingY}px`,
@@ -195,8 +295,31 @@ export default function SectionGrid({ node }: SectionGridProps) {
         }
       }}
     >
+      {/* Background layers (SVG/HTML) */}
+      {backgroundLayers.map((layer) => (
+        <BackgroundLayerRenderer key={layer.id} layer={layer} />
+      ))}
+
+      {/* Background overlay */}
+      {overlay && (
+        <div
+          style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: overlay.color,
+            opacity: overlay.opacity,
+            mixBlendMode: overlay.blendMode || 'normal',
+            pointerEvents: 'none',
+            zIndex: 1,
+          }}
+        />
+      )}
+
       {/* Grid area — overlay + react-grid-layout share this same container */}
-      <div ref={gridAreaRef} style={{ position: 'relative' }}>
+      <div ref={gridAreaRef} style={{ position: 'relative', zIndex: 2 }}>
         {/* Grid overlay — uses measured width to replicate react-grid-layout column positions */}
         {editMode && showGrid && gridAreaWidth > 0 && (
           <GridOverlay

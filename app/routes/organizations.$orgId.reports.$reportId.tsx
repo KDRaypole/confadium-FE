@@ -1,214 +1,113 @@
 import type { MetaFunction } from "@remix-run/node";
-import { Link, useParams } from "@remix-run/react";
-import { useState, useEffect } from "react";
-import { getTagColorClass } from "~/components/tags/TagsData";
-import { useTags, type Tag } from "~/hooks/useTags";
-import { useDarkMode } from "~/contexts/DarkModeContext";
+import { Link, useNavigate, useParams } from "@remix-run/react";
+import { useState, useEffect, useCallback } from "react";
+import { ReportBuilder } from "~/components/report-builder";
+import { useReport, useReportExecution, useReportSchema } from "~/hooks/useReports";
+import type { ReportConfiguration } from "~/lib/api/reports";
+import { ArrowLeftIcon } from "@heroicons/react/24/outline";
 import { useNodeContext } from "~/contexts/NodeContext";
-import D3Chart, { type ChartData } from "~/components/charts/D3Chart";
-import { 
-  ArrowLeftIcon,
-  FunnelIcon,
-  CalendarIcon,
-  TagIcon,
-  ChartBarIcon,
-  DocumentArrowDownIcon,
-  XMarkIcon
-} from "@heroicons/react/24/outline";
 
 export const meta: MetaFunction = () => {
   return [
     { title: "Report Details - Confadium" },
-    { name: "description", content: "View detailed report analytics and visualizations" },
+    { name: "description", content: "View and edit report" },
   ];
 };
 
-interface ReportDataAttributes {
-  name: string;
-  description: string;
-  category: "sales" | "contacts" | "calls" | "activities";
-  last_generated: string;
-  icon: string;
-}
-
-interface ReportData {
-  id: string;
-  type: string;
-  attributes: ReportDataAttributes;
-}
-
-interface EntityData {
-  id: string;
-  name: string;
-  value: number;
-  category?: string;
-  created_at: string;
-  tags: string[];
-  status?: string;
-  // Entity-specific fields
-  revenue?: number;
-  probability?: number;
-  duration?: number;
-  outcome?: string;
-  stage?: string;
-}
-
-// Mock reports data
-const mockReports: Record<string, ReportData> = {
-  "1": {
-    id: "1",
-    type: "report",
-    attributes: {
-      name: "Sales Performance",
-      description: "Monthly sales performance and revenue trends",
-      category: "sales",
-      last_generated: "2024-01-15",
-      icon: "chart"
-    }
-  },
-  "2": {
-    id: "2",
-    type: "report",
-    attributes: {
-      name: "Contact Activity Summary",
-      description: "Contact engagement and interaction summary",
-      category: "contacts",
-      last_generated: "2024-01-14",
-      icon: "users"
-    }
-  },
-  "3": {
-    id: "3",
-    type: "report",
-    attributes: {
-      name: "Call Log Analysis",
-      description: "Call volume, duration, and success rate analysis",
-      category: "calls",
-      last_generated: "2024-01-13",
-      icon: "phone"
-    }
-  }
-};
-
-// Mock data generator
-const generateMockData = (category: string, count: number = 50): EntityData[] => {
-  const tags = ["High Priority", "Enterprise", "Startup", "Technical", "Budget Approved", "Decision Maker"];
-  const data: EntityData[] = [];
-  
-  for (let i = 0; i < count; i++) {
-    const randomTags = tags.slice(0, Math.floor(Math.random() * 3) + 1);
-    const baseData = {
-      id: `${category}-${i}`,
-      name: `${category.charAt(0).toUpperCase()}${category.slice(1)} ${i + 1}`,
-      value: Math.floor(Math.random() * 100000) + 1000,
-      created_at: new Date(Date.now() - Math.random() * 365 * 24 * 60 * 60 * 1000).toISOString(),
-      tags: randomTags
-    };
-
-    if (category === "sales") {
-      data.push({
-        ...baseData,
-        revenue: Math.floor(Math.random() * 500000) + 10000,
-        probability: Math.floor(Math.random() * 100),
-        stage: ["prospect", "qualified", "proposal", "negotiation", "closed-won", "closed-lost"][Math.floor(Math.random() * 6)]
-      });
-    } else if (category === "calls") {
-      data.push({
-        ...baseData,
-        duration: Math.floor(Math.random() * 60) + 5,
-        outcome: ["successful", "busy", "no-answer", "voicemail"][Math.floor(Math.random() * 4)]
-      });
-    } else if (category === "contacts") {
-      data.push({
-        ...baseData,
-        status: ["hot", "warm", "cold"][Math.floor(Math.random() * 3)]
-      });
-    } else {
-      data.push(baseData);
-    }
-  }
-  
-  return data.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
-};
-
-export default function ReportShow() {
+export default function ReportDetailPage() {
+  const navigate = useNavigate();
   const params = useParams();
   const { orgId, reportId } = params;
   const { buildListPath } = useNodeContext();
-  const { isDarkMode } = useDarkMode();
-  
-  const [report] = useState<ReportData | null>(mockReports[reportId || ""] || null);
-  const [data, setData] = useState<EntityData[]>([]);
-  const [filteredData, setFilteredData] = useState<EntityData[]>([]);
-  const { tags: availableTags } = useTags();
-  
-  // Filter states
-  const [filtersOpen, setFiltersOpen] = useState(false);
-  const [dateRange, setDateRange] = useState({ start: "", end: "" });
-  const [selectedTags, setSelectedTags] = useState<string[]>([]);
 
-  // Generate mock data on mount
-  useEffect(() => {
-    if (report) {
-      const mockData = generateMockData(report.attributes.category);
-      setData(mockData);
-      setFilteredData(mockData);
-    }
-  }, [report]);
+  const { schema, loading: schemaLoading } = useReportSchema();
+  const {
+    report,
+    loading: reportLoading,
+    updateReport,
+    deleteReport,
+    updating,
+  } = useReport(reportId);
+  const {
+    results: executionResult,
+    loading: executionLoading,
+    execute,
+    executing,
+  } = useReportExecution(reportId);
 
-  // Apply filters
-  useEffect(() => {
-    let filtered = [...data];
-    
-    // Date range filter
-    if (dateRange.start) {
-      filtered = filtered.filter(item => new Date(item.created_at) >= new Date(dateRange.start));
-    }
-    if (dateRange.end) {
-      filtered = filtered.filter(item => new Date(item.created_at) <= new Date(dateRange.end));
-    }
-    
-    // Tags filter
-    if (selectedTags.length > 0) {
-      filtered = filtered.filter(item => 
-        selectedTags.some(tag => item.tags.includes(tag))
-      );
-    }
-    
-    setFilteredData(filtered);
-  }, [data, dateRange, selectedTags]);
+  const [hasChanges, setHasChanges] = useState(false);
 
-  // Convert EntityData to ChartData format
-  const chartData: ChartData[] = filteredData.map(item => ({
-    id: item.id,
-    name: item.name,
-    value: item.value,
-    category: item.status || item.stage || item.outcome,
-    created_at: item.created_at,
-    tags: item.tags,
-    revenue: item.revenue,
-    duration: item.duration,
-    probability: item.probability
-  }));
+  const handleSave = useCallback(
+    async (data: {
+      name: string;
+      description: string;
+      entity: string;
+      configuration: ReportConfiguration;
+    }) => {
+      setHasChanges(true);
+      // Auto-save on change
+      try {
+        await updateReport({
+          name: data.name,
+          description: data.description,
+          entity: data.entity as "contacts" | "deals" | "activities",
+          configuration: data.configuration,
+        });
+        setHasChanges(false);
+      } catch (error) {
+        console.error("Failed to save report:", error);
+      }
+    },
+    [updateReport]
+  );
 
-  const toggleTag = (tagName: string) => {
-    setSelectedTags(prev => 
-      prev.includes(tagName) 
-        ? prev.filter(t => t !== tagName)
-        : [...prev, tagName]
+  const handleExecute = useCallback(async () => {
+    try {
+      await execute();
+    } catch (error) {
+      console.error("Failed to execute report:", error);
+    }
+  }, [execute]);
+
+  const handleDelete = useCallback(async () => {
+    if (confirm("Are you sure you want to delete this report?")) {
+      try {
+        await deleteReport();
+        navigate(`/organizations/${orgId}/reports`);
+      } catch (error) {
+        console.error("Failed to delete report:", error);
+      }
+    }
+  }, [deleteReport, navigate, orgId]);
+
+  // Loading state
+  if (schemaLoading || reportLoading) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-primary mx-auto"></div>
+          <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
+            Loading report...
+          </p>
+        </div>
+      </div>
     );
-  };
+  }
 
-  const clearFilters = () => {
-    setDateRange({ start: "", end: "" });
-    setSelectedTags([]);
-  };
-
+  // Report not found
   if (!report) {
     return (
-      <div className="text-center">
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Report Not Found</h1>
-        <Link to={buildListPath('reports')} className="text-blue-600 hover:text-blue-500">
+      <div className="flex flex-col items-center justify-center h-screen">
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+          Report Not Found
+        </h1>
+        <p className="mt-2 text-gray-500 dark:text-gray-400">
+          The report you're looking for doesn't exist or has been deleted.
+        </p>
+        <Link
+          to={buildListPath("reports")}
+          className="mt-4 text-brand-primary hover:text-brand-primary/80"
+        >
           Back to Reports
         </Link>
       </div>
@@ -216,204 +115,56 @@ export default function ReportShow() {
   }
 
   return (
-    <>
-          {/* Header */}
-          <div className="mb-6">
-            <nav className="flex items-center space-x-2 text-sm text-gray-500 dark:text-gray-400 mb-4">
-              <Link to={buildListPath('reports')} className="hover:text-gray-700 dark:hover:text-gray-200">
-                Reports
-              </Link>
-              <span>/</span>
-              <span>{report.attributes.name}</span>
-            </nav>
-
-            <div className="flex items-center justify-between">
-              <div className="flex items-center">
-                <Link
-                  to={buildListPath('reports')}
-                  className="mr-4 inline-flex items-center text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
-                >
-                  <ArrowLeftIcon className="h-4 w-4 mr-1" />
-                  Back to Reports
-                </Link>
-                <div>
-                  <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">{report.attributes.name}</h1>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">{report.attributes.description}</p>
-                </div>
-              </div>
-              
-              <div className="flex items-center space-x-3">
-                <button
-                  onClick={() => setFiltersOpen(!filtersOpen)}
-                  className="inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-md shadow-sm text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700"
-                >
-                  <FunnelIcon className="-ml-1 mr-2 h-4 w-4" />
-                  Filters
-                </button>
-                <button className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700">
-                  <DocumentArrowDownIcon className="-ml-1 mr-2 h-4 w-4" />
-                  Export
-                </button>
-              </div>
-            </div>
+    <div className="h-screen flex flex-col">
+      {/* Header */}
+      <div className="flex items-center justify-between px-4 py-3 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
+        <div className="flex items-center gap-4">
+          <button
+            onClick={() => navigate(`/organizations/${orgId}/reports`)}
+            className="p-2 text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700"
+          >
+            <ArrowLeftIcon className="h-5 w-5" />
+          </button>
+          <div>
+            <h1 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+              {report.attributes.name}
+            </h1>
+            <p className="text-sm text-gray-500 dark:text-gray-400">
+              {report.attributes.description || "No description"}
+            </p>
           </div>
-
-          {/* Filters Panel */}
-          {filtersOpen && (
-            <div className="mb-6 bg-white dark:bg-gray-800 shadow rounded-lg border border-gray-200 dark:border-gray-700">
-              <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">Filters</h3>
-                  <button
-                    onClick={() => setFiltersOpen(false)}
-                    className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
-                  >
-                    <XMarkIcon className="h-5 w-5" />
-                  </button>
-                </div>
-              </div>
-              <div className="p-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {/* Date Range */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                      <CalendarIcon className="inline h-4 w-4 mr-1" />
-                      Date Range
-                    </label>
-                    <div className="grid grid-cols-2 gap-2">
-                      <input
-                        type="date"
-                        value={dateRange.start}
-                        onChange={(e) => setDateRange(prev => ({ ...prev, start: e.target.value }))}
-                        className="block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-sm"
-                      />
-                      <input
-                        type="date"
-                        value={dateRange.end}
-                        onChange={(e) => setDateRange(prev => ({ ...prev, end: e.target.value }))}
-                        className="block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-sm"
-                      />
-                    </div>
-                  </div>
-
-                  {/* Tags */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                      <TagIcon className="inline h-4 w-4 mr-1" />
-                      Tags
-                    </label>
-                    <div className="flex flex-wrap gap-2">
-                      {availableTags.slice(0, 6).map((tag) => (
-                        <button
-                          key={tag.id}
-                          onClick={() => toggleTag(tag.attributes?.name || '')}
-                          className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium transition-colors ${
-                            selectedTags.includes(tag.attributes?.name || '')
-                              ? getTagColorClass(tag.attributes?.color || '')
-                              : 'bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600'
-                          }`}
-                        >
-                          {tag.attributes?.name || ''}
-                          {selectedTags.includes(tag.attributes?.name || '') && (
-                            <XMarkIcon className="ml-1 h-3 w-3" />
-                          )}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-                
-                <div className="mt-4 flex justify-between">
-                  <button
-                    onClick={clearFilters}
-                    className="text-sm text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200"
-                  >
-                    Clear all filters
-                  </button>
-                  <span className="text-sm text-gray-600 dark:text-gray-400">
-                    Showing {filteredData.length} of {data.length} records
-                  </span>
-                </div>
-              </div>
-            </div>
+        </div>
+        <div className="flex items-center gap-3">
+          {updating && (
+            <span className="text-sm text-gray-400">Saving...</span>
           )}
-
-          {/* Visualizations */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-            {/* Bar Chart */}
-            <div className="bg-white dark:bg-gray-800 shadow rounded-lg border border-gray-200 dark:border-gray-700">
-              <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
-                <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">
-                  Value Distribution
-                </h3>
-              </div>
-              <div className="p-6">
-                <D3Chart
-                  data={chartData}
-                  type="bar"
-                  width={400}
-                  height={250}
-                  isDarkMode={isDarkMode}
-                />
-              </div>
-            </div>
-
-            {/* Pie Chart */}
-            <div className="bg-white dark:bg-gray-800 shadow rounded-lg border border-gray-200 dark:border-gray-700">
-              <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
-                <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">
-                  Status Distribution
-                </h3>
-              </div>
-              <div className="p-6">
-                <D3Chart
-                  data={chartData}
-                  type="pie"
-                  width={400}
-                  height={250}
-                  isDarkMode={isDarkMode}
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* Timeline Chart */}
-          <div className="bg-white dark:bg-gray-800 shadow rounded-lg border border-gray-200 dark:border-gray-700">
-            <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
-              <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">
-                Timeline Activity
-              </h3>
-            </div>
-            <div className="p-6">
-              <D3Chart
-                data={chartData}
-                type="timeline"
-                width={700}
-                height={250}
-                isDarkMode={isDarkMode}
-              />
-            </div>
-          </div>
-
-          {/* Additional Visualization - Scatter Plot for Sales/Revenue data */}
-          {report?.attributes.category === 'sales' && (
-            <div className="bg-white dark:bg-gray-800 shadow rounded-lg border border-gray-200 dark:border-gray-700">
-              <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
-                <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">
-                  Value vs Revenue Correlation
-                </h3>
-              </div>
-              <div className="p-6">
-                <D3Chart
-                  data={chartData}
-                  type="scatter"
-                  width={700}
-                  height={300}
-                  isDarkMode={isDarkMode}
-                />
-              </div>
-            </div>
+          {hasChanges && !updating && (
+            <span className="text-sm text-amber-500">Unsaved changes</span>
           )}
-    </>
+          <button
+            onClick={handleDelete}
+            className="px-4 py-2 text-sm text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300"
+          >
+            Delete
+          </button>
+        </div>
+      </div>
+
+      {/* Report Builder */}
+      <div className="flex-1 overflow-hidden">
+        <ReportBuilder
+          reportId={report.id}
+          initialName={report.attributes.name}
+          initialDescription={report.attributes.description || ""}
+          initialEntity={report.attributes.entity}
+          initialConfiguration={report.attributes.configuration}
+          schema={schema}
+          executionResult={executionResult}
+          onSave={handleSave}
+          onExecute={handleExecute}
+          executing={executing || executionLoading}
+        />
+      </div>
+    </div>
   );
 }
